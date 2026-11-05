@@ -1,0 +1,13 @@
+{
+  "name": "health-diary",
+  "version": "1.0.0",
+  "description": "A personal health diary for storing current and past health records.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

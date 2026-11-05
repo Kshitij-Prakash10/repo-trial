@@ -21,13 +21,16 @@ A basic web app that works as a personal health diary. Each user keeps their
 
 ## Running
 
-No build step. Open `index.html` in a browser, or serve the folder:
+No build step and no packages to install. With Node.js 14 or later:
 
 ```bash
-python3 -m http.server 8000
+npm start
 ```
 
-Then visit http://localhost:8000.
+Then visit http://localhost:3000. To use another port, run `PORT=8080 npm start`.
+
+You can also just open `index.html` in a browser, or serve the folder with
+`python3 -m http.server 8000`.
 
 ## Project structure
 
@@ -36,6 +39,8 @@ index.html        Page layout: user selection screen + app (sidebar + views)
 css/styles.css    Styling and responsive layout
 js/storage.js     Data layer (localStorage, one record per user)
 js/app.js         Rendering and event handling
+server.js         Small Node.js static server (used by `npm start`)
+package.json      npm scripts
 ```
 
 ## Notes
