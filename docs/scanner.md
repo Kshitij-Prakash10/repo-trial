@@ -5,9 +5,13 @@ page with a trained machine-learning model, corrects the perspective, and enhanc
 gray or black-and-white. It runs locally on the CPU (numpy, scipy, scikit-learn, Pillow); nothing is sent
 anywhere.
 
-**Important: the model is trained and tested only on synthetic photos** (rendered documents on rendered
-backgrounds). The numbers below are held-out results on synthetic data. Real photos are likely to be
-harder; the model has not yet been measured on real photos.
+There are two models:
+- **`models/scanner.joblib`** is trained and tested only on synthetic photos (rendered documents on
+  rendered backgrounds). This document describes it, and the numbers below are its held-out results on
+  synthetic data.
+- **`models/scanner_real.joblib`** is that model fine-tuned on real phone photos (DocCornerDataset) and
+  tested on SmartDoc 2015 Ch1. **The app uses it when it is present.** Its results, including where it is
+  worse than the synthetic model, are in `docs/finetune/results.md`.
 
 ## Use
 
@@ -24,7 +28,7 @@ JPEG, PNG and WebP up to 10 MB, applies the EXIF orientation, rejects images ove
 works on a copy reduced to at most 2400 px on the long side; corners are returned in the pixels of the
 uploaded (EXIF-rotated) image.
 
-If `models/scanner.joblib` is missing, or no plausible page is found, `scan()` returns the whole photo
+If neither model file is present, or no plausible page is found, `scan()` returns the whole photo
 enhanced with `page_found: false` and `method: "fallback"`. It does not raise on a valid image.
 
 ## Data (synthetic)

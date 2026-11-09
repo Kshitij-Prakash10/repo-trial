@@ -1,0 +1,189 @@
+[
+ {
+  "variant": "real_only",
+  "real_photos": 6000,
+  "real_cells": 3600000,
+  "sim_cells": 0,
+  "real_fraction": 1.0,
+  "feature_seconds": 49.8
+ },
+ {
+  "variant": "real_only",
+  "step": "start (synthetic model)",
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8269,
+  "iou_img_ge_0.9": 0.4575,
+  "err_px_mean": 63.9,
+  "err_px_median": 35.2,
+  "err_pct_img_mean": 4.605,
+  "err_pct_img_median": 3.024,
+  "objectness_recall": 0.9887,
+  "objectness_precision": 0.8971,
+  "false_alarm_rate_on_negatives": 0.8451,
+  "score": 0.8269
+ },
+ {
+  "fit_cells_logloss_before": 0.487,
+  "after": 0.3704,
+  "trees": 225
+ },
+ {
+  "variant": "real_only",
+  "step": "A +25 stage-2 trees @ 0.1",
+  "fit_s": 111,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8498,
+  "iou_img_ge_0.9": 0.5539,
+  "err_px_mean": 51.8,
+  "err_px_median": 26.4,
+  "err_pct_img_mean": 3.997,
+  "err_pct_img_median": 2.013,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9442,
+  "false_alarm_rate_on_negatives": 0.4366,
+  "score": 0.8498
+ },
+ {
+  "fit_cells_logloss_before": 0.3704,
+  "after": 0.3172,
+  "trees": 250
+ },
+ {
+  "variant": "real_only",
+  "step": "A +50 stage-2 trees @ 0.1",
+  "fit_s": 120,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8702,
+  "iou_img_ge_0.9": 0.6181,
+  "err_px_mean": 43.1,
+  "err_px_median": 18.7,
+  "err_pct_img_mean": 3.433,
+  "err_pct_img_median": 1.562,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9528,
+  "false_alarm_rate_on_negatives": 0.3662,
+  "score": 0.8702
+ },
+ {
+  "fit_cells_logloss_before": 0.3172,
+  "after": 0.281,
+  "trees": 300
+ },
+ {
+  "variant": "real_only",
+  "step": "A +100 stage-2 trees @ 0.1",
+  "fit_s": 130,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8904,
+  "iou_img_ge_0.9": 0.6692,
+  "err_px_mean": 35.8,
+  "err_px_median": 12.9,
+  "err_pct_img_mean": 2.858,
+  "err_pct_img_median": 1.228,
+  "objectness_recall": 0.9943,
+  "objectness_precision": 0.9546,
+  "false_alarm_rate_on_negatives": 0.3521,
+  "score": 0.8904
+ },
+ {
+  "fit_cells_logloss_before": 0.4438,
+  "after": 0.303,
+  "trees": 250
+ },
+ {
+  "fit_cells_logloss_before": 0.2321,
+  "after": 0.212,
+  "trees": 350
+ },
+ {
+  "variant": "real_only",
+  "step": "B +50 trees per stage @ 0.01",
+  "fit_s": 458,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8914,
+  "iou_img_ge_0.9": 0.6805,
+  "err_px_mean": 35.4,
+  "err_px_median": 12.6,
+  "err_pct_img_mean": 2.795,
+  "err_pct_img_median": 1.194,
+  "objectness_recall": 0.9868,
+  "objectness_precision": 0.9508,
+  "false_alarm_rate_on_negatives": 0.3803,
+  "score": 0.8914
+ },
+ {
+  "fit_cells_logloss_before": 0.4438,
+  "after": 0.2607,
+  "trees": 300
+ },
+ {
+  "fit_cells_logloss_before": 0.2243,
+  "after": 0.1949,
+  "trees": 400
+ },
+ {
+  "variant": "real_only",
+  "step": "B +100 trees per stage @ 0.01",
+  "fit_s": 546,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8895,
+  "iou_img_ge_0.9": 0.6711,
+  "err_px_mean": 35.9,
+  "err_px_median": 12.3,
+  "err_pct_img_mean": 2.88,
+  "err_pct_img_median": 1.192,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9511,
+  "false_alarm_rate_on_negatives": 0.3803,
+  "score": 0.8895
+ },
+ {
+  "fit_cells_logloss_before": 0.4438,
+  "after": 0.2232,
+  "trees": 400
+ },
+ {
+  "fit_cells_logloss_before": 0.2193,
+  "after": 0.1791,
+  "trees": 500
+ },
+ {
+  "variant": "real_only",
+  "step": "B +200 trees per stage @ 0.01",
+  "fit_s": 751,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.891,
+  "iou_img_ge_0.9": 0.6767,
+  "err_px_mean": 35.8,
+  "err_px_median": 12.9,
+  "err_pct_img_mean": 2.805,
+  "err_pct_img_median": 1.242,
+  "objectness_recall": 0.9943,
+  "objectness_precision": 0.9495,
+  "false_alarm_rate_on_negatives": 0.3944,
+  "score": 0.891
+ },
+ {
+  "variant": "real_only",
+  "chosen": "A+100 then B+50",
+  "val_score": 0.8914
+ },
+ {
+  "variant": "real_only",
+  "total_seconds": 2441
+ }
+]

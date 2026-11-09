@@ -21,7 +21,6 @@ import os
 
 import numpy as np
 import pandas as pd
-from datasets import load_dataset
 from PIL import Image, ImageDraw
 
 from scanner.infer import ROOT
@@ -30,7 +29,7 @@ SEED = 2026
 MAX_SIDE = 1024  # px, stored long side for DocCorner images (the model works on a 128-cell grid)
 N_SELECT = {"train": 6000, "val": 1000, "test": 2000}  # images per split (seeded, stratified by source)
 LEAK_HAMMING = 12  # dHash (256 bit) distance at or below which an image counts as a SmartDoc near-duplicate
-SMARTDOC_EVERY = 10  # every 10th frame of each SmartDoc video (2,489 of 24,889 frames)
+SMARTDOC_EVERY = 10  # every 10th frame of each SmartDoc video (2,555 of 24,889 frames)
 MANIFEST_DIR = os.path.join(ROOT, "data", "real", "manifests")
 CORNERS = ("tl", "tr", "br", "bl")
 
@@ -74,6 +73,7 @@ def select(data_home: str) -> dict[str, pd.DataFrame]:
 
 def write_doccorner(data_home: str, split: str, chosen: pd.DataFrame) -> pd.DataFrame:
     """Decode the chosen images (streaming over the local Parquet files), downscale, save, return labels."""
+    from datasets import load_dataset  # setup-only dependency (requirements-finetune.txt)
     want = set(chosen.filename)
     meta = chosen.set_index("filename")
     dst = os.path.join(data_home, "prepared", "doccorner", split)

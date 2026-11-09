@@ -19,8 +19,14 @@ from scanner import geometry as geo
 from scanner.synth import poly_mask
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-MODEL_PATH = os.path.join(ROOT, "models", "scanner.joblib")
-METRICS_PATH = os.path.join(ROOT, "models", "scanner_metrics.json")
+SYNTHETIC_MODEL_PATH = os.path.join(ROOT, "models", "scanner.joblib")  # trained on synthetic photos only
+SYNTHETIC_METRICS_PATH = os.path.join(ROOT, "models", "scanner_metrics.json")
+REAL_MODEL_PATH = os.path.join(ROOT, "models", "scanner_real.joblib")  # fine-tuned on real photos (docs/finetune)
+REAL_METRICS_PATH = os.path.join(ROOT, "models", "scanner_real_metrics.json")
+# The app uses the fine-tuned model when it is present, else the synthetic one.
+_use_real = os.path.exists(REAL_MODEL_PATH)
+MODEL_PATH = REAL_MODEL_PATH if _use_real else SYNTHETIC_MODEL_PATH
+METRICS_PATH = REAL_METRICS_PATH if _use_real else SYNTHETIC_METRICS_PATH
 REFINE_SIDE = 640  # px, long side of the image used for edge refinement
 MIN_CONFIDENCE = 0.35
 MIN_AREA_FRAC = 0.05  # of the photo

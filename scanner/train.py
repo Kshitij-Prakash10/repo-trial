@@ -36,8 +36,8 @@ from scanner import infer
 from scanner import synth
 
 ROOT = infer.ROOT
-MODEL_PATH = infer.MODEL_PATH
-METRICS_PATH = infer.METRICS_PATH
+MODEL_PATH = infer.SYNTHETIC_MODEL_PATH
+METRICS_PATH = infer.SYNTHETIC_METRICS_PATH
 EXAMPLES_DIR = os.path.join(ROOT, "data", "scanner_examples")
 MODEL_VERSION = "scanner-0.1"
 SEED = 11
@@ -184,6 +184,7 @@ def report(rows: list[dict]) -> dict:
 
 def time_scan(items: list[dict], n: int = 25) -> dict:
     """Wall time of the full scan() (detect, warp, enhance gray) per photo, one process, model loaded."""
+    infer.MODEL_PATH = MODEL_PATH  # time the synthetic model just trained, not the fine-tuned app model
     infer.load_model()
     ts = []
     for it in items[:n]:

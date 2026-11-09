@@ -1,0 +1,78 @@
+{
+ "model_version": "scanner-0.2-ft-real_only",
+ "data": "synthetic photos (pre-training, models/scanner.joblib) + real photos (fine-tuning only on 6,000 DocCornerDataset train photos, no synthetic cells in fine-tuning)",
+ "chosen_by": "mean quad IoU on 600 DocCornerDataset val photos (not the test sets)",
+ "fine_tuning": "real_only variant: stage A +100 stage-2 trees @ 0.1, then stage B +50 trees per stage @ 0.01, on 6,000 DocCornerDataset train photos",
+ "report": "docs/finetune/results.md",
+ "size_bytes": 1013594,
+ "trees": [
+  250,
+  350
+ ],
+ "latency_detect_only": {
+  "n": 40,
+  "ms_mean": 146.5,
+  "ms_p90": 171.3,
+  "image": "1920x1080 SmartDoc frame",
+  "threads": "default",
+  "note": "re-measured for all models in one quiet run"
+ },
+ "smartdoc_ch1_test_2555_frames": {
+  "n": 2555,
+  "n_pos": 2555,
+  "n_neg": 0,
+  "iou_img_mean": 0.7634,
+  "iou_img_ge_0.9": 0.4975,
+  "err_px_mean": 110.8,
+  "err_px_median": 35.3,
+  "err_pct_img_mean": 5.029,
+  "err_pct_img_median": 1.603,
+  "iou_doc_mean": 0.7659,
+  "iou_doc_ge_0.9": 0.5045,
+  "objectness_recall": 0.9969,
+  "objectness_precision": 1.0,
+  "false_alarm_rate_on_negatives": null
+ },
+ "doccorner_test_2000": {
+  "n": 2000,
+  "n_pos": 1761,
+  "n_neg": 239,
+  "iou_img_mean": 0.7234,
+  "iou_img_ge_0.9": 0.385,
+  "err_px_mean": 85.6,
+  "err_px_median": 41.5,
+  "err_pct_img_mean": 7.18,
+  "err_pct_img_median": 3.863,
+  "objectness_recall": 0.9705,
+  "objectness_precision": 0.959,
+  "false_alarm_rate_on_negatives": 0.3054
+ },
+ "doccorner_val_1000": {
+  "n": 1000,
+  "n_pos": 880,
+  "n_neg": 120,
+  "iou_img_mean": 0.893,
+  "iou_img_ge_0.9": 0.6852,
+  "err_px_mean": 35.3,
+  "err_px_median": 12.3,
+  "err_pct_img_mean": 2.757,
+  "err_pct_img_median": 1.167,
+  "objectness_recall": 0.9875,
+  "objectness_precision": 0.9518,
+  "false_alarm_rate_on_negatives": 0.3667
+ },
+ "synthetic_test_200": {
+  "n": 200,
+  "n_pos": 200,
+  "n_neg": 0,
+  "iou_img_mean": 0.9034,
+  "iou_img_ge_0.9": 0.76,
+  "err_px_mean": 29.0,
+  "err_px_median": 14.9,
+  "err_pct_img_mean": 2.77,
+  "err_pct_img_median": 1.426,
+  "objectness_recall": 0.995,
+  "objectness_precision": 1.0,
+  "false_alarm_rate_on_negatives": null
+ }
+}

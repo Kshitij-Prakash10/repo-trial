@@ -144,7 +144,7 @@ def val_score(model: dict, val_items: list[dict]) -> dict:
 
 def finetune(variant: str, data_home: str, log: list) -> dict:
     """Run one variant; returns the best model by validation score (with its history in log)."""
-    base = joblib.load(infer.MODEL_PATH)
+    base = joblib.load(infer.SYNTHETIC_MODEL_PATH)
     val_items = ev.doccorner_items(data_home, "val", N_VAL)
     real = real_train_items(data_home)
     t0 = time.time()

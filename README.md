@@ -48,7 +48,7 @@ files); nothing needs the internet at run time.
 ## Tests
 
 ```bash
-python -m pytest -q                     # server and scanner tests
+python -m pytest -q                     # server and scanner tests (fine-tuning tests need requirements-finetune.txt)
 npm install playwright && npx playwright install chromium   # once
 node tests/ui/check.js                  # UI flows in headless Chromium (starts server.py)
 ```
@@ -68,7 +68,8 @@ js/voice.js         Voice notes (MediaRecorder)
 server.py           Local Flask server: the static app + the scanner API
 scanner/            ML document scanner (training, inference, API); docs/scanner.md
 data/synthetic/     The synthetic photos the scanner is trained and tested on
-models/             Trained scanner model and its held-out metrics
+models/             Scanner models (synthetic, and fine-tuned on real photos), metrics, ONNX export
+docs/finetune/      Fine-tuning on real photos: results, ablations, failure cases
 tests/              pytest tests and the Playwright UI check
 ```
 

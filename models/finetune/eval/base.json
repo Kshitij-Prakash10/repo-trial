@@ -1,0 +1,483 @@
+{
+ "name": "base",
+ "model": "models/scanner.joblib",
+ "model_version": "scanner-0.1",
+ "size_bytes": 704089,
+ "trees": [
+  200,
+  200
+ ],
+ "smartdoc": {
+  "n": 2555,
+  "n_pos": 2555,
+  "n_neg": 0,
+  "iou_img_mean": 0.745,
+  "iou_img_ge_0.9": 0.5452,
+  "err_px_mean": 137.1,
+  "err_px_median": 19.7,
+  "err_pct_img_mean": 6.225,
+  "err_pct_img_median": 0.896,
+  "iou_doc_mean": 0.7471,
+  "iou_doc_ge_0.9": 0.5577,
+  "objectness_recall": 0.9984,
+  "objectness_precision": 1.0,
+  "false_alarm_rate_on_negatives": null,
+  "seconds": 177,
+  "by_condition": {
+   "bg_name": {
+    "background01": {
+     "n": 633,
+     "iou_mean": 0.9046,
+     "iou_ge_0.9": 0.7457
+    },
+    "background02": {
+     "n": 613,
+     "iou_mean": 0.422,
+     "iou_ge_0.9": 0.367
+    },
+    "background03": {
+     "n": 609,
+     "iou_mean": 0.9081,
+     "iou_ge_0.9": 0.9064
+    },
+    "background04": {
+     "n": 430,
+     "iou_mean": 0.7975,
+     "iou_ge_0.9": 0.407
+    },
+    "background05": {
+     "n": 270,
+     "iou_mean": 0.6728,
+     "iou_ge_0.9": 0.0037
+    }
+   },
+   "modeltype_name": {
+    "datasheet": {
+     "n": 450,
+     "iou_mean": 0.8795,
+     "iou_ge_0.9": 0.7222
+    },
+    "letter": {
+     "n": 434,
+     "iou_mean": 0.8307,
+     "iou_ge_0.9": 0.6912
+    },
+    "magazine": {
+     "n": 431,
+     "iou_mean": 0.6621,
+     "iou_ge_0.9": 0.406
+    },
+    "paper": {
+     "n": 422,
+     "iou_mean": 0.7305,
+     "iou_ge_0.9": 0.5853
+    },
+    "patent": {
+     "n": 414,
+     "iou_mean": 0.7241,
+     "iou_ge_0.9": 0.5604
+    },
+    "tax": {
+     "n": 404,
+     "iou_mean": 0.6415,
+     "iou_ge_0.9": 0.3614
+    }
+   }
+  }
+ },
+ "doccorner_val": {
+  "n": 1000,
+  "n_pos": 880,
+  "n_neg": 120,
+  "iou_img_mean": 0.8261,
+  "iou_img_ge_0.9": 0.4625,
+  "err_px_mean": 63.5,
+  "err_px_median": 34.5,
+  "err_pct_img_mean": 4.556,
+  "err_pct_img_median": 2.951,
+  "objectness_recall": 0.9909,
+  "objectness_precision": 0.8953,
+  "false_alarm_rate_on_negatives": 0.85,
+  "seconds": 85,
+  "by_condition": {
+   "source": {
+    "2kpgu": {
+     "n": 21,
+     "iou_mean": 0.8503,
+     "iou_ge_0.9": 0.381
+    },
+    "bienban": {
+     "n": 9,
+     "iou_mean": 0.9028,
+     "iou_ge_0.9": 0.8889
+    },
+    "bill": {
+     "n": 34,
+     "iou_mean": 0.8939,
+     "iou_ge_0.9": 0.6471
+    },
+    "book": {
+     "n": 27,
+     "iou_mean": 0.8938,
+     "iou_ge_0.9": 0.6667
+    },
+    "business": {
+     "n": 20,
+     "iou_mean": 0.8393,
+     "iou_ge_0.9": 0.55
+    },
+    "card": {
+     "n": 59,
+     "iou_mean": 0.7658,
+     "iou_ge_0.9": 0.3559
+    },
+    "cs": {
+     "n": 11,
+     "iou_mean": 0.8437,
+     "iou_ge_0.9": 0.6364
+    },
+    "dccc": {
+     "n": 24,
+     "iou_mean": 0.7975,
+     "iou_ge_0.9": 0.4167
+    },
+    "doc": {
+     "n": 20,
+     "iou_mean": 0.8591,
+     "iou_ge_0.9": 0.5
+    },
+    "document": {
+     "n": 132,
+     "iou_mean": 0.8609,
+     "iou_ge_0.9": 0.4394
+    },
+    "documents": {
+     "n": 6,
+     "iou_mean": 0.8852,
+     "iou_ge_0.9": 0.6667
+    },
+    "filtered": {
+     "n": 54,
+     "iou_mean": 0.8106,
+     "iou_ge_0.9": 0.3889
+    },
+    "id": {
+     "n": 129,
+     "iou_mean": 0.7845,
+     "iou_ge_0.9": 0.3333
+    },
+    "idcard": {
+     "n": 12,
+     "iou_mean": 0.6479,
+     "iou_ge_0.9": 0.3333
+    },
+    "is": {
+     "n": 13,
+     "iou_mean": 0.8398,
+     "iou_ge_0.9": 0.5385
+    },
+    "ktp": {
+     "n": 15,
+     "iou_mean": 0.8993,
+     "iou_ge_0.9": 0.6
+    },
+    "midv2019": {
+     "n": 2,
+     "iou_mean": 0.3859,
+     "iou_ge_0.9": 0.0
+    },
+    "midv500": {
+     "n": 173,
+     "iou_mean": 0.8255,
+     "iou_ge_0.9": 0.4682
+    },
+    "more2": {
+     "n": 17,
+     "iou_mean": 0.8176,
+     "iou_ge_0.9": 0.5294
+    },
+    "paper": {
+     "n": 20,
+     "iou_mean": 0.7863,
+     "iou_ge_0.9": 0.45
+    },
+    "receipt": {
+     "n": 23,
+     "iou_mean": 0.9085,
+     "iou_ge_0.9": 0.8261
+    },
+    "receipts": {
+     "n": 9,
+     "iou_mean": 0.8259,
+     "iou_ge_0.9": 0.4444
+    },
+    "sdf": {
+     "n": 19,
+     "iou_mean": 0.8304,
+     "iou_ge_0.9": 0.4211
+    },
+    "seg": {
+     "n": 5,
+     "iou_mean": 0.9447,
+     "iou_ge_0.9": 0.8
+    },
+    "segment": {
+     "n": 1,
+     "iou_mean": 0.6189,
+     "iou_ge_0.9": 0.0
+    },
+    "segmentation": {
+     "n": 2,
+     "iou_mean": 0.823,
+     "iou_ge_0.9": 0.0
+    },
+    "segrec": {
+     "n": 3,
+     "iou_mean": 0.3433,
+     "iou_ge_0.9": 0.3333
+    },
+    "test1": {
+     "n": 20,
+     "iou_mean": 0.8726,
+     "iou_ge_0.9": 0.55
+    }
+   }
+  }
+ },
+ "doccorner_test": {
+  "n": 2000,
+  "n_pos": 1761,
+  "n_neg": 239,
+  "iou_img_mean": 0.6682,
+  "iou_img_ge_0.9": 0.2709,
+  "err_px_mean": 118.3,
+  "err_px_median": 64.8,
+  "err_pct_img_mean": 9.672,
+  "err_pct_img_median": 5.735,
+  "objectness_recall": 0.9631,
+  "objectness_precision": 0.8926,
+  "false_alarm_rate_on_negatives": 0.8536,
+  "seconds": 174,
+  "by_condition": {
+   "source": {
+    "2kpgu": {
+     "n": 19,
+     "iou_mean": 0.7484,
+     "iou_ge_0.9": 0.2105
+    },
+    "bienban": {
+     "n": 12,
+     "iou_mean": 0.7662,
+     "iou_ge_0.9": 0.25
+    },
+    "bill": {
+     "n": 43,
+     "iou_mean": 0.8776,
+     "iou_ge_0.9": 0.6279
+    },
+    "book": {
+     "n": 76,
+     "iou_mean": 0.7322,
+     "iou_ge_0.9": 0.2895
+    },
+    "business": {
+     "n": 31,
+     "iou_mean": 0.7436,
+     "iou_ge_0.9": 0.2903
+    },
+    "card": {
+     "n": 154,
+     "iou_mean": 0.6249,
+     "iou_ge_0.9": 0.2013
+    },
+    "cs": {
+     "n": 32,
+     "iou_mean": 0.8129,
+     "iou_ge_0.9": 0.3438
+    },
+    "dccc": {
+     "n": 36,
+     "iou_mean": 0.7046,
+     "iou_ge_0.9": 0.1944
+    },
+    "doc": {
+     "n": 46,
+     "iou_mean": 0.879,
+     "iou_ge_0.9": 0.5435
+    },
+    "document": {
+     "n": 123,
+     "iou_mean": 0.8241,
+     "iou_ge_0.9": 0.3902
+    },
+    "documento": {
+     "n": 7,
+     "iou_mean": 0.3907,
+     "iou_ge_0.9": 0.0
+    },
+    "documents": {
+     "n": 24,
+     "iou_mean": 0.832,
+     "iou_ge_0.9": 0.3333
+    },
+    "filtered": {
+     "n": 87,
+     "iou_mean": 0.7785,
+     "iou_ge_0.9": 0.2529
+    },
+    "id": {
+     "n": 175,
+     "iou_mean": 0.6814,
+     "iou_ge_0.9": 0.1886
+    },
+    "idcard": {
+     "n": 289,
+     "iou_mean": 0.3346,
+     "iou_ge_0.9": 0.0657
+    },
+    "is": {
+     "n": 23,
+     "iou_mean": 0.8071,
+     "iou_ge_0.9": 0.3913
+    },
+    "ktp": {
+     "n": 62,
+     "iou_mean": 0.7276,
+     "iou_ge_0.9": 0.3226
+    },
+    "midv2019": {
+     "n": 18,
+     "iou_mean": 0.3515,
+     "iou_ge_0.9": 0.0
+    },
+    "midv500": {
+     "n": 141,
+     "iou_mean": 0.7676,
+     "iou_ge_0.9": 0.3475
+    },
+    "more2": {
+     "n": 43,
+     "iou_mean": 0.7284,
+     "iou_ge_0.9": 0.3256
+    },
+    "paper": {
+     "n": 19,
+     "iou_mean": 0.7847,
+     "iou_ge_0.9": 0.3684
+    },
+    "receipt": {
+     "n": 105,
+     "iou_mean": 0.7889,
+     "iou_ge_0.9": 0.419
+    },
+    "receipts": {
+     "n": 50,
+     "iou_mean": 0.7538,
+     "iou_ge_0.9": 0.34
+    },
+    "sdf": {
+     "n": 32,
+     "iou_mean": 0.7267,
+     "iou_ge_0.9": 0.375
+    },
+    "seg": {
+     "n": 29,
+     "iou_mean": 0.8291,
+     "iou_ge_0.9": 0.3448
+    },
+    "segment": {
+     "n": 4,
+     "iou_mean": 0.5791,
+     "iou_ge_0.9": 0.25
+    },
+    "segmentation": {
+     "n": 12,
+     "iou_mean": 0.9466,
+     "iou_ge_0.9": 0.8333
+    },
+    "segrec": {
+     "n": 47,
+     "iou_mean": 0.3482,
+     "iou_ge_0.9": 0.0638
+    },
+    "test1": {
+     "n": 22,
+     "iou_mean": 0.8516,
+     "iou_ge_0.9": 0.5455
+    }
+   }
+  }
+ },
+ "synthetic_test": {
+  "n": 200,
+  "n_pos": 200,
+  "n_neg": 0,
+  "iou_img_mean": 0.968,
+  "iou_img_ge_0.9": 0.945,
+  "err_px_mean": 13.4,
+  "err_px_median": 1.3,
+  "err_pct_img_mean": 1.134,
+  "err_pct_img_median": 0.137,
+  "objectness_recall": 1.0,
+  "objectness_precision": 1.0,
+  "false_alarm_rate_on_negatives": null,
+  "seconds": 20,
+  "by_condition": {
+   "background": {
+    "blotch": {
+     "n": 28,
+     "iou_mean": 0.9706,
+     "iou_ge_0.9": 0.9286
+    },
+    "dots": {
+     "n": 25,
+     "iou_mean": 0.979,
+     "iou_ge_0.9": 0.96
+    },
+    "fabric": {
+     "n": 22,
+     "iou_mean": 0.9572,
+     "iou_ge_0.9": 0.9545
+    },
+    "gradient": {
+     "n": 28,
+     "iou_mean": 0.9768,
+     "iou_ge_0.9": 0.9643
+    },
+    "light": {
+     "n": 21,
+     "iou_mean": 0.947,
+     "iou_ge_0.9": 0.9048
+    },
+    "solid": {
+     "n": 25,
+     "iou_mean": 0.9802,
+     "iou_ge_0.9": 1.0
+    },
+    "stripes": {
+     "n": 17,
+     "iou_mean": 0.9596,
+     "iou_ge_0.9": 0.9412
+    },
+    "tiles": {
+     "n": 17,
+     "iou_mean": 0.9479,
+     "iou_ge_0.9": 0.8235
+    },
+    "wood": {
+     "n": 17,
+     "iou_mean": 0.9832,
+     "iou_ge_0.9": 1.0
+    }
+   }
+  }
+ },
+ "latency": {
+  "n": 40,
+  "ms_mean": 119.6,
+  "ms_p90": 136.0,
+  "image": "1920x1080 SmartDoc frame",
+  "threads": "default",
+  "note": "re-measured for all models in one quiet run"
+ }
+}
