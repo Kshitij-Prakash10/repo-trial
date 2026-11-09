@@ -1,0 +1,11 @@
+{
+ "model": "models/scanner_real.joblib",
+ "max_abs_diff": {
+  "stage1": 5.118141952475952e-07,
+  "stage2": 1.0541436917255176e-06
+ },
+ "stage1_bytes": 492798,
+ "stage1_rows_checked": 69248,
+ "stage2_bytes": 694400,
+ "stage2_rows_checked": 69248
+}

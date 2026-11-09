@@ -1,0 +1,120 @@
+[
+ {
+  "variant": "no_stage_a",
+  "real_photos": 6000,
+  "real_cells": 3600000,
+  "sim_cells": 1542960,
+  "real_fraction": 0.7,
+  "feature_seconds": 51.5
+ },
+ {
+  "variant": "no_stage_a",
+  "step": "start (synthetic model)",
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8269,
+  "iou_img_ge_0.9": 0.4575,
+  "err_px_mean": 63.9,
+  "err_px_median": 35.2,
+  "err_pct_img_mean": 4.605,
+  "err_pct_img_median": 3.024,
+  "objectness_recall": 0.9887,
+  "objectness_precision": 0.8971,
+  "false_alarm_rate_on_negatives": 0.8451,
+  "score": 0.8269
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.2247,
+  "trees": 250
+ },
+ {
+  "fit_cells_logloss_before": 0.2463,
+  "after": 0.1958,
+  "trees": 250
+ },
+ {
+  "variant": "no_stage_a",
+  "step": "B +50 trees per stage @ 0.01",
+  "fit_s": 515,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8397,
+  "iou_img_ge_0.9": 0.4896,
+  "err_px_mean": 58.9,
+  "err_px_median": 31.7,
+  "err_pct_img_mean": 4.28,
+  "err_pct_img_median": 2.612,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9178,
+  "false_alarm_rate_on_negatives": 0.662,
+  "score": 0.8397
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.1964,
+  "trees": 300
+ },
+ {
+  "fit_cells_logloss_before": 0.2229,
+  "after": 0.1688,
+  "trees": 300
+ },
+ {
+  "variant": "no_stage_a",
+  "step": "B +100 trees per stage @ 0.01",
+  "fit_s": 656,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8508,
+  "iou_img_ge_0.9": 0.518,
+  "err_px_mean": 53.5,
+  "err_px_median": 26.8,
+  "err_pct_img_mean": 4.001,
+  "err_pct_img_median": 2.332,
+  "objectness_recall": 0.9943,
+  "objectness_precision": 0.9393,
+  "false_alarm_rate_on_negatives": 0.4789,
+  "score": 0.8508
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.1716,
+  "trees": 400
+ },
+ {
+  "fit_cells_logloss_before": 0.202,
+  "after": 0.1428,
+  "trees": 400
+ },
+ {
+  "variant": "no_stage_a",
+  "step": "B +200 trees per stage @ 0.01",
+  "fit_s": 895,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8736,
+  "iou_img_ge_0.9": 0.6125,
+  "err_px_mean": 43.3,
+  "err_px_median": 22.0,
+  "err_pct_img_mean": 3.308,
+  "err_pct_img_median": 1.706,
+  "objectness_recall": 0.9943,
+  "objectness_precision": 0.9359,
+  "false_alarm_rate_on_negatives": 0.507,
+  "score": 0.8736
+ },
+ {
+  "variant": "no_stage_a",
+  "chosen": "B+200",
+  "val_score": 0.8736
+ },
+ {
+  "variant": "no_stage_a",
+  "total_seconds": 2172
+ }
+]

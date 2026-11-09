@@ -3,70 +3,123 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <title>Health Diary</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- ============ LOGIN / USER SELECT ============ -->
-  <section id="auth-screen" class="auth">
-    <div class="auth-card">
-      <h1>🩺 Health Diary</h1>
-      <p class="muted">Keep your past and current health records in one place.</p>
+  <a class="skip-link" href="#main-content">Skip to content</a>
 
-      <h3>Existing users</h3>
+  <!-- Icon sprite (inline, no external assets). Simple 24 px stroke icons. -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-logo" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12h4l2-3 3 6 2-3h5.5"/></symbol>
+      <symbol id="i-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+      <symbol id="i-vitals" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+      <symbol id="i-conditions" viewBox="0 0 24 24"><path d="M14 14.8V4.5a2.5 2.5 0 0 0-5 0v10.3a4.5 4.5 0 1 0 5 0z"/><path d="M11.5 9v8"/></symbol>
+      <symbol id="i-medications" viewBox="0 0 24 24"><rect x="2" y="8.5" width="20" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></symbol>
+      <symbol id="i-allergies" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+      <symbol id="i-visits" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></symbol>
+      <symbol id="i-documents" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+      <symbol id="i-voice" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/></symbol>
+      <symbol id="i-profile" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-switch" viewBox="0 0 24 24"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5l12 7.5-12 7.5z" fill="currentColor"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+      <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+      <symbol id="i-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- ============ USER SELECT ============ -->
+  <main id="auth-screen" class="auth">
+    <div class="auth-card">
+      <h1 class="auth-title"><svg class="icon logo" aria-hidden="true"><use href="#i-logo"></use></svg> Health Diary</h1>
+      <p class="muted">Keep your past and current health records in one place. Everything stays in this browser.</p>
+
+      <h2 class="h3">Existing users</h2>
       <ul id="user-list" class="user-list"></ul>
 
-      <h3>Create a new user</h3>
+      <h2 class="h3">Create a new user</h2>
       <form id="new-user-form" class="form">
-        <input name="name" placeholder="Full name" required />
+        <label>Full name<input name="name" autocomplete="name" required /></label>
         <div class="row">
-          <input name="dob" type="date" title="Date of birth" required />
-          <select name="gender">
-            <option value="">Gender</option>
-            <option>Female</option>
-            <option>Male</option>
-            <option>Other</option>
-          </select>
-          <select name="bloodGroup">
-            <option value="">Blood group</option>
-            <option>A+</option><option>A-</option>
-            <option>B+</option><option>B-</option>
-            <option>AB+</option><option>AB-</option>
-            <option>O+</option><option>O-</option>
-          </select>
+          <label>Date of birth<input name="dob" type="date" required /></label>
+          <label>Gender
+            <select name="gender">
+              <option value="">Not set</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Blood group
+            <select name="bloodGroup">
+              <option value="">Not set</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </label>
         </div>
         <button type="submit" class="btn primary">Create &amp; open diary</button>
       </form>
     </div>
-  </section>
+  </main>
 
   <!-- ============ MAIN APP ============ -->
   <div id="app" class="app hidden">
-    <aside class="sidebar">
-      <div class="brand">🩺 Health Diary</div>
+    <header class="topbar">
+      <span class="brand"><svg class="icon logo" aria-hidden="true"><use href="#i-logo"></use></svg> Health Diary</span>
+      <button type="button" id="menu-btn" class="btn icon-btn" aria-expanded="false" aria-controls="sidebar">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg><span>Menu</span>
+      </button>
+    </header>
+
+    <aside class="sidebar" id="sidebar" aria-label="Diary navigation">
+      <div class="brand side-brand"><svg class="icon logo" aria-hidden="true"><use href="#i-logo"></use></svg> Health Diary</div>
       <div class="user-chip">
-        <div class="avatar" id="user-avatar">?</div>
+        <div class="avatar" id="user-avatar" aria-hidden="true">?</div>
         <div>
           <div id="user-name" class="user-name"></div>
-          <div id="user-meta" class="muted small"></div>
+          <div id="user-meta" class="side-meta small"></div>
         </div>
       </div>
-      <nav>
-        <a href="#" data-view="dashboard" class="active">📊 Dashboard</a>
-        <a href="#" data-view="vitals">📏 Vitals (height, weight…)</a>
-        <a href="#" data-view="conditions">🦠 Diseases &amp; Conditions</a>
-        <a href="#" data-view="medications">💊 Medications</a>
-        <a href="#" data-view="allergies">⚠️ Allergies</a>
-        <a href="#" data-view="visits">🏥 Visits &amp; Reports</a>
-        <a href="#" data-view="profile">👤 Profile</a>
+      <nav aria-label="Sections">
+        <a href="#dashboard" data-view="dashboard"><svg class="icon" aria-hidden="true"><use href="#i-dashboard"></use></svg>Dashboard</a>
+        <a href="#vitals" data-view="vitals"><svg class="icon" aria-hidden="true"><use href="#i-vitals"></use></svg>Vitals</a>
+        <a href="#conditions" data-view="conditions"><svg class="icon" aria-hidden="true"><use href="#i-conditions"></use></svg>Diseases &amp; Conditions</a>
+        <a href="#medications" data-view="medications"><svg class="icon" aria-hidden="true"><use href="#i-medications"></use></svg>Medications</a>
+        <a href="#allergies" data-view="allergies"><svg class="icon" aria-hidden="true"><use href="#i-allergies"></use></svg>Allergies</a>
+        <a href="#visits" data-view="visits"><svg class="icon" aria-hidden="true"><use href="#i-visits"></use></svg>Visits &amp; Reports</a>
+        <a href="#documents" data-view="documents"><svg class="icon" aria-hidden="true"><use href="#i-documents"></use></svg>Documents</a>
+        <a href="#voice" data-view="voice"><svg class="icon" aria-hidden="true"><use href="#i-voice"></use></svg>Voice notes</a>
+        <a href="#profile" data-view="profile"><svg class="icon" aria-hidden="true"><use href="#i-profile"></use></svg>Profile</a>
       </nav>
-      <button id="logout-btn" class="btn ghost">Switch user</button>
+      <p class="side-storage small"><svg class="icon" aria-hidden="true"><use href="#i-disk"></use></svg><span class="js-storage-used">Files: ...</span></p>
+      <button type="button" id="logout-btn" class="btn ghost"><svg class="icon" aria-hidden="true"><use href="#i-switch"></use></svg>Switch user</button>
     </aside>
 
-    <main class="content">
+    <main class="content" id="main-content" tabindex="-1">
       <!-- DASHBOARD: current snapshot -->
-      <section data-section="dashboard" class="view">
-        <h2>Current health snapshot</h2>
+      <section data-section="dashboard" class="view" aria-labelledby="h-dashboard">
+        <div class="view-head">
+          <h2 id="h-dashboard" tabindex="-1">Current health snapshot</h2>
+        </div>
         <div class="cards" id="current-cards"></div>
 
         <div class="grid-2">
@@ -80,35 +133,45 @@
           </div>
         </div>
 
-        <div class="panel">
-          <h3>Recent activity (past records)</h3>
-          <ul id="timeline" class="timeline"></ul>
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Latest documents</h3>
+              <a href="#documents" class="btn small">All documents</a>
+            </div>
+            <ul id="dash-documents" class="doc-mini-list"></ul>
+          </div>
+          <div class="panel">
+            <h3>Recent activity (past records)</h3>
+            <ul id="timeline" class="timeline"></ul>
+          </div>
         </div>
       </section>
 
       <!-- VITALS -->
-      <section data-section="vitals" class="view hidden">
-        <h2>Vitals</h2>
+      <section data-section="vitals" class="view hidden" aria-labelledby="h-vitals">
+        <div class="view-head"><h2 id="h-vitals" tabindex="-1">Vitals</h2>
+          <p class="muted">Height, weight, blood pressure, heart rate and blood sugar. BMI is worked out for you.</p></div>
         <form class="form panel" data-form="vitals">
           <div class="row">
             <label>Date<input name="date" type="date" required /></label>
-            <label>Height (cm)<input name="height" type="number" step="0.1" /></label>
-            <label>Weight (kg)<input name="weight" type="number" step="0.1" /></label>
+            <label>Height (cm)<input name="height" type="number" step="0.1" min="20" max="280" inputmode="decimal" /></label>
+            <label>Weight (kg)<input name="weight" type="number" step="0.1" min="1" max="500" inputmode="decimal" /></label>
           </div>
           <div class="row">
-            <label>Blood pressure<input name="bp" placeholder="120/80" /></label>
-            <label>Heart rate (bpm)<input name="heartRate" type="number" /></label>
-            <label>Blood sugar (mg/dL)<input name="sugar" type="number" /></label>
+            <label>Blood pressure (mmHg)<input name="bp" placeholder="120/80" pattern="\d{2,3}\s*/\s*\d{2,3}" title="Systolic/diastolic, for example 120/80" /></label>
+            <label>Heart rate (bpm)<input name="heartRate" type="number" min="20" max="250" inputmode="numeric" /></label>
+            <label>Blood sugar (mg/dL)<input name="sugar" type="number" min="10" max="1000" inputmode="numeric" /></label>
           </div>
           <label>Notes<input name="notes" /></label>
-          <button class="btn primary">Add entry</button>
+          <button class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Add entry</button>
         </form>
-        <div class="panel"><table class="table" data-table="vitals"></table></div>
+        <div class="panel table-panel"><table class="table" data-table="vitals"></table></div>
       </section>
 
       <!-- CONDITIONS -->
-      <section data-section="conditions" class="view hidden">
-        <h2>Diseases &amp; Conditions</h2>
+      <section data-section="conditions" class="view hidden" aria-labelledby="h-conditions">
+        <div class="view-head"><h2 id="h-conditions" tabindex="-1">Diseases &amp; Conditions</h2></div>
         <form class="form panel" data-form="conditions">
           <div class="row">
             <label>Name<input name="name" required placeholder="e.g. Asthma" /></label>
@@ -122,14 +185,15 @@
             </label>
           </div>
           <label>Notes<input name="notes" /></label>
-          <button class="btn primary">Add condition</button>
+          <button class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Add condition</button>
         </form>
-        <div class="panel"><table class="table" data-table="conditions"></table></div>
+        <div class="panel table-panel"><table class="table" data-table="conditions"></table></div>
       </section>
 
       <!-- MEDICATIONS -->
-      <section data-section="medications" class="view hidden">
-        <h2>Medications</h2>
+      <section data-section="medications" class="view hidden" aria-labelledby="h-medications">
+        <div class="view-head"><h2 id="h-medications" tabindex="-1">Medications</h2>
+          <p class="muted">A medication with no end date, or an end date that has not passed, counts as current.</p></div>
         <form class="form panel" data-form="medications">
           <div class="row">
             <label>Medicine<input name="name" required /></label>
@@ -137,17 +201,17 @@
           </div>
           <div class="row">
             <label>Start date<input name="start" type="date" /></label>
-            <label>End date<input name="end" type="date" title="Leave empty if still taking" /></label>
+            <label>End date (empty if still taking)<input name="end" type="date" /></label>
           </div>
           <label>Prescribed for<input name="reason" /></label>
-          <button class="btn primary">Add medication</button>
+          <button class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Add medication</button>
         </form>
-        <div class="panel"><table class="table" data-table="medications"></table></div>
+        <div class="panel table-panel"><table class="table" data-table="medications"></table></div>
       </section>
 
       <!-- ALLERGIES -->
-      <section data-section="allergies" class="view hidden">
-        <h2>Allergies</h2>
+      <section data-section="allergies" class="view hidden" aria-labelledby="h-allergies">
+        <div class="view-head"><h2 id="h-allergies" tabindex="-1">Allergies</h2></div>
         <form class="form panel" data-form="allergies">
           <div class="row">
             <label>Allergen<input name="name" required placeholder="e.g. Peanuts" /></label>
@@ -160,14 +224,14 @@
             </label>
           </div>
           <label>Reaction<input name="reaction" /></label>
-          <button class="btn primary">Add allergy</button>
+          <button class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Add allergy</button>
         </form>
-        <div class="panel"><table class="table" data-table="allergies"></table></div>
+        <div class="panel table-panel"><table class="table" data-table="allergies"></table></div>
       </section>
 
       <!-- VISITS -->
-      <section data-section="visits" class="view hidden">
-        <h2>Doctor visits &amp; Reports</h2>
+      <section data-section="visits" class="view hidden" aria-labelledby="h-visits">
+        <div class="view-head"><h2 id="h-visits" tabindex="-1">Doctor visits &amp; Reports</h2></div>
         <form class="form panel" data-form="visits">
           <div class="row">
             <label>Date<input name="date" type="date" required /></label>
@@ -183,32 +247,181 @@
             <label>Doctor / Hospital<input name="doctor" /></label>
           </div>
           <label>Summary / findings<textarea name="notes" rows="3"></textarea></label>
-          <button class="btn primary">Add record</button>
+          <button class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Add record</button>
         </form>
-        <div class="panel"><table class="table" data-table="visits"></table></div>
+        <div class="panel table-panel"><table class="table" data-table="visits"></table></div>
+      </section>
+
+      <!-- DOCUMENTS -->
+      <section data-section="documents" class="view hidden" aria-labelledby="h-documents">
+        <div class="view-head">
+          <h2 id="h-documents" tabindex="-1">Documents</h2>
+          <p class="muted">Prescriptions, lab reports, certificates and other papers. Files are kept only in this browser.</p>
+          <div class="row-actions">
+            <button type="button" id="doc-add-btn" class="btn primary" aria-expanded="false" aria-controls="doc-upload">
+              <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>Add a document</button>
+            <button type="button" id="doc-scan-btn" class="btn" aria-expanded="false" aria-controls="doc-scan">
+              <svg class="icon" aria-hidden="true"><use href="#i-scan"></use></svg>Scan a paper document</button>
+          </div>
+        </div>
+
+        <form id="doc-upload" class="form panel" hidden novalidate aria-labelledby="doc-upload-h">
+          <h3 id="doc-upload-h" tabindex="-1">Add a document</h3>
+          <label>File (PDF, PNG, JPEG or WebP, up to 20 MB)
+            <input type="file" id="doc-file" name="file" accept="application/pdf,image/png,image/jpeg,image/webp" /></label>
+          <div class="doc-fields" data-fields="upload"></div>
+          <p class="form-status" id="doc-upload-status" role="status"></p>
+          <div class="row-actions">
+            <button type="submit" class="btn primary" id="doc-upload-save">Save document</button>
+            <button type="button" class="btn" id="doc-upload-cancel">Cancel</button>
+          </div>
+        </form>
+
+        <section id="doc-scan" class="panel scan" hidden aria-labelledby="scan-h">
+          <h3 id="scan-h" tabindex="-1">Scan a paper document</h3>
+          <p class="muted small">Lay the page on a darker surface, let it fill most of the photo, and avoid strong shadows. The photo is processed by the local server on this computer.</p>
+          <p id="scan-avail" class="notice" role="status"></p>
+          <div id="scan-body" hidden>
+            <div class="row-actions">
+              <label class="btn primary file-btn"><svg class="icon" aria-hidden="true"><use href="#i-camera"></use></svg>Take a photo
+                <input type="file" id="scan-camera" accept="image/*" capture="environment" /></label>
+              <label class="btn file-btn"><svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>Choose a photo
+                <input type="file" id="scan-file" accept="image/jpeg,image/png,image/webp" /></label>
+            </div>
+            <fieldset class="segmented" id="scan-mode-set">
+              <legend>Output</legend>
+              <label><input type="radio" name="scan-mode" value="color" /><span>Colour</span></label>
+              <label><input type="radio" name="scan-mode" value="gray" checked /><span>Grey</span></label>
+              <label><input type="radio" name="scan-mode" value="bw" /><span>Black &amp; white</span></label>
+            </fieldset>
+            <p id="scan-status" class="form-status" role="status"></p>
+            <div id="scan-result" class="scan-grid" hidden>
+              <figure>
+                <div class="scan-photo-wrap">
+                  <img id="scan-photo" alt="Your photo" />
+                  <svg id="scan-outline" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points="" /></svg>
+                </div>
+                <figcaption id="scan-photo-cap">Your photo with the detected page outlined.</figcaption>
+              </figure>
+              <figure>
+                <img id="scan-page" class="scan-page" alt="The corrected page" />
+                <figcaption id="scan-meta"></figcaption>
+              </figure>
+            </div>
+            <form id="scan-save" class="form" hidden novalidate aria-label="Save the scanned page">
+              <div class="doc-fields" data-fields="scan"></div>
+              <div class="row-actions">
+                <button type="submit" class="btn primary" id="scan-save-btn">Save as document</button>
+                <button type="button" class="btn" id="scan-discard">Discard scan</button>
+              </div>
+            </form>
+          </div>
+          <div class="row-actions end"><button type="button" class="btn" id="scan-close">Close scanner</button></div>
+        </section>
+
+        <div class="toolbar panel" role="search" aria-label="Find documents">
+          <label class="search"><span class="visually-hidden">Search documents</span>
+            <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+            <input type="search" id="doc-q" placeholder="Search title, tags, notes" /></label>
+          <label class="inline-label">Category
+            <select id="doc-cat"><option value="">All categories</option></select></label>
+          <p class="muted small toolbar-count" id="doc-count" role="status"></p>
+        </div>
+        <div id="doc-list" class="doc-grid"></div>
+      </section>
+
+      <!-- VOICE NOTES -->
+      <section data-section="voice" class="view hidden" aria-labelledby="h-voice">
+        <div class="view-head">
+          <h2 id="h-voice" tabindex="-1">Voice notes</h2>
+          <p class="muted">Record a short note about a visit or a symptom. Audio stays in this browser.</p>
+        </div>
+        <div class="panel recorder" id="recorder">
+          <div class="form">
+            <div class="row">
+              <label>Title<input id="rec-title" maxlength="200" placeholder="e.g. Questions for the next visit" /></label>
+              <label>Attach to document<select id="rec-doc"><option value="">No document</option></select></label>
+            </div>
+          </div>
+          <div class="rec-controls">
+            <button type="button" id="rec-start" class="btn primary"><svg class="icon" aria-hidden="true"><use href="#i-record"></use></svg>Record</button>
+            <button type="button" id="rec-stop" class="btn" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"></use></svg>Stop</button>
+            <span class="rec-timer" id="rec-timer" role="timer" aria-label="Recording time">0:00</span>
+            <span class="rec-dot" aria-hidden="true"></span>
+          </div>
+          <p id="rec-status" class="form-status" role="status"></p>
+          <div id="rec-preview" hidden>
+            <audio id="rec-audio" controls></audio>
+            <div class="row-actions">
+              <button type="button" id="rec-save" class="btn primary">Save voice note</button>
+              <button type="button" id="rec-discard" class="btn">Discard</button>
+            </div>
+          </div>
+          <div class="upload-alt form">
+            <h3 class="h4">Or upload an audio file</h3>
+            <div class="row-actions">
+              <label class="grow">Audio file (WebM, Ogg, M4A, WAV or MP3, up to 20 MB)
+                <input type="file" id="rec-file" accept="audio/*,.m4a,.webm,.ogg,.wav,.mp3" /></label>
+              <button type="button" id="rec-file-save" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>Save audio file</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted small" id="voice-count" role="status"></p>
+        <ul id="voice-list" class="voice-list"></ul>
       </section>
 
       <!-- PROFILE -->
-      <section data-section="profile" class="view hidden">
-        <h2>Profile</h2>
+      <section data-section="profile" class="view hidden" aria-labelledby="h-profile">
+        <div class="view-head"><h2 id="h-profile" tabindex="-1">Profile</h2></div>
         <form id="profile-form" class="form panel">
-          <label>Full name<input name="name" required /></label>
+          <label>Full name<input name="name" autocomplete="name" required /></label>
           <div class="row">
             <label>Date of birth<input name="dob" type="date" /></label>
             <label>Gender<input name="gender" /></label>
             <label>Blood group<input name="bloodGroup" /></label>
           </div>
           <label>Emergency contact<input name="emergency" placeholder="Name, phone" /></label>
-          <div class="row">
+          <div class="row-actions">
             <button class="btn primary">Save profile</button>
-            <button type="button" id="delete-user" class="btn danger">Delete this user</button>
           </div>
         </form>
+        <div class="panel">
+          <h3>Storage</h3>
+          <dl class="facts" id="storage-facts"></dl>
+          <p class="muted small">Documents and voice notes are stored in this browser (IndexedDB). Clearing the browser's site data removes them.</p>
+        </div>
+        <div class="panel danger-zone">
+          <h3>Delete this user</h3>
+          <p class="muted small">Removes the profile and every record, document and voice note of this user from this browser.</p>
+          <button type="button" id="delete-user" class="btn danger"><svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>Delete this user</button>
+        </div>
       </section>
     </main>
   </div>
 
+  <dialog id="viewer" class="viewer" aria-labelledby="viewer-title">
+    <div class="viewer-head">
+      <div>
+        <h2 id="viewer-title" class="h3"></h2>
+        <p id="viewer-meta" class="muted small"></p>
+      </div>
+      <div class="row-actions">
+        <a id="viewer-open" class="btn small" target="_blank" rel="noopener">Open in new tab</a>
+        <button type="button" id="viewer-download" class="btn small"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>Download</button>
+        <button type="button" id="viewer-close" class="btn small"><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>Close</button>
+      </div>
+    </div>
+    <div id="viewer-body" class="viewer-body"></div>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
   <script src="js/storage.js"></script>
+  <script src="js/files-db.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/documents.js"></script>
+  <script src="js/scan.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

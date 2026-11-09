@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.DS_Store
+# large datasets are downloaded during setup and never committed
+data/raw/
+node_modules/

@@ -1,0 +1,8 @@
+# Only needed for the local server and the document scanner. The app itself is plain HTML/CSS/JS.
+numpy==2.5.4
+scipy==1.18.1
+scikit-learn==1.9.1
+joblib==1.6.0
+flask==3.1.3
+pillow==12.3.0
+pytest==9.2.0

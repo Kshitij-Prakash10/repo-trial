@@ -1,0 +1,189 @@
+[
+ {
+  "variant": "full",
+  "real_photos": 6000,
+  "real_cells": 3600000,
+  "sim_cells": 1542960,
+  "real_fraction": 0.7,
+  "feature_seconds": 54.0
+ },
+ {
+  "variant": "full",
+  "step": "start (synthetic model)",
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8269,
+  "iou_img_ge_0.9": 0.4575,
+  "err_px_mean": 63.9,
+  "err_px_median": 35.2,
+  "err_pct_img_mean": 4.605,
+  "err_pct_img_median": 3.024,
+  "objectness_recall": 0.9887,
+  "objectness_precision": 0.8971,
+  "false_alarm_rate_on_negatives": 0.8451,
+  "score": 0.8269
+ },
+ {
+  "fit_cells_logloss_before": 0.345,
+  "after": 0.2725,
+  "trees": 225
+ },
+ {
+  "variant": "full",
+  "step": "A +25 stage-2 trees @ 0.1",
+  "fit_s": 147,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8516,
+  "iou_img_ge_0.9": 0.5577,
+  "err_px_mean": 50.1,
+  "err_px_median": 26.8,
+  "err_pct_img_mean": 3.898,
+  "err_pct_img_median": 1.984,
+  "objectness_recall": 0.9943,
+  "objectness_precision": 0.9443,
+  "false_alarm_rate_on_negatives": 0.4366,
+  "score": 0.8516
+ },
+ {
+  "fit_cells_logloss_before": 0.2725,
+  "after": 0.2474,
+  "trees": 250
+ },
+ {
+  "variant": "full",
+  "step": "A +50 stage-2 trees @ 0.1",
+  "fit_s": 148,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8721,
+  "iou_img_ge_0.9": 0.6068,
+  "err_px_mean": 42.9,
+  "err_px_median": 20.0,
+  "err_pct_img_mean": 3.359,
+  "err_pct_img_median": 1.753,
+  "objectness_recall": 0.9887,
+  "objectness_precision": 0.944,
+  "false_alarm_rate_on_negatives": 0.4366,
+  "score": 0.8721
+ },
+ {
+  "fit_cells_logloss_before": 0.2474,
+  "after": 0.2283,
+  "trees": 300
+ },
+ {
+  "variant": "full",
+  "step": "A +100 stage-2 trees @ 0.1",
+  "fit_s": 157,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8838,
+  "iou_img_ge_0.9": 0.6541,
+  "err_px_mean": 37.7,
+  "err_px_median": 16.0,
+  "err_pct_img_mean": 3.015,
+  "err_pct_img_median": 1.343,
+  "objectness_recall": 0.9868,
+  "objectness_precision": 0.9526,
+  "false_alarm_rate_on_negatives": 0.3662,
+  "score": 0.8838
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.2247,
+  "trees": 250
+ },
+ {
+  "fit_cells_logloss_before": 0.2166,
+  "after": 0.1951,
+  "trees": 350
+ },
+ {
+  "variant": "full",
+  "step": "B +50 trees per stage @ 0.01",
+  "fit_s": 544,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8837,
+  "iou_img_ge_0.9": 0.6692,
+  "err_px_mean": 38.1,
+  "err_px_median": 15.3,
+  "err_pct_img_mean": 3.059,
+  "err_pct_img_median": 1.234,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9511,
+  "false_alarm_rate_on_negatives": 0.3803,
+  "score": 0.8837
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.1964,
+  "trees": 300
+ },
+ {
+  "fit_cells_logloss_before": 0.1997,
+  "after": 0.169,
+  "trees": 400
+ },
+ {
+  "variant": "full",
+  "step": "B +100 trees per stage @ 0.01",
+  "fit_s": 701,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8823,
+  "iou_img_ge_0.9": 0.656,
+  "err_px_mean": 38.0,
+  "err_px_median": 14.9,
+  "err_pct_img_mean": 3.025,
+  "err_pct_img_median": 1.242,
+  "objectness_recall": 0.9924,
+  "objectness_precision": 0.9545,
+  "false_alarm_rate_on_negatives": 0.3521,
+  "score": 0.8823
+ },
+ {
+  "fit_cells_logloss_before": 0.3181,
+  "after": 0.1716,
+  "trees": 400
+ },
+ {
+  "fit_cells_logloss_before": 0.1893,
+  "after": 0.1503,
+  "trees": 500
+ },
+ {
+  "variant": "full",
+  "step": "B +200 trees per stage @ 0.01",
+  "fit_s": 874,
+  "n": 600,
+  "n_pos": 529,
+  "n_neg": 71,
+  "iou_img_mean": 0.8847,
+  "iou_img_ge_0.9": 0.6597,
+  "err_px_mean": 38.2,
+  "err_px_median": 16.0,
+  "err_pct_img_mean": 3.049,
+  "err_pct_img_median": 1.352,
+  "objectness_recall": 0.9868,
+  "objectness_precision": 0.9508,
+  "false_alarm_rate_on_negatives": 0.3803,
+  "score": 0.8847
+ },
+ {
+  "variant": "full",
+  "chosen": "A+100 then B+200",
+  "val_score": 0.8847
+ },
+ {
+  "variant": "full",
+  "total_seconds": 2931
+ }
+]
