@@ -1,0 +1,5 @@
+split,available_after_exclusion,used,negatives
+train,32330,6000,720
+val,8466,1000,120
+test,6577,2000,239
+smartdoc_ch1_test,24889,2555,0

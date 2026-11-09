@@ -6,3 +6,4 @@ __pycache__/
 # large datasets are downloaded during setup and never committed
 data/raw/
 node_modules/
+models/finetune/
