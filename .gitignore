@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 # large datasets are downloaded during setup and never committed
 data/raw/
+node_modules/

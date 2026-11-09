@@ -18,29 +18,63 @@ A basic web app that works as a personal health diary. Each user keeps their
 - **Visits & Reports**: doctor visits, lab tests, vaccinations, surgeries.
 - **Profile**: name, date of birth (age is worked out from it), gender, blood
   group, emergency contact.
+- **Documents**: store prescriptions, lab reports, medical certificates,
+  discharge summaries, insurance papers and other files (PDF, PNG, JPEG, WebP;
+  up to 20 MB) per user, with title, category, date, tags, notes and an
+  optional link to a visit or condition. Search, filter, view, download, edit,
+  delete. The latest documents show on the Dashboard.
+- **Scan a paper document**: take or choose a photo; the local scanner finds the
+  page with a trained machine-learning model, straightens it and cleans it up
+  (colour, grey or black-and-white); save it as a document. See `docs/scanner.md`.
+- **Voice notes**: record in the browser (or upload an audio file), attach to a
+  document, play, rename, delete.
+- Storage used per user is shown in the sidebar and on the Profile page.
+  Deleting a user deletes their documents and voice notes. Light and dark
+  theme; works down to 360 px wide.
 
 ## Running
 
-No build step. Open `index.html` in a browser, or serve the folder:
-
 ```bash
-python3 -m http.server 8000
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+python server.py            # http://127.0.0.1:8000  (HOST and PORT env vars to change)
 ```
 
-Then visit http://localhost:8000.
+Opening `index.html` directly also works; only scanning needs the server.
+Recording audio needs http://127.0.0.1, http://localhost or https.
+Everything stays in the browser (localStorage for records, IndexedDB for
+files); nothing needs the internet at run time.
+
+## Tests
+
+```bash
+python -m pytest -q                     # server and scanner tests
+npm install playwright && npx playwright install chromium   # once
+node tests/ui/check.js                  # UI flows in headless Chromium (starts server.py)
+```
 
 ## Project structure
 
 ```
-index.html        Page layout: user selection screen + app (sidebar + views)
-css/styles.css    Styling and responsive layout
-js/storage.js     Data layer (localStorage, one record per user)
-js/app.js         Rendering and event handling
+index.html          Page layout: user selection screen + app (sidebar + views)
+css/styles.css      Styling, responsive layout, light and dark theme
+js/storage.js       Health records (localStorage, one record per user)
+js/files-db.js      Documents and voice notes (IndexedDB; the only file that touches it)
+js/ui.js            Shared UI helpers (formatting, icons, toasts, file viewer)
+js/app.js           Rendering and event handling
+js/documents.js     Document library
+js/scan.js          Paper document scan flow (talks to /api/scan)
+js/voice.js         Voice notes (MediaRecorder)
+server.py           Local Flask server: the static app + the scanner API
+scanner/            ML document scanner (training, inference, API); docs/scanner.md
+data/synthetic/     The synthetic photos the scanner is trained and tested on
+models/             Trained scanner model and its held-out metrics
+tests/              pytest tests and the Playwright UI check
 ```
 
 ## Notes
 
-- Data is stored in the browser's `localStorage`, so it stays on that one
-  device and browser. There is no password protection yet.
+- Data is stored in the browser (`localStorage` and IndexedDB), so it stays on
+  that one device and browser. There is no password protection yet.
 - `js/storage.js` is the only file that touches storage. You can replace it
   with calls to a backend API (plus real login) without changing the UI.
