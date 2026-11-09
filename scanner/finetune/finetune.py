@@ -99,16 +99,46 @@ def stack(rows: list, model: dict | None = None) -> tuple[np.ndarray, np.ndarray
     return X1, y, np.hstack([X1, np.concatenate(ctx)])
 
 
-def grow(clf, X: np.ndarray, y: np.ndarray, total_iter: int, lr: float):
-    """Warm-start: add trees until the classifier has total_iter of them, new ones at learning rate lr."""
+def grow(clf, X: np.ndarray, y: np.ndarray, total_iter: int, lr: float, log: list | None = None):
+    """Warm-start: add trees until the classifier has total_iter of them, new ones at learning rate lr.
+
+    scikit-learn's warm start re-fits the feature bins on the new data and then replays the existing trees
+    on the re-binned data, which misreads every existing tree when the data changes (fine-tuning). The
+    original bins are therefore kept fixed for the duration of the fit: new data is binned with the bins the
+    synthetic model was trained with, so old and new trees agree."""
+    mapper = clf._bin_mapper
+
+    def frozen_bins(X_, sample_weight, is_training_data):
+        clf._bin_mapper = mapper  # fit() has just replaced it with a new, unfitted mapper
+        out = mapper.transform(X_)
+        return out if is_training_data else np.ascontiguousarray(out)
+
+    before = float(np.mean(_logloss(y, clf.predict_proba(X)[:, 1])))
     clf.set_params(warm_start=True, max_iter=total_iter, learning_rate=lr)
-    return clf.fit(X, y)
+    clf._bin_data = frozen_bins
+    try:
+        clf.fit(X, y)
+    finally:
+        del clf._bin_data
+        clf._bin_mapper = mapper
+    after = float(np.mean(_logloss(y, clf.predict_proba(X)[:, 1])))
+    if log is not None:
+        log.append({"fit_cells_logloss_before": round(before, 4), "after": round(after, 4), "trees": clf.n_iter_})
+    if after > before + 1e-3:
+        raise RuntimeError(f"fine-tuning raised the training loss ({before:.4f} -> {after:.4f})")
+    return clf
+
+
+def _logloss(y: np.ndarray, p: np.ndarray) -> np.ndarray:
+    p = np.clip(p, 1e-7, 1 - 1e-7)
+    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
 
 
 def val_score(model: dict, val_items: list[dict]) -> dict:
-    """Selection score on DocCorner val: mean IoU on positives minus the false-alarm rate on negatives."""
+    """Selection score on DocCorner val: mean quad IoU on photos with a document (localisation only; the
+    false-alarm rate on photos without one is reported, not traded against localisation)."""
     s = ev.summarise(ev.run(model, val_items))
-    s["score"] = round(s["iou_img_mean"] - (s["false_alarm_rate_on_negatives"] or 0.0), 4)
+    s["score"] = s["iou_img_mean"]
     return s
 
 
@@ -138,7 +168,7 @@ def finetune(variant: str, data_home: str, log: list) -> dict:
         X1, y, X2 = stack(rows, model)
         for k in STEPS_A:
             t = time.time()
-            grow(model["stage2"], X2, y, n2 + k, LR_A)
+            grow(model["stage2"], X2, y, n2 + k, LR_A, log)
             s = val_score(model, val_items)
             log.append({"variant": variant, "step": f"A +{k} stage-2 trees @ {LR_A}", "fit_s": round(time.time() - t), **s})
             if s["score"] > best[0]:
@@ -151,9 +181,9 @@ def finetune(variant: str, data_home: str, log: list) -> dict:
     for k in STEPS_B:
         t = time.time()
         m = copy.deepcopy(model)
-        grow(m["stage1"], X1, y, n1 + k, LR_B)
+        grow(m["stage1"], X1, y, n1 + k, LR_B, log)
         _, _, X2 = stack(rows, m)
-        grow(m["stage2"], X2, y, n2 + k, LR_B)
+        grow(m["stage2"], X2, y, n2 + k, LR_B, log)
         s = val_score(m, val_items)
         log.append({"variant": variant, "step": f"B +{k} trees per stage @ {LR_B}", "fit_s": round(time.time() - t), **s})
         if s["score"] > best[0]:
