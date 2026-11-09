@@ -1,6 +1,7 @@
 """HTTP API of the document scanner (contract: docs/PLAN.md). Agent A registers `scan_bp` in server.py.
 
-POST /api/scan        multipart: image (JPEG, PNG or WebP, at most 10 MB), mode (color | gray | bw)
+POST /api/scan        multipart: image (JPEG, PNG or WebP, at most 10 MB), mode (color | gray | bw),
+                      optional corners (JSON [[x, y] * 4], uploaded-image px after EXIF rotation: skip detection)
 GET  /api/scan/status {"available", "model_version", "metrics"}
 """
 from __future__ import annotations
@@ -8,6 +9,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import math
 import os
 import time
 import warnings
@@ -15,6 +17,10 @@ import warnings
 from flask import Blueprint, jsonify, request
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+import numpy as np
+
+from scanner import enhance as enh
+from scanner import geometry as geo
 from scanner import infer
 
 scan_bp = Blueprint("scan", __name__)
@@ -24,6 +30,35 @@ MAX_PIXELS = 50_000_000  # decoded size limit, pixels (decompression-bomb guard)
 WORK_SIDE = 2400  # px, the long side the photo is reduced to before scanning
 FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO: JPEG variant some phones write
 MODES = ("color", "gray", "bw")
+CORNER_MARGIN = 0.10  # manual corners may lie this fraction of the image size outside it
+
+
+def _parse_corners(text: str):
+    """Manual corners from the form field: 4 finite [x, y] points (px), or an error message (str)."""
+    try:
+        pts = json.loads(text)
+    except ValueError:
+        return "corners must be JSON: an array of 4 [x, y] points"
+    if not isinstance(pts, list) or len(pts) != 4:
+        return "corners must be an array of exactly 4 [x, y] points"
+    out = []
+    for p in pts:
+        if (not isinstance(p, list) or len(p) != 2
+                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in p)
+                or not all(math.isfinite(v) for v in p)):
+            return "each corner must be an [x, y] pair of finite numbers"
+        out.append([float(p[0]), float(p[1])])
+    return np.array(out, float)
+
+
+def _check_corners(q: np.ndarray, w: int, h: int):
+    """None when q (px) lies within the w x h image +/- CORNER_MARGIN and is a convex quad, else a message."""
+    mx, my = CORNER_MARGIN * w, CORNER_MARGIN * h
+    if (q[:, 0] < -mx).any() or (q[:, 0] > w + mx).any() or (q[:, 1] < -my).any() or (q[:, 1] > h + my).any():
+        return f"corners must lie within the image ({w} x {h} px) or at most 10 % outside it"
+    if not geo.is_convex(q):
+        return "corners must form a convex four-sided shape"
+    return None
 
 
 def _err(msg: str, code: int):
@@ -64,6 +99,12 @@ def scan_route():
     mode = (request.form.get("mode") or "gray").strip().lower()
     if mode not in MODES:
         return _err(f"mode must be one of {', '.join(MODES)}", 400)
+    manual = None
+    corners_text = (request.form.get("corners") or "").strip()
+    if corners_text:
+        manual = _parse_corners(corners_text)
+        if isinstance(manual, str):
+            return _err(manual, 400)
     size = _file_size(f)
     if size > MAX_BYTES:
         return _err("file is larger than 10 MB", 413)
@@ -95,7 +136,21 @@ def scan_route():
     if max(im.size) > WORK_SIDE:
         im.thumbnail((WORK_SIDE, WORK_SIDE), Image.BOX)
     sx, sy = ow / im.size[0], oh / im.size[1]
-    res = infer.scan(im, mode)
+    if manual is not None:
+        problem = _check_corners(manual, ow, oh)
+        if problem:
+            return _err(problem, 400)
+        q = geo.order_corners(manual)  # TL, TR, BR, BL whatever order the client sent
+        try:
+            page = enh.enhance(geo.warp(im, q / np.array([sx, sy])), mode)
+        except Exception:  # numerically degenerate quad
+            return _err("corners do not give a usable page outline", 400)
+        model = infer.load_model()
+        res = {"page_found": True, "corners": q.tolist(), "confidence": None, "image": page,
+               "model_version": model.get("model_version", "unknown") if model else "none", "method": "manual"}
+        sx = sy = 1.0  # corners are already in uploaded-image px
+    else:
+        res = infer.scan(im, mode)
     corners = [[round(x * sx, 1), round(y * sy, 1)] for x, y in res["corners"]]
     buf = io.BytesIO()
     res["image"].save(buf, "PNG", compress_level=6 if mode == "bw" else 1)  # level 1: fast for photos
@@ -103,7 +158,7 @@ def scan_route():
     return jsonify({
         "page_found": bool(res["page_found"]), "corners": corners,
         "corners_norm": [[round(x / ow, 4), round(y / oh, 4)] for x, y in corners],
-        "confidence": float(res["confidence"]), "method": res["method"],
+        "confidence": None if res["confidence"] is None else float(res["confidence"]), "method": res["method"],
         "width": out.size[0], "height": out.size[1],
         "image_png_b64": base64.b64encode(buf.getvalue()).decode("ascii"),
         "model_version": res["model_version"],

@@ -47,7 +47,14 @@ def scan(image: "PIL.Image.Image", mode: str = "gray") -> dict:
   `mode` (`color` | `gray` | `bw`, default `gray`).
   - 200: `{"page_found", "corners", "corners_norm" (0..1), "confidence", "method", "width", "height",
     "image_png_b64" (no data: prefix), "model_version", "elapsed_ms"}`
-  - 400 `{"error"}`: missing field, not an image, bad mode. 413 `{"error"}`: over 10 MB.
+  - Optional field `corners`: page corners chosen by the user, as JSON: an array of 4 `[x, y]` points in
+    the pixels of the uploaded image after EXIF rotation, in outline order (TL, TR, BR, BL; either
+    direction is accepted). When it is given, page detection is skipped and the photo is warped and
+    enhanced with these corners. The response has the same shape, with `method` `"manual"`, `page_found`
+    `true`, `confidence` `null`, and `corners` / `corners_norm` ordered TL, TR, BR, BL. It must be exactly
+    4 finite points, each within the image +/- 10 % of its width and height, forming a convex quad;
+    otherwise 400 `{"error"}`. An empty field means "detect as usual".
+  - 400 `{"error"}`: missing field, not an image, bad mode, bad corners. 413 `{"error"}`: over 10 MB.
 - `GET /api/scan/status`: `{"available": bool, "model_version": str | null, "metrics": dict | null}`
 
 `server.py` registers it so the server still starts if the scanner is missing:
@@ -69,7 +76,8 @@ except Exception:
 2. **Voice notes** (new sidebar section): record with MediaRecorder (timer, stop, preview, save or discard),
    title, optional link to a document; list, play, rename, delete. Clear messages when the microphone is
    missing, permission is denied, or the page is not a secure context; offer an audio-file upload instead.
-3. **Scan a paper document** (in Documents): take a photo (`accept="image/*" capture="environment"`) or
+3. **Scan a paper document** (its own view, `#scan`, opened from the sidebar, the Dashboard and Documents;
+   steps Photo, Check, Save; the corners can be adjusted by hand and are then sent as `corners`): take a photo (`accept="image/*" capture="environment"`) or
    choose one, POST to `/api/scan`, show the detected outline (corners_norm) over the photo and the
    corrected page, switch color / gray / black-and-white, save as a PNG document. Use
    `/api/scan/status` to show when the scanner is not available.
