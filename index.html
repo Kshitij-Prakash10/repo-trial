@@ -107,6 +107,7 @@
         <a href="#allergies" data-view="allergies"><svg class="icon" aria-hidden="true"><use href="#i-allergies"></use></svg>Allergies</a>
         <a href="#visits" data-view="visits"><svg class="icon" aria-hidden="true"><use href="#i-visits"></use></svg>Visits &amp; Reports</a>
         <a href="#documents" data-view="documents"><svg class="icon" aria-hidden="true"><use href="#i-documents"></use></svg>Documents</a>
+        <a href="#scan" data-view="scan"><svg class="icon" aria-hidden="true"><use href="#i-scan"></use></svg>Scan</a>
         <a href="#voice" data-view="voice"><svg class="icon" aria-hidden="true"><use href="#i-voice"></use></svg>Voice notes</a>
         <a href="#profile" data-view="profile"><svg class="icon" aria-hidden="true"><use href="#i-profile"></use></svg>Profile</a>
       </nav>
@@ -120,6 +121,11 @@
         <div class="view-head">
           <h2 id="h-dashboard" tabindex="-1">Current health snapshot</h2>
         </div>
+        <a href="#scan" class="quick-action" id="dash-scan">
+          <span class="quick-icon" aria-hidden="true"><svg class="icon"><use href="#i-scan"></use></svg></span>
+          <span class="quick-text"><strong>Scan a document</strong>
+            <span class="muted small">Photograph a prescription or report; it is straightened and saved to Documents.</span></span>
+        </a>
         <div class="cards" id="current-cards"></div>
 
         <div class="grid-2">
@@ -260,8 +266,8 @@
           <div class="row-actions">
             <button type="button" id="doc-add-btn" class="btn primary" aria-expanded="false" aria-controls="doc-upload">
               <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>Add a document</button>
-            <button type="button" id="doc-scan-btn" class="btn" aria-expanded="false" aria-controls="doc-scan">
-              <svg class="icon" aria-hidden="true"><use href="#i-scan"></use></svg>Scan a paper document</button>
+            <a href="#scan" id="doc-scan-btn" class="btn">
+              <svg class="icon" aria-hidden="true"><use href="#i-scan"></use></svg>Scan a paper document</a>
           </div>
         </div>
 
@@ -277,48 +283,6 @@
           </div>
         </form>
 
-        <section id="doc-scan" class="panel scan" hidden aria-labelledby="scan-h">
-          <h3 id="scan-h" tabindex="-1">Scan a paper document</h3>
-          <p class="muted small">Lay the page on a darker surface, let it fill most of the photo, and avoid strong shadows. The photo is processed by the local server on this computer.</p>
-          <p id="scan-avail" class="notice" role="status"></p>
-          <div id="scan-body" hidden>
-            <div class="row-actions">
-              <label class="btn primary file-btn"><svg class="icon" aria-hidden="true"><use href="#i-camera"></use></svg>Take a photo
-                <input type="file" id="scan-camera" accept="image/*" capture="environment" /></label>
-              <label class="btn file-btn"><svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>Choose a photo
-                <input type="file" id="scan-file" accept="image/jpeg,image/png,image/webp" /></label>
-            </div>
-            <fieldset class="segmented" id="scan-mode-set">
-              <legend>Output</legend>
-              <label><input type="radio" name="scan-mode" value="color" /><span>Colour</span></label>
-              <label><input type="radio" name="scan-mode" value="gray" checked /><span>Grey</span></label>
-              <label><input type="radio" name="scan-mode" value="bw" /><span>Black &amp; white</span></label>
-            </fieldset>
-            <p id="scan-status" class="form-status" role="status"></p>
-            <div id="scan-result" class="scan-grid" hidden>
-              <figure>
-                <div class="scan-photo-wrap">
-                  <img id="scan-photo" alt="Your photo" />
-                  <svg id="scan-outline" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points="" /></svg>
-                </div>
-                <figcaption id="scan-photo-cap">Your photo with the detected page outlined.</figcaption>
-              </figure>
-              <figure>
-                <img id="scan-page" class="scan-page" alt="The corrected page" />
-                <figcaption id="scan-meta"></figcaption>
-              </figure>
-            </div>
-            <form id="scan-save" class="form" hidden novalidate aria-label="Save the scanned page">
-              <div class="doc-fields" data-fields="scan"></div>
-              <div class="row-actions">
-                <button type="submit" class="btn primary" id="scan-save-btn">Save as document</button>
-                <button type="button" class="btn" id="scan-discard">Discard scan</button>
-              </div>
-            </form>
-          </div>
-          <div class="row-actions end"><button type="button" class="btn" id="scan-close">Close scanner</button></div>
-        </section>
-
         <div class="toolbar panel" role="search" aria-label="Find documents">
           <label class="search"><span class="visually-hidden">Search documents</span>
             <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
@@ -328,6 +292,138 @@
           <p class="muted small toolbar-count" id="doc-count" role="status"></p>
         </div>
         <div id="doc-list" class="doc-grid"></div>
+      </section>
+
+      <!-- SCAN: photo -> check (outline, corrected page, corners) -> save as a document -->
+      <section data-section="scan" class="view hidden scan" aria-labelledby="h-scan">
+        <div class="view-head">
+          <h2 id="h-scan" tabindex="-1">Scan a document</h2>
+          <p class="muted">Photograph a paper record. The page is found, straightened and cleaned up on this computer, then saved to Documents.</p>
+        </div>
+
+        <ol class="steps" id="scan-steps" aria-label="Scan progress">
+          <li data-step="photo" class="current" aria-current="step"><span class="step-num" aria-hidden="true">1</span>Photo<span class="visually-hidden step-state"></span></li>
+          <li data-step="check"><span class="step-num" aria-hidden="true">2</span>Check<span class="visually-hidden step-state"></span></li>
+          <li data-step="save"><span class="step-num" aria-hidden="true">3</span>Save<span class="visually-hidden step-state"></span></li>
+        </ol>
+
+        <p id="scan-avail" class="notice" role="status"></p>
+
+        <!-- Step 1: photo -->
+        <div class="panel scan-step" id="scan-step-photo" role="group" aria-labelledby="scan-h-photo">
+          <h3 id="scan-h-photo" tabindex="-1">Take or choose a photo</h3>
+          <div class="dropzone" id="scan-drop">
+            <svg class="icon drop-icon" aria-hidden="true"><use href="#i-camera"></use></svg>
+            <div class="row-actions center">
+              <label class="btn primary file-btn"><svg class="icon" aria-hidden="true"><use href="#i-camera"></use></svg>Take a photo
+                <input type="file" id="scan-camera" accept="image/*" capture="environment" /></label>
+              <label class="btn file-btn"><svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>Choose a file
+                <input type="file" id="scan-file" accept="image/jpeg,image/png,image/webp" /></label>
+            </div>
+            <p class="muted small drop-hint">or drop a photo here. JPEG, PNG or WebP, up to 10 MB.</p>
+          </div>
+          <p id="scan-photo-status" class="form-status" role="status"></p>
+          <div class="row-actions" id="scan-raw-row" hidden>
+            <button type="button" class="btn" id="scan-raw-btn"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>Save the photo without scanning</button>
+          </div>
+          <div class="tips">
+            <h4 class="h4">For a good scan</h4>
+            <ul>
+              <li>Put the page on a dark or contrasting background.</li>
+              <li>Get the whole page in the frame, with a little space around it.</li>
+              <li>Use good, even light and avoid strong shadows.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 2: check -->
+        <div class="panel scan-step" id="scan-step-check" role="group" aria-labelledby="scan-h-check" hidden>
+          <div class="panel-head">
+            <h3 id="scan-h-check" tabindex="-1">Check the page</h3>
+            <button type="button" class="btn small" id="scan-retake"><svg class="icon" aria-hidden="true"><use href="#i-camera"></use></svg>Retake</button>
+          </div>
+          <fieldset class="segmented" id="scan-mode-set">
+            <legend>Output</legend>
+            <label><input type="radio" name="scan-mode" value="color" /><span>Colour</span></label>
+            <label><input type="radio" name="scan-mode" value="gray" checked /><span>Grey</span></label>
+            <label><input type="radio" name="scan-mode" value="bw" /><span>Black &amp; white</span></label>
+          </fieldset>
+          <p id="scan-status" class="scan-status" role="status" aria-live="polite"></p>
+          <div id="scan-notfound" class="notice warn scan-notfound" hidden>
+            <p><strong>The edges of the page could not be found</strong>, so the whole photo is shown, cleaned up.
+              You can retake the photo, set the corners yourself, or save it as it is.</p>
+            <ul>
+              <li>Put the page on a dark or contrasting background.</li>
+              <li>Get the whole page in the frame.</li>
+              <li>Use good, even light.</li>
+            </ul>
+            <div class="row-actions">
+              <button type="button" class="btn small" id="scan-nf-retake">Retake the photo</button>
+              <button type="button" class="btn small" id="scan-nf-adjust">Set the corners</button>
+              <button type="button" class="btn small" id="scan-nf-save">Save anyway</button>
+            </div>
+          </div>
+          <div class="scan-grid" id="scan-result">
+            <figure>
+              <div class="scan-photo-wrap" id="scan-photo-wrap">
+                <img id="scan-photo" alt="Your photo" />
+                <svg id="scan-outline" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points="" /></svg>
+              </div>
+              <figcaption id="scan-photo-cap">Your photo with the detected page outlined.</figcaption>
+            </figure>
+            <figure>
+              <div class="scan-page-wrap">
+                <img id="scan-page" class="scan-page" alt="The corrected page" />
+                <span class="scan-busy" aria-hidden="true"><span class="spinner"></span></span>
+              </div>
+              <figcaption id="scan-meta"></figcaption>
+            </figure>
+          </div>
+          <div class="adjust-bar" id="scan-adjust-bar">
+            <button type="button" class="btn" id="scan-adjust" aria-expanded="false" aria-controls="scan-adjust-help">Adjust corners</button>
+            <div class="adjust-tools" id="scan-adjust-tools" hidden>
+              <p class="small" id="scan-adjust-help">Drag the four round handles onto the corners of the page. With a keyboard, Tab to a handle and use the arrow keys (hold Shift for bigger steps).</p>
+              <div class="row-actions">
+                <button type="button" class="btn primary" id="scan-apply">Apply corners</button>
+                <button type="button" class="btn" id="scan-adjust-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <div class="row-actions scan-nav">
+            <button type="button" class="btn primary" id="scan-next">Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 3: save -->
+        <form class="panel scan-step form" id="scan-save" aria-labelledby="scan-h-save" novalidate hidden>
+          <h3 id="scan-h-save" tabindex="-1">Save to Documents</h3>
+          <div class="save-grid">
+            <figure class="save-preview">
+              <img id="scan-save-preview" alt="The page that will be saved" />
+              <figcaption class="muted small" id="scan-save-cap"></figcaption>
+            </figure>
+            <div class="doc-fields" data-fields="scan"></div>
+          </div>
+          <p class="form-status" id="scan-save-status" role="status"></p>
+          <div class="row-actions">
+            <button type="submit" class="btn primary" id="scan-save-btn">Save document</button>
+            <button type="button" class="btn" id="scan-back">Back</button>
+            <button type="button" class="btn" id="scan-discard">Discard</button>
+          </div>
+        </form>
+
+        <!-- Done -->
+        <div class="panel scan-step scan-done" id="scan-done" role="group" aria-labelledby="scan-h-done" hidden>
+          <span class="done-icon" aria-hidden="true"><svg class="icon"><use href="#i-documents"></use></svg></span>
+          <h3 id="scan-h-done" tabindex="-1">Saved to Documents</h3>
+          <p id="scan-done-text" class="muted"></p>
+          <div class="row-actions center">
+            <a href="#documents" class="btn primary" id="scan-view-docs">View in Documents</a>
+            <button type="button" class="btn" id="scan-another"><svg class="icon" aria-hidden="true"><use href="#i-scan"></use></svg>Scan another</button>
+          </div>
+        </div>
+
+        <p class="muted small scan-model" id="scan-model"></p>
       </section>
 
       <!-- VOICE NOTES -->

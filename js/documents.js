@@ -234,7 +234,6 @@ const Documents = (() => {
       if (!$("#doc-upload").hidden) { togglePanel("#doc-upload", "#doc-add-btn", false); return; }
       resetUpload();
       togglePanel("#doc-upload", "#doc-add-btn", true);
-      if (typeof Scan !== "undefined") Scan.close();
     });
     $("#doc-upload-cancel").addEventListener("click", () => {
       togglePanel("#doc-upload", "#doc-add-btn", false);
