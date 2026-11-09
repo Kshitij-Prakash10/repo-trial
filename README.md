@@ -23,9 +23,12 @@ A basic web app that works as a personal health diary. Each user keeps their
   up to 20 MB) per user, with title, category, date, tags, notes and an
   optional link to a visit or condition. Search, filter, view, download, edit,
   delete. The latest documents show on the Dashboard.
-- **Scan a paper document**: take or choose a photo; the local scanner finds the
-  page with a trained machine-learning model, straightens it and cleans it up
-  (colour, grey or black-and-white); save it as a document. See `docs/scanner.md`.
+- **Scan**: its own view (sidebar, Dashboard quick action, or Documents) in three
+  steps, Photo, Check and Save. Take or choose a photo (or drop one); the local
+  scanner finds the page with a trained machine-learning model, straightens it
+  and cleans it up (colour, grey or black-and-white). Drag the corners (or move
+  them with the arrow keys) and Apply if the outline is off. Save it with a title,
+  category, date, tags and notes; it appears in Documents. See `docs/scanner.md`.
 - **Voice notes**: record in the browser (or upload an audio file), attach to a
   document, play, rename, delete.
 - Storage used per user is shown in the sidebar and on the Profile page.
@@ -41,6 +44,24 @@ python server.py            # http://127.0.0.1:8000  (HOST and PORT env vars to 
 ```
 
 Opening `index.html` directly also works; only scanning needs the server.
+
+### Scanning a document
+
+1. Open **Scan** (or "Scan a document" on the Dashboard). The small print at the
+   bottom names the page-detection model in use.
+2. **Photo**: take a photo, choose a file or drop one (JPEG, PNG or WebP, up to
+   10 MB). Put the page on a dark or contrasting background, get the whole page
+   in the frame, and use good light.
+3. **Check**: compare the outline on your photo with the corrected page; switch
+   Colour / Grey / Black & white. If the outline is wrong, choose Adjust corners,
+   drag the four handles (or Tab to one and use the arrow keys, Shift for bigger
+   steps) and Apply. If the page edges were not found, retake, set the corners,
+   or save anyway.
+4. **Save**: give it a title, category, date, tags and notes, then "View in
+   Documents" or "Scan another".
+
+Without the server (opened as a file) or without the scanner, the Scan view
+still saves the photo as a document, without scanning.
 Recording audio needs http://127.0.0.1, http://localhost or https.
 Everything stays in the browser (localStorage for records, IndexedDB for
 files); nothing needs the internet at run time.
@@ -63,7 +84,7 @@ js/files-db.js      Documents and voice notes (IndexedDB; the only file that tou
 js/ui.js            Shared UI helpers (formatting, icons, toasts, file viewer)
 js/app.js           Rendering and event handling
 js/documents.js     Document library
-js/scan.js          Paper document scan flow (talks to /api/scan)
+js/scan.js          Scan view: Photo, Check (corners), Save (talks to /api/scan)
 js/voice.js         Voice notes (MediaRecorder)
 server.py           Local Flask server: the static app + the scanner API
 scanner/            ML document scanner (training, inference, API); docs/scanner.md
