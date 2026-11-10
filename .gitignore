@@ -6,3 +6,11 @@ __pycache__/
 # large datasets are downloaded during setup and never committed
 data/raw/
 node_modules/
+
+# OCR datasets are downloaded by scripts/download_data.py and never committed
+data/_hf_cache/
+data/funsd/
+data/sroie/
+data/cord/
+data/synth_text/
+runs/
