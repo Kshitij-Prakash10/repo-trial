@@ -2,7 +2,7 @@
 const App = (() => {
   const { $, $$, esc, fmtDate, fmtBytes, today, icon, toast, emit } = UI;
   const byDateDesc = (key) => (a, b) => (b[key] || "").localeCompare(a[key] || "");
-  const VIEWS = ["dashboard", "vitals", "conditions", "medications", "allergies", "visits", "documents", "voice", "profile"];
+  const VIEWS = ["dashboard", "vitals", "conditions", "medications", "allergies", "visits", "documents", "scan", "voice", "profile"];
   const LISTS = ["vitals", "conditions", "medications", "allergies", "visits"];
 
   let user = null;
@@ -166,6 +166,7 @@ const App = (() => {
     document.title = `${title ? title.textContent : "Health Diary"} - Health Diary`;
     closeMenu();
     if (focus && title) title.focus();
+    emit("view:show", { name });
   }
 
   function closeMenu() {
@@ -252,7 +253,7 @@ const App = (() => {
           <span class="mini-text"><button type="button" class="linklike" data-open-doc="${esc(d.id)}">${esc(d.title)}</button>
           <span class="muted small">${esc(Documents.catText(d.category))} &middot; ${esc(d.docDate ? fmtDate(d.docDate) : fmtDate(d.createdAt))}</span></span>
         </li>`).join("")
-      : `<li class="muted">No documents yet. <a href="#documents">Add or scan one</a>.</li>`;
+      : `<li class="muted">No documents yet. <a href="#documents">Add one</a> or <a href="#scan">scan one</a>.</li>`;
   }
 
   function renderTable(type) {

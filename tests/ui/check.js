@@ -7,9 +7,12 @@
  * Starts `python server.py` on a free local port (or uses BASE_URL if set), then checks: an older saved
  * user still opens, create user, add vitals, add / search / edit / view documents (PNG, PDF, a rejected
  * fake file), voice note from an uploaded WAV (rename, play, attach to a document), recording with a fake
- * microphone, the scan flow against a mocked /api/scan (and the real scanner when the server reports it
- * available), scanner-missing and file:// messages, storage shown, deleting a user deletes their files,
- * no horizontal scroll at 360 px, keyboard menu on mobile, no page errors.
+ * microphone, the Scan view (Photo, Check, Save) against a mocked /api/scan: Dashboard and Documents entry
+ * points, outline and confidence, mode switch, dragging and keyboard-moving corners then Apply (sends the
+ * `corners` field), page-not-found help, save and the scan listed in Documents; the real scanner (also with
+ * manual corners) when the server reports it available; scanner missing and file:// (save the photo without
+ * scanning); storage shown, deleting a user deletes their files, no horizontal scroll at 360 px, keyboard
+ * menu on mobile, no page errors.
  *
  * Env: BASE_URL (skip starting a server), PYTHON (default "python3"), UI_PORT (default 8123),
  *      SCREENSHOT_DIR (save screenshots at 1280 and 375 px, light and dark).
@@ -302,72 +305,187 @@ async function main() {
     assert(sel.startsWith("Prescription Dr Rao"), sel);
   });
 
-  await step("scan: scanner missing on the server shows a clear message", async () => {
+  /* ---------- scan view: mocked /api/scan ---------- */
+  const pagePng = docPng.toString("base64");
+  const MOCK_VERSION = "scanner-0.2-ft-real_only (mock)";
+  const PHOTO_W = 900, PHOTO_H = 1200; // photo.png
+  let mockNotFound = false;
+  const formField = (body, name) => {
+    const m = new RegExp(`name="${name}"\r\n\r\n([^\r]*)\r\n`).exec(body.toString("latin1"));
+    return m ? m[1] : null;
+  };
+  const mockScanner = async (p) => {
+    await p.route("**/api/scan/status", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ available: true, model_version: MOCK_VERSION, metrics: null }) }));
+    await p.route("**/api/scan", (r) => {
+      const body = r.request().postDataBuffer() || Buffer.alloc(0);
+      const corners = formField(body, "corners");
+      scanRequests.push({ mode: formField(body, "mode"), corners: corners ? JSON.parse(corners) : null, bytes: body.length, hasImage: body.includes('name="image"') });
+      let res;
+      if (corners) {
+        const c = JSON.parse(corners);
+        res = { page_found: true, corners: c, corners_norm: c.map(([x, y]) => [x / PHOTO_W, y / PHOTO_H]), confidence: null, method: "manual" };
+      } else if (mockNotFound) {
+        res = { page_found: false, corners: [[0, 0], [PHOTO_W, 0], [PHOTO_W, PHOTO_H], [0, PHOTO_H]], corners_norm: [[0, 0], [1, 0], [1, 1], [0, 1]], confidence: 0.12, method: "fallback" };
+      } else {
+        res = { page_found: true, corners: [[205, 115], [780, 185], [690, 1100], [120, 1020]],
+          corners_norm: [[0.228, 0.096], [0.867, 0.154], [0.767, 0.917], [0.133, 0.85]], confidence: 0.93, method: "ml" };
+      }
+      return r.fulfill({ status: 200, contentType: "application/json",
+        body: JSON.stringify({ ...res, width: 600, height: 800, image_png_b64: pagePng, model_version: MOCK_VERSION, elapsed_ms: 123.4 }) });
+    });
+  };
+  const unmockScanner = async (p) => { await p.unroute("**/api/scan"); await p.unroute("**/api/scan/status"); };
+  const scanIdle = (p, timeout = 10000) => p.waitForFunction(() => {
+    const step = document.querySelector("#scan-step-check");
+    return !step.hidden && !step.classList.contains("is-busy") && document.querySelector("#scan-page").getAttribute("src");
+  }, null, { timeout });
+
+  await step("scan: scanner missing on the server; the photo can still be saved without scanning", async () => {
     await page.route("**/api/scan/status", (r) => r.fulfill({ status: 404, contentType: "application/json", body: '{"error":"The scanner is not installed on this server."}' }));
-    await page.click('a[data-view="documents"]');
-    await page.click("#doc-scan-btn");
+    await page.click('a[data-view="scan"]');
+    await page.waitForSelector('[data-section="scan"]:not(.hidden)');
     await page.waitForFunction(() => /not installed/.test(document.querySelector("#scan-avail").textContent));
-    assert(await page.isHidden("#scan-body"));
-    await page.click("#scan-close");
+    assert(/without scanning/.test(await page.textContent("#scan-avail")), "no 'without scanning' offer");
+    assert(await page.isVisible("#scan-drop"), "photo step should stay usable");
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await page.waitForSelector("#scan-save:not([hidden])");
+    assert((await page.getAttribute('#scan-steps li[data-step="check"]', "class")) === "skipped", "Check should be marked skipped");
+    assert((await page.inputValue("#scan-title")).startsWith("Document photo"), "raw title");
+    assert(/not scanned/.test(await page.textContent("#scan-save-cap")));
+    assert(await page.evaluate(() => document.activeElement.id === "scan-h-save"), "focus should move to the Save heading");
+    await page.click("#scan-discard");
+    await page.waitForSelector("#scan-step-photo:not([hidden])");
     await page.unroute("**/api/scan/status");
   });
 
-  await step("scan (mocked /api/scan): outline, corrected page, mode switch, save as PNG document", async () => {
-    const pagePng = docPng.toString("base64");
-    await page.route("**/api/scan/status", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ available: true, model_version: "mock-1", metrics: null }) }));
-    await page.route("**/api/scan", (r) => {
-      const body = r.request().postDataBuffer() || Buffer.alloc(0);
-      const m = /name="mode"\r\n\r\n(\w+)/.exec(body.toString("latin1"));
-      scanRequests.push({ mode: m && m[1], bytes: body.length, hasImage: body.includes('name="image"') });
-      return r.fulfill({
-        status: 200, contentType: "application/json",
-        body: JSON.stringify({
-          page_found: true, corners: [[205, 115], [780, 185], [690, 1100], [120, 1020]],
-          corners_norm: [[0.228, 0.096], [0.867, 0.154], [0.767, 0.917], [0.133, 0.85]],
-          confidence: 0.93, method: "ml", width: 600, height: 800, image_png_b64: pagePng,
-          model_version: "mock-1", elapsed_ms: 123.4,
-        }),
-      });
-    });
-    await page.click("#doc-scan-btn");
-    await page.waitForFunction(() => /Scanner ready/.test(document.querySelector("#scan-avail").textContent));
+  await step("scan (mocked): Dashboard quick action, outline, confidence, mode switch", async () => {
+    await mockScanner(page);
+    await page.click('a[data-view="dashboard"]');
+    await page.click("#dash-scan");
+    await page.waitForSelector('[data-section="scan"]:not(.hidden)');
+    assert(await page.evaluate(() => document.activeElement.id === "h-scan"), "focus on the Scan heading");
+    assert((await page.getAttribute('a[data-view="scan"]', "aria-current")) === "page", "Scan nav item not current");
+    await page.waitForFunction((v) => document.querySelector("#scan-model").textContent.includes(v), MOCK_VERSION);
     await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
-    await page.waitForSelector("#scan-result:not([hidden])");
+    await scanIdle(page);
+    assert((await page.getAttribute('#scan-steps li[data-step="check"]', "aria-current")) === "step", "step indicator");
     const pts = await page.getAttribute("#scan-outline polygon", "points");
     assert(pts && pts.split(" ").length === 4, "outline points " + pts);
-    assert(await page.locator(".scan-photo-wrap .corner").count() === 4, "corner markers");
-    assert((await page.textContent("#scan-status")).includes("93%"));
+    const status = await page.textContent("#scan-status");
+    assert(/high confidence/.test(status) && status.includes("93%"), status);
+    assert(await page.isHidden("#scan-notfound"));
     await page.check('input[name="scan-mode"][value="bw"]', { force: true });
-    await page.waitForFunction(() => !document.querySelector("#scan-mode-set").hasAttribute("aria-busy"));
-    await page.waitForTimeout(100);
-    assert(scanRequests.length >= 2 && scanRequests[0].mode === "gray" && scanRequests.at(-1).mode === "bw",
+    await scanIdle(page);
+    assert(scanRequests.length === 2 && scanRequests[0].mode === "gray" && scanRequests[1].mode === "bw",
       "modes sent: " + JSON.stringify(scanRequests.map((s) => s.mode)));
-    assert(scanRequests[0].hasImage, "image field not sent");
-    if (SHOTS) { await clearToasts(page); await page.screenshot({ path: path.join(SHOTS, "scan-1280-light.png"), fullPage: true }); }
-    await page.fill("#scan-title", "Scanned discharge summary");
-    await page.selectOption("#scan-category", "discharge_summary");
-    await page.click("#scan-save-btn");
-    await page.waitForSelector('.doc-card .doc-title:text("Scanned discharge summary")');
-    const card = page.locator(".doc-card", { hasText: "Scanned discharge summary" });
-    assert((await card.textContent()).includes("PNG") && (await card.textContent()).includes("Scanned"));
-    assert(await page.isHidden("#doc-scan"), "scanner panel should close after saving");
-    await page.unroute("**/api/scan");
-    await page.unroute("**/api/scan/status");
+    assert(scanRequests[0].hasImage && !scanRequests[0].corners, "first request: image, no corners");
+    assert(/Black and white/.test(await page.textContent("#scan-meta")));
+  });
+
+  await step("scan (mocked): drag a corner, move one with the keyboard, Apply sends the corners field", async () => {
+    await page.click("#scan-adjust");
+    assert(await page.locator(".corner-handle").count() === 4, "four handles");
+    assert(await page.evaluate(() => document.activeElement.classList.contains("corner-handle")), "focus on the first handle");
+    const box = await page.locator("#scan-photo").boundingBox();
+    const h0 = await page.locator('.corner-handle[data-i="0"]').boundingBox();
+    await page.mouse.move(h0.x + h0.width / 2, h0.y + h0.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.1, { steps: 6 });
+    await page.mouse.move(box.x + box.width * 0.10, box.y + box.height * 0.05, { steps: 6 });
+    await page.mouse.up();
+    await page.focus('.corner-handle[data-i="1"]');
+    await page.keyboard.press("Shift+ArrowRight");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    const label = await page.getAttribute('.corner-handle[data-i="1"]', "aria-label");
+    assert(/Top-right corner, 92% across, 16% down/.test(label), label);
+    await page.click("#scan-apply");
+    await scanIdle(page);
+    const last = scanRequests.at(-1);
+    assert(last.corners && last.corners.length === 4 && last.mode === "bw", "corners not sent: " + JSON.stringify(last));
+    const near = (a, b, tol) => Math.abs(a - b) <= tol;
+    const [c0, c1] = last.corners;
+    assert(near(c0[0], 0.10 * PHOTO_W, PHOTO_W * 0.02) && near(c0[1], 0.05 * PHOTO_H, PHOTO_H * 0.02), "dragged corner " + JSON.stringify(c0));
+    assert(near(c1[0], 0.917 * PHOTO_W, 2) && near(c1[1], 0.164 * PHOTO_H, 2), "keyboard corner " + JSON.stringify(c1));
+    assert(/your corners/.test(await page.textContent("#scan-status")));
+    assert(await page.locator(".corner-handle").count() === 0, "handles should go after Apply");
+    assert(await page.evaluate(() => document.activeElement.id === "scan-adjust"), "focus back on Adjust corners");
+    // A mode switch now re-sends the user's corners.
+    await page.check('input[name="scan-mode"][value="color"]', { force: true });
+    await scanIdle(page);
+    assert(scanRequests.at(-1).mode === "color" && scanRequests.at(-1).corners, "mode switch should keep the corners");
     return `${scanRequests.length} requests`;
   });
 
-  await step("scan with the real scanner (only when the server reports it available)", async () => {
+  await step("scan (mocked): save with metadata; success state; the scan appears in Documents", async () => {
+    await page.click("#scan-next");
+    await page.waitForSelector("#scan-save:not([hidden])");
+    assert((await page.inputValue("#scan-title")).startsWith("Scanned document"), "title not prefilled");
+    assert((await page.inputValue("#scan-date")).length === 10, "date not prefilled");
+    await page.fill("#scan-title", "Scanned discharge summary");
+    await page.selectOption("#scan-category", "discharge_summary");
+    await page.fill("#scan-tags", "discharge, synthetic");
+    await page.fill("#scan-notes", "Synthetic scan test");
+    await page.click("#scan-save-btn");
+    await page.waitForSelector("#scan-done:not([hidden])");
+    assert((await page.textContent("#scan-done-text")).includes("Scanned discharge summary"));
+    assert(await page.evaluate(() => document.activeElement.id === "scan-h-done"), "focus on the success heading");
+    assert(await page.isVisible("#scan-another"), "Scan another");
+    await page.click("#scan-view-docs");
+    await page.waitForSelector('[data-section="documents"]:not(.hidden)');
+    await page.waitForSelector('.doc-card .doc-title:text("Scanned discharge summary")');
+    const card = page.locator(".doc-card", { hasText: "Scanned discharge summary" });
+    const t = await card.textContent();
+    assert(t.includes("PNG") && t.includes("Scanned") && t.includes("Discharge summary") && t.includes("synthetic"), t);
+    const meta = await page.evaluate(() => Documents.list().find((d) => d.title === "Scanned discharge summary").scan);
+    assert(meta && meta.method === "manual" && meta.mode === "color" && meta.modelVersion === "scanner-0.2-ft-real_only (mock)", JSON.stringify(meta));
+    // The Documents button opens the scan view, back at step 1.
+    assert(await page.locator("#doc-scan").count() === 0, "the old in-Documents scan panel should be gone");
+    await page.click("#doc-scan-btn");
+    await page.waitForSelector('[data-section="scan"]:not(.hidden)');
+    assert(await page.isVisible("#scan-step-photo") && await page.isHidden("#scan-done"), "scan view should restart at step 1");
+  });
+
+  await step("scan (mocked): page edges not found explains, offers retake, corners and save anyway", async () => {
+    mockNotFound = true;
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await scanIdle(page);
+    const nf = await page.textContent("#scan-notfound");
+    assert(/could not be found/.test(nf) && /whole photo/.test(nf) && /background/.test(nf), nf);
+    assert((await page.getAttribute("#scan-outline polygon", "points")) === "", "no outline expected");
+    assert(await page.isVisible("#scan-nf-retake") && await page.isVisible("#scan-nf-save"));
+    await page.click("#scan-nf-adjust");
+    assert(await page.locator(".corner-handle").count() === 4);
+    await page.keyboard.press("Escape");
+    assert(await page.locator(".corner-handle").count() === 0, "Escape should cancel corner editing");
+    await page.click("#scan-nf-retake");
+    await page.waitForSelector("#scan-step-photo:not([hidden])");
+    assert(!(await page.getAttribute("#scan-photo", "src")), "photo should be cleared on retake");
+    mockNotFound = false;
+    await unmockScanner(page);
+  });
+
+  await step("scan with the real scanner (only when the server reports it available), including manual corners", async () => {
     const status = await page.evaluate(async () => {
       const r = await fetch("api/scan/status");
       return { code: r.status, body: r.ok ? await r.json() : null };
     });
     if (status.code !== 200) return `SKIPPED: /api/scan/status answered ${status.code} (scanner not installed)`;
-    await page.click("#doc-scan-btn");
+    await page.evaluate(() => { location.hash = "#dashboard"; });
+    await page.evaluate(() => { location.hash = "#scan"; });
+    await page.waitForFunction(() => document.querySelector("#scan-model").textContent.length > 0);
+    const model = await page.textContent("#scan-model");
+    if (status.body.model_version) assert(model.includes(status.body.model_version), model);
     await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
-    await page.waitForSelector("#scan-result:not([hidden])", { timeout: 30000 });
+    await scanIdle(page, 30000);
     const s = await page.textContent("#scan-status");
-    await page.click("#scan-close");
-    return `real scanner, available=${status.body.available}: ${s.slice(0, 80)}`;
+    await page.click("#scan-adjust");
+    await page.click("#scan-apply");
+    await scanIdle(page, 30000);
+    const s2 = await page.textContent("#scan-status");
+    assert(/your corners/.test(s2), "real manual corners: " + s2);
+    await page.click("#scan-retake");
+    return `real scanner, available=${status.body.available}: ${s.slice(0, 70)} | manual: ok`;
   });
 
   await step("storage used is shown per user", async () => {
@@ -388,7 +506,7 @@ async function main() {
   });
 
   /* ---------- responsive and dark ---------- */
-  const views = ["dashboard", "vitals", "conditions", "medications", "allergies", "visits", "documents", "voice", "profile"];
+  const views = ["dashboard", "vitals", "conditions", "medications", "allergies", "visits", "documents", "scan", "voice", "profile"];
   await step("no horizontal scroll at 360 px on any view; mobile menu works with the keyboard", async () => {
     await page.setViewportSize({ width: 360, height: 740 });
     const wide = [];
@@ -398,6 +516,20 @@ async function main() {
       const sw = await page.evaluate(() => document.documentElement.scrollWidth);
       if (sw > 360) wide.push(`${v}: ${sw}px`);
     }
+    // The scan check step with the corner handles out, and the save step.
+    await mockScanner(page);
+    await page.evaluate(() => { location.hash = "#scan"; });
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await scanIdle(page);
+    await page.click("#scan-adjust");
+    let sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    if (sw > 360) wide.push(`scan (adjust corners): ${sw}px`);
+    await page.click("#scan-adjust-cancel");
+    await page.click("#scan-next");
+    sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    if (sw > 360) wide.push(`scan (save): ${sw}px`);
+    await page.click("#scan-discard");
+    await unmockScanner(page);
     assert(!wide.length, "too wide: " + wide.join(", "));
     assert(await page.isHidden("#sidebar"), "sidebar should be collapsed on mobile");
     await page.focus("#menu-btn");
@@ -425,6 +557,49 @@ async function main() {
         }
       }
     }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1280, height: 900 });
+  }
+
+  if (SHOTS) {
+    // The scan flow, step by step (mocked scanner), at 1280 and 375 px, light and dark.
+    await mockScanner(page);
+    for (const scheme of ["light", "dark"]) {
+      await page.emulateMedia({ colorScheme: scheme });
+      for (const [w, h] of [[1280, 900], [375, 812]]) {
+        await page.setViewportSize({ width: w, height: h });
+        const shot = async (name) => {
+          await clearToasts(page);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.waitForTimeout(80);
+          await page.screenshot({ path: path.join(SHOTS, `scan-${name}-${w}-${scheme}.png`), fullPage: true });
+        };
+        await page.evaluate(() => { location.hash = "#dashboard"; });
+        await page.evaluate(() => { location.hash = "#scan"; });
+        await page.waitForSelector("#scan-step-photo:not([hidden])");
+        await page.waitForFunction(() => document.querySelector("#scan-model").textContent.length > 0);
+        await shot("1-photo");
+        await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+        await scanIdle(page);
+        await shot("2-check");
+        await page.click("#scan-adjust");
+        await shot("2-adjust");
+        await page.click("#scan-adjust-cancel");
+        await page.click("#scan-next");
+        await shot("3-save");
+        await page.click("#scan-save-btn");
+        await page.waitForSelector("#scan-done:not([hidden])");
+        await shot("4-done");
+        await page.click("#scan-another");
+        mockNotFound = true;
+        await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+        await scanIdle(page);
+        await shot("2-notfound");
+        mockNotFound = false;
+        await page.click("#scan-retake");
+      }
+    }
+    await unmockScanner(page);
     await page.emulateMedia({ colorScheme: "light" });
     await page.setViewportSize({ width: 1280, height: 900 });
   }
@@ -474,8 +649,18 @@ async function main() {
     await p3.click('#new-user-form button[type="submit"]');
     await p3.evaluate(() => { location.hash = "#documents"; });
     await p3.click("#doc-scan-btn");
+    await p3.waitForSelector('[data-section="scan"]:not(.hidden)');
     const msg = await p3.textContent("#scan-avail");
-    assert(msg.includes("python server.py"), msg);
+    assert(msg.includes("python server.py") && msg.includes("without scanning"), msg);
+    await p3.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await p3.waitForSelector("#scan-save:not([hidden])");
+    await p3.fill("#scan-title", "Photo saved offline");
+    await p3.click("#scan-save-btn");
+    await p3.waitForSelector("#scan-done:not([hidden])");
+    await p3.click("#scan-view-docs");
+    await p3.waitForSelector('.doc-card .doc-title:text("Photo saved offline")');
+    const offline = await p3.locator(".doc-card", { hasText: "Photo saved offline" }).textContent();
+    assert(offline.includes("PNG") && !offline.includes("Scanned"), offline);
     // Documents still work without the server.
     await p3.click("#doc-add-btn");
     await p3.setInputFiles("#doc-file", path.join(tmp, "prescription.pdf"));
