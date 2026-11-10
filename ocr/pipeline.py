@@ -27,7 +27,13 @@ MAX_SIDE = 2400  # px; larger photos are reduced first (the scanner's own workin
 SCAN_MIN_CONF = 0.5  # scanner confidence needed to use its crop
 SCAN_MIN_TEXT_INSIDE = 0.98  # share of detected word centres that must lie inside the page quad
 SCAN_MAX_AREA = 0.9  # a quad covering more of the photo than this changes nothing useful; skip the warp
+SCAN_MIN_WORDS_KEPT = 0.98  # the flattened page must keep this share of the words found on the photo
+SCAN_MIN_CONF_GAIN = 0.02  # ... and its mean recognition confidence must beat the photo's by this much (set on validation)
 MIN_BOX = 3  # px
+
+
+def _mean_conf(rec: list[tuple[str, float]]) -> float:
+    return float(np.mean([c for _, c in rec])) if rec else 0.0
 
 
 def _inside(points: np.ndarray, quad: np.ndarray) -> np.ndarray:
@@ -99,8 +105,9 @@ class OcrPipeline:
     def run(self, image: Image.Image, keep_first_pass: bool = False) -> dict:
         """Full pipeline on one photo or scan. Returns the result dict described in README.md.
 
-        keep_first_pass adds "first_pass_boxes": the detector's word boxes on the uncropped photo, in
-        source pixels (used by the evaluation to score detection without a second run)."""
+        keep_first_pass adds "first_pass_boxes" (the detector's word boxes on the uncropped photo, in
+        source pixels) and "first_pass_text" (the text read without the scanner's crop); the evaluation
+        uses them to score detection and the scanner-stage ablation without a second run."""
         t0 = time.perf_counter()
         img = image.convert("RGB")
         W0, H0 = img.size
@@ -110,7 +117,9 @@ class OcrPipeline:
         W, H = img.size
         arr = np.asarray(img)
         boxes, scores = self.detect(arr)
+        rec = self.recognise(arr, boxes)
         first_pass = (boxes / s).round(1).tolist()
+        first_text = "\n".join(" ".join(rec[w][0] for w in ln) for ln in group_lines(boxes))
         scan = {"used": False, "reason": "scanner stage disabled", "page_found": None, "confidence": None,
                 "corners": None}
         to_source = None  # maps page pixels back to the pixels of the working photo
@@ -120,16 +129,23 @@ class OcrPipeline:
             scan = {"used": used, "reason": reason, "page_found": bool(page["page_found"]),
                     "confidence": round(float(page["confidence"]), 3),
                     "corners": (np.asarray(page["corners"], float) / s).round(1).tolist()}
-            if used:
+            if used:  # read the flattened page too, and keep it only if it reads at least as well
                 q = np.asarray(page["corners"], float)
                 flat = geo.warp(img, q)
                 pw, ph = flat.size
-                to_source = geo.homography(np.array([[0, 0], [pw, 0], [pw, ph], [0, ph]], float), q)
-                arr = np.asarray(flat)
-                boxes, scores = self.detect(arr)
+                arr2 = np.asarray(flat)
+                boxes2, scores2 = self.detect(arr2)
+                rec2 = self.recognise(arr2, boxes2)
+                c1, c2 = _mean_conf(rec), _mean_conf(rec2)
+                scan["read_confidence"] = {"whole_photo": round(c1, 4), "crop": round(c2, 4)}
+                if len(boxes2) >= SCAN_MIN_WORDS_KEPT * len(boxes) and c2 >= c1 + SCAN_MIN_CONF_GAIN:
+                    to_source = geo.homography(np.array([[0, 0], [pw, 0], [pw, ph], [0, ph]], float), q)
+                    arr, boxes, scores, rec = arr2, boxes2, scores2, rec2
+                else:
+                    scan["used"] = False
+                    scan["reason"] = "the crop does not read better than the whole photo"
         elif self.use_scanner:
             scan["reason"] = "scanner model file missing"
-        rec = self.recognise(arr, boxes)
         words = []
         for (x0, y0, x1, y1), sc, (text, conf) in zip(boxes, scores, rec):
             quad = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float)
@@ -146,7 +162,7 @@ class OcrPipeline:
             lines.append({"text": " ".join(words[w]["text"] for w in ln), "words": ln,
                           "box": [round(v, 1) for v in union(boxes[ln])],
                           "confidence": round(float(np.mean([words[w]["confidence"] for w in ln])), 4)})
-        extra = {"first_pass_boxes": first_pass} if keep_first_pass else {}
+        extra = {"first_pass_boxes": first_pass, "first_pass_text": first_text} if keep_first_pass else {}
         return {**extra, "text": "\n".join(ln["text"] for ln in lines), "lines": lines, "words": words,
                 "page": {"width": int(arr.shape[1]), "height": int(arr.shape[0]),
                          "is_scanner_crop": bool(scan["used"])},

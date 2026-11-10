@@ -136,11 +136,7 @@ def eval_pages(system: str, split: str, limit: int | None, workers: int) -> tupl
                     r = pipe.run(im, keep_first_pass=True)
                 row = {"texts": [w["text"] for w in r["words"]], "text": r["text"], "boxes": r["first_pass_boxes"],
                        "scanner_used": r["scanner"]["used"], "scanner_reason": r["scanner"]["reason"]}
-                if r["scanner"]["used"]:  # the same page with the scanner stage off, for the ablation
-                    pipe.use_scanner = False
-                    with Image.open(p["path"]) as im:
-                        row["text_no_scanner"] = pipe.run(im)["text"]
-                    pipe.use_scanner = True
+                row["text_no_scanner"] = r["first_pass_text"]  # the scanner-stage ablation
                 results.append(row)
         secs = time.time() - t0
         tp = n_pred = n_true = 0
