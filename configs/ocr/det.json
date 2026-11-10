@@ -1,0 +1,16 @@
+{
+ "arch": "fast_base",
+ "out_dir": "runs/det",
+ "seed": 2026,
+ "epochs": 6,
+ "patience": 2,
+ "pages_per_epoch": 240,
+ "batch_size": 2,
+ "lr": 0.0001,
+ "weight_decay": 0.0001,
+ "aug_p": 0.35,
+ "aug_warp": 0.03,
+ "aug_blur": 1.2,
+ "threads": 4,
+ "freeze_backbone": true
+}

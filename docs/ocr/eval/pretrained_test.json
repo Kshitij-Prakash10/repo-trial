@@ -1,0 +1,101 @@
+{
+ "system": "pretrained",
+ "split": "test",
+ "limit_pages": null,
+ "recognition": {
+  "funsd": {
+   "cer": 0.0516,
+   "wer": 0.1634,
+   "chars": 44086,
+   "words": 8729,
+   "n": 8707,
+   "seconds": 22
+  },
+  "sroie": {
+   "cer": 0.1385,
+   "wer": 0.1534,
+   "chars": 184073,
+   "words": 38542,
+   "n": 38542,
+   "seconds": 73
+  },
+  "cord": {
+   "cer": 0.0194,
+   "wer": 0.0876,
+   "chars": 11366,
+   "words": 2398,
+   "n": 2356,
+   "seconds": 5
+  }
+ },
+ "detection": {
+  "funsd": {
+   "precision": 0.8483,
+   "recall": 0.8159,
+   "f1": 0.8318,
+   "tp": 7104,
+   "n_pred": 8374,
+   "n_true": 8707
+  },
+  "sroie": {
+   "precision": 0.6956,
+   "recall": 0.7449,
+   "f1": 0.7194,
+   "tp": 28711,
+   "n_pred": 41274,
+   "n_true": 38542
+  },
+  "cord": {
+   "precision": 0.8347,
+   "recall": 0.9648,
+   "f1": 0.8951,
+   "tp": 2273,
+   "n_pred": 2723,
+   "n_true": 2356
+  }
+ },
+ "end_to_end": {
+  "funsd": {
+   "cer": 0.0944,
+   "wer": 0.3173,
+   "chars": 52743,
+   "words": 8729,
+   "n": 50,
+   "pages": 50,
+   "seconds_per_page": 3.86,
+   "scanner_crop_used_on_pages": 0,
+   "without_scanner_stage": {
+    "cer": 0.0944,
+    "wer": 0.3173
+   }
+  },
+  "sroie": {
+   "cer": 0.1032,
+   "wer": 0.2131,
+   "chars": 224197,
+   "words": 39065,
+   "n": 361,
+   "pages": 361,
+   "seconds_per_page": 2.97,
+   "scanner_crop_used_on_pages": 31,
+   "without_scanner_stage": {
+    "cer": 0.103,
+    "wer": 0.2181
+   }
+  },
+  "cord": {
+   "cer": 0.1235,
+   "wer": 0.2798,
+   "chars": 13622,
+   "words": 2398,
+   "n": 100,
+   "pages": 100,
+   "seconds_per_page": 2.9,
+   "scanner_crop_used_on_pages": 8,
+   "without_scanner_stage": {
+    "cer": 0.1191,
+    "wer": 0.2752
+   }
+  }
+ }
+}

@@ -1,0 +1,355 @@
+{
+ "config": {
+  "arch": "crnn_mobilenet_v3_large",
+  "out_dir": "runs/rec",
+  "seed": 2026,
+  "epochs": 10,
+  "patience": 3,
+  "batch_size": 64,
+  "lr": 0.0001,
+  "weight_decay": 0.0001,
+  "aug_p": 0.35,
+  "aug_warp": 0.04,
+  "aug_blur": 1.2,
+  "threads": 4,
+  "crops_per_epoch": 32000
+ },
+ "sroie_train_labels": {
+  "sroie_recased": 51373,
+  "sroie_kept_no_letters": 1058,
+  "sroie_dropped": 8840
+ },
+ "overfit": 0,
+ "train_crops": 90357,
+ "val_crops": 11638,
+ "train_dropped_not_in_vocab_or_too_long": 489,
+ "epochs": [
+  {
+   "epoch": 1,
+   "train_loss": 0.1669,
+   "val": {
+    "cord": {
+     "cer": 0.014,
+     "wer": 0.0783,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0535,
+     "wer": 0.1699,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1253,
+     "wer": 0.1424,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0643
+   },
+   "seconds": 373,
+   "lr": 9.999998781535245e-05
+  },
+  {
+   "epoch": 2,
+   "train_loss": 0.0976,
+   "val": {
+    "cord": {
+     "cer": 0.0138,
+     "wer": 0.0765,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0497,
+     "wer": 0.159,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1221,
+     "wer": 0.1298,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0619
+   },
+   "seconds": 355,
+   "lr": 9.697269294445433e-05
+  },
+  {
+   "epoch": 3,
+   "train_loss": 0.0844,
+   "val": {
+    "cord": {
+     "cer": 0.0137,
+     "wer": 0.076,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0495,
+     "wer": 0.1569,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1203,
+     "wer": 0.1272,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0612
+   },
+   "seconds": 369,
+   "lr": 8.827982218429131e-05
+  },
+  {
+   "epoch": 4,
+   "train_loss": 0.0743,
+   "val": {
+    "cord": {
+     "cer": 0.0137,
+     "wer": 0.0751,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0492,
+     "wer": 0.1576,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1208,
+     "wer": 0.1254,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0612
+   },
+   "seconds": 361,
+   "lr": 7.49698640416479e-05
+  },
+  {
+   "epoch": 5,
+   "train_loss": 0.0737,
+   "val": {
+    "cord": {
+     "cer": 0.0134,
+     "wer": 0.0738,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0488,
+     "wer": 0.1555,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1203,
+     "wer": 0.1263,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0608
+   },
+   "seconds": 364,
+   "lr": 5.864819590258822e-05
+  },
+  {
+   "epoch": 6,
+   "train_loss": 0.0696,
+   "val": {
+    "cord": {
+     "cer": 0.0131,
+     "wer": 0.0725,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0485,
+     "wer": 0.1541,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1191,
+     "wer": 0.1245,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0602
+   },
+   "seconds": 366,
+   "lr": 4.128345182684991e-05
+  },
+  {
+   "epoch": 7,
+   "train_loss": 0.0692,
+   "val": {
+    "cord": {
+     "cer": 0.0127,
+     "wer": 0.072,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0476,
+     "wer": 0.1506,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1194,
+     "wer": 0.1216,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0599
+   },
+   "seconds": 385,
+   "lr": 2.4970076226295458e-05
+  },
+  {
+   "epoch": 8,
+   "train_loss": 0.0693,
+   "val": {
+    "cord": {
+     "cer": 0.0127,
+     "wer": 0.072,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0481,
+     "wer": 0.1516,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1196,
+     "wer": 0.123,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0601
+   },
+   "seconds": 369,
+   "lr": 1.1675702958133874e-05
+  },
+  {
+   "epoch": 9,
+   "train_loss": 0.0648,
+   "val": {
+    "cord": {
+     "cer": 0.0129,
+     "wer": 0.072,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0479,
+     "wer": 0.1509,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1195,
+     "wer": 0.1224,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0601
+   },
+   "seconds": 367,
+   "lr": 3.0038296425586035e-06
+  },
+  {
+   "epoch": 10,
+   "train_loss": 0.0641,
+   "val": {
+    "cord": {
+     "cer": 0.0127,
+     "wer": 0.072,
+     "chars": 10326,
+     "words": 2236,
+     "n": 2186
+    },
+    "funsd": {
+     "cer": 0.0479,
+     "wer": 0.1513,
+     "chars": 14437,
+     "words": 2849,
+     "n": 2849
+    },
+    "sroie": {
+     "cer": 0.1192,
+     "wer": 0.1224,
+     "chars": 31516,
+     "words": 6603,
+     "n": 6603
+    },
+    "mean_cer": 0.0599
+   },
+   "seconds": 375,
+   "lr": 4.1218464755759487e-10
+  }
+ ],
+ "start": {
+  "cord": {
+   "cer": 0.0151,
+   "wer": 0.0845,
+   "chars": 10326,
+   "words": 2236,
+   "n": 2186
+  },
+  "funsd": {
+   "cer": 0.0506,
+   "wer": 0.1618,
+   "chars": 14437,
+   "words": 2849,
+   "n": 2849
+  },
+  "sroie": {
+   "cer": 0.1269,
+   "wer": 0.1458,
+   "chars": 31516,
+   "words": 6603,
+   "n": 6603
+  },
+  "mean_cer": 0.0642
+ },
+ "best_epoch": 7,
+ "stopped_early_at": 10,
+ "best_val_mean_cer": 0.0599
+}
