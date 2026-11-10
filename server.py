@@ -5,8 +5,9 @@ Env:  HOST (default 127.0.0.1), PORT (default 8000).
 
 Only the app's own static files are served (index.html, css/, js/); never this file, tests, models or
 data. Errors under /api/ are JSON ({"error": "..."}). The scanner blueprint (scanner/api.py) is optional:
-if it cannot be imported the app still runs and /api/scan answers 404 JSON. Nothing here needs the
-internet.
+if it cannot be imported the app still runs and /api/scan answers 404 JSON. The OCR blueprint (ocr/api.py)
+is registered the same way; its heavy packages are loaded on the first POST /api/ocr, not at start-up.
+Nothing here needs the internet.
 """
 from __future__ import annotations
 
@@ -63,11 +64,23 @@ def register_scanner(app: Flask) -> bool:
         return False
 
 
-def create_app(with_scanner: bool = True) -> Flask:
-    """Build the Flask app. `with_scanner` False skips the scanner blueprint (for tests)."""
+def register_ocr(app: Flask) -> bool:
+    """Register ocr.api.ocr_bp (POST /api/ocr, GET /api/ocr/status) if it imports. Returns True when registered."""
+    try:
+        from ocr.api import ocr_bp  # light import: torch and docTR are loaded on the first request
+        app.register_blueprint(ocr_bp)
+        return True
+    except Exception as err:  # reading text is optional; the diary must still run without it
+        log.warning("OCR not available (%s: %s). /api/ocr will answer 404.", type(err).__name__, err)
+        return False
+
+
+def create_app(with_scanner: bool = True, with_ocr: bool = True) -> Flask:
+    """Build the Flask app. `with_scanner` / `with_ocr` False skip those blueprints (for tests)."""
     app = Flask(__name__, static_folder=None)
     app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES
     app.config["SCANNER_REGISTERED"] = register_scanner(app) if with_scanner else False
+    app.config["OCR_REGISTERED"] = register_ocr(app) if with_ocr else False
 
     @app.get("/")
     @app.get("/index.html")
@@ -92,6 +105,8 @@ def create_app(with_scanner: bool = True) -> Flask:
                 message = f"The upload is too large (at most {MAX_REQUEST_BYTES // (1024 * 1024)} MB per request)."
             elif err.code == 404 and request.path.startswith("/api/scan") and not app.config["SCANNER_REGISTERED"]:
                 message = "The scanner is not installed on this server."
+            elif err.code == 404 and request.path.startswith("/api/ocr") and not app.config["OCR_REGISTERED"]:
+                message = "Reading text is not installed on this server."
             elif err.code == 404:
                 message = "Not found."
             else:
