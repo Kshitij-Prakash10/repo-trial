@@ -40,6 +40,8 @@
       <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
       <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
       <symbol id="i-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></symbol>
     </defs>
   </svg>
@@ -124,7 +126,7 @@
         <a href="#scan" class="quick-action" id="dash-scan">
           <span class="quick-icon" aria-hidden="true"><svg class="icon"><use href="#i-scan"></use></svg></span>
           <span class="quick-text"><strong>Scan a document</strong>
-            <span class="muted small">Photograph a prescription or report; it is straightened and saved to Documents.</span></span>
+            <span class="muted small">Photograph a prescription or report; it is straightened, its text can be read, and it is saved to Documents.</span></span>
         </a>
         <div class="cards" id="current-cards"></div>
 
@@ -286,7 +288,7 @@
         <div class="toolbar panel" role="search" aria-label="Find documents">
           <label class="search"><span class="visually-hidden">Search documents</span>
             <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-            <input type="search" id="doc-q" placeholder="Search title, tags, notes" /></label>
+            <input type="search" id="doc-q" placeholder="Search title, tags, notes, text" /></label>
           <label class="inline-label">Category
             <select id="doc-cat"><option value="">All categories</option></select></label>
           <p class="muted small toolbar-count" id="doc-count" role="status"></p>
@@ -389,6 +391,8 @@
               </div>
             </div>
           </div>
+          <!-- Text on the page (js/ocr.js fills this in) -->
+          <div id="scan-ocr"></div>
           <div class="row-actions scan-nav">
             <button type="button" class="btn primary" id="scan-next">Continue</button>
           </div>
@@ -404,6 +408,7 @@
             </figure>
             <div class="doc-fields" data-fields="scan"></div>
           </div>
+          <p class="muted small scan-save-text" id="scan-save-text" hidden></p>
           <p class="form-status" id="scan-save-status" role="status"></p>
           <div class="row-actions">
             <button type="submit" class="btn primary" id="scan-save-btn">Save document</button>
@@ -507,7 +512,10 @@
         <button type="button" id="viewer-close" class="btn small"><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>Close</button>
       </div>
     </div>
-    <div id="viewer-body" class="viewer-body"></div>
+    <div class="viewer-main" id="viewer-main">
+      <div id="viewer-body" class="viewer-body"></div>
+      <div id="viewer-extra" class="viewer-extra" hidden></div>
+    </div>
   </dialog>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
@@ -515,6 +523,7 @@
   <script src="js/storage.js"></script>
   <script src="js/files-db.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/ocr.js"></script>
   <script src="js/documents.js"></script>
   <script src="js/scan.js"></script>
   <script src="js/voice.js"></script>

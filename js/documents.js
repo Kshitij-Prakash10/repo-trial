@@ -1,4 +1,5 @@
-/* Health Diary: document library (add, list, search, view, download, edit, delete). Uses UI, FilesDB, App. */
+/* Health Diary: document library (add, list, search, view with its text, download, edit, delete).
+ * Uses UI, FilesDB, Ocr, App. */
 const Documents = (() => {
   const { $, esc, icon, fmtDate, fmtBytes, toast, emit } = UI;
 
@@ -16,6 +17,7 @@ const Documents = (() => {
   let docs = [];
   let loadError = null;
   let loaded = false;
+  let viewerText = null; // the Ocr.widget in the open viewer, if any
 
   /* ---------- Shared form fields (upload, scan, edit) ---------- */
 
@@ -119,7 +121,7 @@ const Documents = (() => {
   function matches(d, q, cat) {
     if (cat && d.category !== cat) return false;
     if (!q) return true;
-    const hay = [d.title, d.notes, d.fileName, catText(d.category), ...(d.tags || [])].join(" ").toLowerCase();
+    const hay = [d.title, d.notes, d.fileName, catText(d.category), ...(d.tags || []), d.text || ""].join(" ").toLowerCase();
     return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
   }
 
@@ -138,7 +140,8 @@ const Documents = (() => {
     return `<article class="doc-card" data-id="${id}" aria-labelledby="doc-t-${id}">
       <button type="button" class="thumb" data-act="view" tabindex="-1" aria-hidden="true">${thumbHtml(d)}</button>
       <div class="doc-body">
-        <span class="chip cat-${esc(d.category)}">${esc(catText(d.category))}</span>
+        <div class="chip-row"><span class="chip cat-${esc(d.category)}">${esc(catText(d.category))}</span>${d.text
+          ? `<span class="chip text-chip" title="The text of this document has been read. Search finds it; View shows it.">${icon("text")}Text<span class="visually-hidden"> has been read</span></span>` : ""}</div>
         <h3 id="doc-t-${id}" class="doc-title">${esc(d.title)}</h3>
         <p class="muted small">${meta.map(esc).join(" &middot; ")}</p>
         ${link ? `<p class="small doc-link">${icon("link")}${esc(link)}</p>` : ""}
@@ -195,9 +198,42 @@ const Documents = (() => {
       if (!blob) throw new Error("the file is missing");
       UI.openViewer({ title: d.title, blob, mime: d.mime, fileName: d.fileName,
         meta: `${catText(d.category)} · ${d.docDate ? fmtDate(d.docDate) : "no date"} · ${fmtBytes(d.size)}` });
+      showText(d, blob);
     } catch (err) {
       toast(`Could not open the document: ${err.message}`, "error");
     }
+  }
+
+  /**
+   * The text of a document next to it in the viewer: saved text with Copy and Save text, or, for an image
+   * without text, the Read text action (the text is saved with the document as soon as it is read).
+   * PDFs cannot be read, so a PDF without text shows nothing.
+   */
+  function showText(d, blob) {
+    const isImage = d.mime.startsWith("image/");
+    if (viewerText) viewerText.reset();
+    viewerText = null;
+    if (typeof Ocr === "undefined" || (!d.text && !isImage)) return;
+    const box = $("#viewer-extra");
+    box.hidden = false;
+    $("#viewer-main").classList.add("has-extra");
+    const store = async (v) => {
+      await FilesDB.updateDocument(d.id, { text: v.text, ocr: v.ocr });
+      await refresh();
+    };
+    const w = Ocr.widget(box, {
+      id: "viewer-ocr", heading: "Text",
+      idleHint: "No text has been read from this document yet. Read text finds the printed text so you can copy it and search for it.",
+      source: isImage ? async () => blob : null,
+      onRead: async (v) => {
+        if (!v.text) return;
+        try { await store(v); w.flash("Saved with the document."); } catch (err) { w.showError(`The text was read but not saved: ${err.message}`); }
+      },
+      onSave: store,
+    });
+    viewerText = w;
+    if (d.text) w.setText(d.text, d.ocr || null);
+    if (isImage) w.checkAvailability();
   }
 
   async function downloadDoc(d) {
@@ -344,6 +380,7 @@ const Documents = (() => {
       refresh();
     });
     document.addEventListener("user:close", () => { userId = null; docs = []; loaded = false; });
+    $("#viewer").addEventListener("close", () => { if (viewerText) viewerText.reset(); viewerText = null; });
     // Visits or conditions changed: link texts and options may change.
     document.addEventListener("user:data", () => { if (loaded) render(); });
   }
