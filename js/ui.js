@@ -102,6 +102,13 @@ const UI = (() => {
     const dlg = $("#viewer");
     if (dlg.open) dlg.close();
   }
+  /** Empty the viewer's side slot (#viewer-extra); callers fill it after openViewer, e.g. with the text. */
+  function clearViewerExtra() {
+    const extra = $("#viewer-extra");
+    extra.innerHTML = "";
+    extra.hidden = true;
+    $("#viewer-main").classList.remove("has-extra");
+  }
   /** Show an image or PDF blob in the viewer dialog. */
   function openViewer({ title, blob, mime, fileName, meta = "" }) {
     const dlg = $("#viewer");
@@ -110,6 +117,7 @@ const UI = (() => {
     $("#viewer-title").textContent = title;
     $("#viewer-meta").textContent = meta;
     const body = $("#viewer-body");
+    clearViewerExtra();
     if (mime.startsWith("image/")) {
       body.innerHTML = `<img src="${viewerUrl}" alt="${esc(title)}">`;
     } else {
@@ -125,7 +133,7 @@ const UI = (() => {
     if (!dlg) return;
     $("#viewer-close").addEventListener("click", closeViewer);
     dlg.addEventListener("click", (e) => { if (e.target === dlg) closeViewer(); });
-    dlg.addEventListener("close", () => { $("#viewer-body").innerHTML = ""; });
+    dlg.addEventListener("close", () => { $("#viewer-body").innerHTML = ""; clearViewerExtra(); });
   });
 
   /** Decode base64 (no data: prefix) into a Blob. */

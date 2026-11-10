@@ -8,6 +8,9 @@
  *   documents  { id, userId, title, category, docDate, tags: [], notes, link: "visit:<id>" | "condition:<id>" | "",
  *                fileName, mime, size (bytes), thumb (small JPEG data: URL or ""), source: "upload" | "scan",
  *                scan: null or { mode, method, modelVersion, confidence, pageFound } for scanned pages,
+ *                text: the text read from the page (OCR, possibly corrected by the user) or "",
+ *                ocr: null or { confidence (mean, 0..1 or null), words, edited, readAt, models },
+ *                (documents stored before text reading existed have no text / ocr fields: read as "" / null)
  *                createdAt, updatedAt (ISO 8601) }
  *   voiceNotes { id, userId, title, documentId, fileName, mime, size (bytes), duration (seconds or null),
  *                createdAt, updatedAt }
@@ -19,6 +22,7 @@ const FilesDB = (() => {
   const DB_NAME = "healthDiary.files";
   const DB_VERSION = 1;
   const MAX_BYTES = 20 * 1024 * 1024; // per document or voice note
+  const MAX_TEXT = 200000; // characters of text kept with a document
 
   const DOC_TYPES = { "application/pdf": "PDF", "image/png": "PNG", "image/jpeg": "JPEG", "image/webp": "WebP" };
   const AUDIO_TYPES = {
@@ -142,7 +146,8 @@ const FilesDB = (() => {
 
   /**
    * Store a document. The type is checked from the first bytes; size at most 20 MB.
-   * meta: { title, category, docDate, tags, notes, link, fileName, thumb, source }. Returns the record.
+   * meta: { title, category, docDate, tags, notes, link, fileName, thumb, source, scan, text, ocr }.
+   * Returns the record.
    */
   async function addDocument(userId, meta, blob) {
     checkSize(blob);
@@ -166,6 +171,8 @@ const FilesDB = (() => {
       thumb: meta.thumb || "",
       source: meta.source || "upload",
       scan: meta.scan || null,
+      text: normText(meta.text),
+      ocr: normText(meta.text) ? meta.ocr || null : null,
       createdAt: t, updatedAt: t,
     };
     const typed = blob.type === mime ? blob : new Blob([blob], { type: mime });
@@ -176,7 +183,7 @@ const FilesDB = (() => {
     return doc;
   }
 
-  /** Change a document's metadata (title, category, docDate, tags, notes, link). Returns the record. */
+  /** Change a document's metadata (title, category, docDate, tags, notes, link, text + ocr). Returns the record. */
   async function updateDocument(id, patch) {
     let out = null;
     await run(["documents"], "readwrite", (tx) => {
@@ -188,6 +195,10 @@ const FilesDB = (() => {
         out = { ...r.result };
         allowed.forEach((k) => { if (k in patch) out[k] = patch[k] ?? ""; });
         if ("tags" in patch) out.tags = normTags(patch.tags);
+        if ("text" in patch) {
+          out.text = normText(patch.text);
+          out.ocr = out.text ? (patch.ocr !== undefined ? patch.ocr : out.ocr || null) : null;
+        }
         if (!String(out.title).trim()) out.title = r.result.title;
         out.updatedAt = now();
         store.put(out);
@@ -304,11 +315,11 @@ const FilesDB = (() => {
 
   /**
    * Storage used by one user, in bytes: { documents: {count, bytes}, voiceNotes: {count, bytes}, bytes }.
-   * Counts file sizes plus thumbnails.
+   * Counts file sizes plus thumbnails and stored text.
    */
   async function usage(userId) {
     const [docs, notes] = await Promise.all([listBy("documents", userId), listBy("voiceNotes", userId)]);
-    const d = docs.reduce((s, x) => s + x.size + (x.thumb ? x.thumb.length : 0), 0);
+    const d = docs.reduce((s, x) => s + x.size + (x.thumb ? x.thumb.length : 0) + (x.text ? x.text.length : 0), 0);
     const v = notes.reduce((s, x) => s + x.size, 0);
     return { documents: { count: docs.length, bytes: d }, voiceNotes: { count: notes.length, bytes: v }, bytes: d + v };
   }
@@ -320,6 +331,8 @@ const FilesDB = (() => {
     } catch (err) { /* not supported */ }
     return null;
   }
+
+  const normText = (v) => String(v ?? "").trim().slice(0, MAX_TEXT);
 
   function normTags(v) {
     const list = Array.isArray(v) ? v : String(v || "").split(",");

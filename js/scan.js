@@ -2,8 +2,9 @@
  * Health Diary: the Scan view (#scan). Three steps: 1 Photo, 2 Check, 3 Save.
  * Sends the photo to the local server (POST /api/scan), shows the detected outline over the photo and the
  * corrected page, lets the user switch the output mode, drag the corners and re-warp (field `corners`),
- * then saves the page as a PNG document. Without the scanner the photo can still be saved as it is.
- * Uses UI, FilesDB, Documents. Interface: docs/PLAN.md ("Interface: the scanner").
+ * optionally reads the text on the page (Ocr.widget, POST /api/ocr on the corrected page), then saves the
+ * page as a PNG document together with that text. Without the scanner the photo can still be saved as it is.
+ * Uses UI, FilesDB, Ocr, Documents. Interface: docs/PLAN.md ("Interface: the scanner").
  */
 const Scan = (() => {
   const { $, $$, fmtBytes, fmtDate, today } = UI;
@@ -26,6 +27,8 @@ const Scan = (() => {
     adjusting: false, edit: null, // while adjusting: normalised corner handles [[x, y] * 4]
     busy: false, seq: 0, fieldsReady: false,
   };
+
+  let ocr = null; // the "Text on this page" box of the Check step (Ocr.widget), made in bind()
 
   const mode = () => ($('input[name="scan-mode"]:checked') || {}).value || "gray";
   const setStatus = (msg) => { $("#scan-status").textContent = msg; };
@@ -120,6 +123,8 @@ const Scan = (() => {
     $("#scan-page").removeAttribute("src");
     $("#scan-save-preview").removeAttribute("src");
     drawOutline(null);
+    if (ocr) ocr.reset();
+    $("#scan-save-text").hidden = true;
     $("#scan-notfound").hidden = true;
     $(".scan-page-wrap").classList.add("empty");
     setBusy(false);
@@ -179,7 +184,15 @@ const Scan = (() => {
     $("#scan-step-check").classList.toggle("is-busy", on);
     if (on) $("#scan-result").setAttribute("aria-busy", "true"); else $("#scan-result").removeAttribute("aria-busy");
     $$('input[name="scan-mode"]').forEach((r) => { r.disabled = on; });
-    ["#scan-adjust", "#scan-apply", "#scan-next", "#scan-nf-adjust", "#scan-nf-save"].forEach((s) => { $(s).disabled = on; });
+    ["#scan-adjust", "#scan-apply", "#scan-nf-adjust"].forEach((s) => { $(s).disabled = on; });
+    if (ocr) ocr.setEnabled(!on);
+    lockNext();
+  }
+
+  /** Continue waits for a scan or a text read that is still running, so the text is not lost. */
+  function lockNext() {
+    const wait = st.busy || Boolean(ocr && ocr.isBusy());
+    ["#scan-next", "#scan-nf-save"].forEach((s) => { $(s).disabled = wait; });
   }
 
   /** POST the photo (and the user's corners, if any) to /api/scan and show the result. */
@@ -208,7 +221,9 @@ const Scan = (() => {
       }
       if (mine !== st.seq) return; // retake or reset meanwhile
       const wasAdjusting = st.adjusting;
+      const first = !st.result;
       st.result = { ...data, mode: m };
+      if (ocr && !first) ocr.pageChanged(); // text read from the earlier page is kept but marked as out of date
       setBusy(false);
       endAdjust(false);
       show(st.result);
@@ -356,6 +371,11 @@ const Scan = (() => {
     $("#scan-save-preview").src = pageSrc(st.result);
     $("#scan-save-cap").textContent = `Corrected page, ${MODE_TEXT[st.result.mode] || st.result.mode}, saved as PNG.`;
     $("#scan-save-status").textContent = "";
+    const t = ocr ? ocr.value() : null;
+    const note = $("#scan-save-text");
+    note.hidden = !(t && t.text);
+    note.textContent = t && t.text
+      ? `The text you read from the page (${Ocr.wordsText(t.ocr.words)}) will be saved with the document. Go Back to change it.` : "";
     setStep("save");
   }
 
@@ -368,6 +388,7 @@ const Scan = (() => {
     fillFields(`Document photo ${fmtDate(today())}`);
     $("#scan-save-preview").src = st.photoUrl;
     $("#scan-save-cap").textContent = "Your photo, saved as it is (not scanned).";
+    $("#scan-save-text").hidden = true;
     $("#scan-save-status").textContent = "";
     setPhotoStatus("");
     setStep("save");
@@ -395,6 +416,8 @@ const Scan = (() => {
         meta.source = "scan";
         meta.scan = { mode: r.mode, method: r.method, modelVersion: r.model_version || null,
           confidence: r.confidence ?? null, pageFound: Boolean(r.page_found) };
+        const t = ocr ? ocr.value() : null;
+        if (t && t.text) { meta.text = t.text; meta.ocr = t.ocr; }
       }
       meta.thumb = await UI.thumbnail(blob);
       const d = await Documents.add(meta, blob);
@@ -497,9 +520,18 @@ const Scan = (() => {
     $("#scan-view-docs").addEventListener("click", () => reset(false));
     bindHandles();
     bindDrop();
+    if (typeof Ocr !== "undefined") {
+      ocr = Ocr.widget($("#scan-ocr"), {
+        id: "scan-ocr", heading: "Text on this page",
+        idleHint: "Read the printed text on the page so you can copy it and find this document later by its words. It is read on this computer and saved with the document.",
+        source: async () => (st.result ? UI.b64ToBlob(st.result.image_png_b64, "image/png") : null),
+        onBusy: lockNext,
+      });
+    }
     document.addEventListener("view:show", (e) => {
       if (e.detail.name !== "scan") return;
       if (st.step === "done") reset(false);
+      if (ocr) ocr.checkAvailability();
       if (st.step === "photo") {
         if (!st.file) setPhotoStatus("");
         checkStatus();
