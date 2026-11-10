@@ -1,0 +1,15 @@
+{
+ "arch": "crnn_mobilenet_v3_large",
+ "out_dir": "runs/rec",
+ "seed": 2026,
+ "epochs": 14,
+ "patience": 3,
+ "batch_size": 64,
+ "lr": 0.0003,
+ "weight_decay": 0.0001,
+ "aug_p": 0.35,
+ "aug_warp": 0.04,
+ "aug_blur": 1.2,
+ "threads": 4,
+ "crops_per_epoch": 32000
+}

@@ -1,0 +1,12 @@
+# OCR pipeline (ocr/, ocr_scan.py): text detection and recognition on top of the page scanner.
+# Tesseract itself is only needed for the baseline comparison: apt-get install tesseract-ocr
+-r requirements.txt
+torch==2.15.0
+torchvision==0.29.2
+python-doctr==1.1.0
+opencv-python==5.0.0.93
+rapidfuzz==3.14.6
+pytesseract==0.3.13
+# data download and conversion (scripts/download_data.py)
+huggingface_hub==2.4.0
+pyarrow==26.0.1
