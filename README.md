@@ -92,6 +92,9 @@ sudo apt-get install -y tesseract-ocr
 Tesseract is needed only for the baseline comparison. The first run downloads the docTR pretrained
 weights (about 60 MB) into `~/.cache/doctr`; after that everything runs offline.
 
+Limits: pages turned by 90 or 180 degrees are not corrected (rotate them first; EXIF rotation is
+applied), and handwriting is out of scope.
+
 ### Run inference
 
 ```bash

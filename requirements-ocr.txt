@@ -8,5 +8,5 @@ opencv-python==5.0.0.93
 rapidfuzz==3.14.6
 pytesseract==0.3.13
 # data download and conversion (scripts/download_data.py)
-huggingface_hub==2.4.0
+huggingface_hub==1.33.0
 pyarrow==26.0.1

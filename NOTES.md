@@ -179,7 +179,9 @@ This was found after the first recognition run (Step 4). Consequences:
 ### Recogniser (`ocr/train_rec.py`, `configs/ocr/rec.json`)
 
 - **Overfit test** (48 crops, no augmentation): loss 0.13 to 0.0025, CER on those crops 0.037 to 0.004.
-  Passed. Log: `docs/ocr/logs/rec_overfit.json`.
+  Passed. Log: `docs/ocr/logs/rec_overfit.json`. That log was made with the first learning rate
+  (3e-4). With the shipped config (1e-4) the same command gives loss 0.29 to 0.047 and CER 0.037 to
+  0.020: slower, still falling.
 - **First run** (lr 3e-4, raw SROIE labels): validation CER got *worse* on CORD (0.015 to 0.037) and
   FUNSD (0.051 to 0.078). Cause: the upper-case SROIE labels above taught the model to upper-case
   text. Log: `docs/ocr/logs/rec_train_first_run_uppercase_labels.json`. Not used.

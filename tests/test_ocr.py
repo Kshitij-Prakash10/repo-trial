@@ -151,3 +151,10 @@ def test_scanner_crop_is_used_only_when_safe():
 def test_sroie_is_scored_without_case():
     assert common.error_counts("Total", "TOTAL", "sroie")["char_err"] == 0
     assert common.error_counts("Total", "TOTAL", "funsd")["char_err"] == 4
+
+
+def test_transparent_background_becomes_white():
+    from PIL import Image
+    from ocr.pipeline import to_rgb
+    im = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
+    assert to_rgb(im).getpixel((0, 0)) == (255, 255, 255)

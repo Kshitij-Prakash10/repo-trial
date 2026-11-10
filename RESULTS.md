@@ -129,6 +129,19 @@ errors. On SROIE a large share of the "errors" are label problems, not reading p
 - Single runs with one seed (2026); no confidence intervals. The recognition gains are small enough
   that a different seed could change their size.
 
+- **8 of the 361 SROIE test images also appear in train or val** under another id (7 in train, 1 in
+  val; byte-identical files in the upstream dataset, found by an independent check). The splits are
+  disjoint by page id, not by content. Leaving these 8 pages out changes SROIE recognition CER by
+  0.0003 (fine-tuned 0.1316, pretrained 0.1382) and end-to-end CER by 0.0001. FUNSD and CORD have no
+  such duplicates.
+
+## Known limitations
+
+- **Rotated pages are not handled.** A page turned by 90 or 180 degrees is read as garbage (CER above
+  0.8) with no warning. EXIF rotation from phone cameras is applied.
+- **The first run needs the network** to download the docTR pretrained weights; without them and
+  without network it stops with an error. Later runs work offline.
+
 ## What to try next
 
 1. **Fine-tune the detector on a GPU.** The overfit test needs many more steps than a CPU allows; with

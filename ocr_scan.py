@@ -31,7 +31,8 @@ def main(argv: list[str] | None = None) -> int:
     from ocr.pipeline import OcrPipeline
     try:
         with Image.open(a.image) as f:
-            image = ImageOps.exif_transpose(f).convert("RGB")
+            image = ImageOps.exif_transpose(f)
+            image.load()
     except Exception as e:
         print(f"error: cannot read {a.image} as an image: {e}", file=sys.stderr)
         return 2

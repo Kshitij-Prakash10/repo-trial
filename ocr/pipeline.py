@@ -32,6 +32,15 @@ SCAN_MIN_CONF_GAIN = 0.02  # ... and its mean recognition confidence must beat t
 MIN_BOX = 3  # px
 
 
+def to_rgb(image: Image.Image) -> Image.Image:
+    """RGB copy of any PIL image; transparent areas become white (a plain convert makes them black)."""
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+        rgba = image.convert("RGBA")
+        white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        return Image.alpha_composite(white, rgba).convert("RGB")
+    return image.convert("RGB")
+
+
 def _mean_conf(rec: list[tuple[str, float]]) -> float:
     return float(np.mean([c for _, c in rec])) if rec else 0.0
 
@@ -109,7 +118,7 @@ class OcrPipeline:
         source pixels) and "first_pass_text" (the text read without the scanner's crop); the evaluation
         uses them to score detection and the scanner-stage ablation without a second run."""
         t0 = time.perf_counter()
-        img = image.convert("RGB")
+        img = to_rgb(image)
         W0, H0 = img.size
         s = min(1.0, MAX_SIDE / max(W0, H0))
         if s < 1:
