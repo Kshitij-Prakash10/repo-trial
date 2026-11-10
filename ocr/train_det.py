@@ -112,9 +112,12 @@ def main(cfg: dict, overfit: int = 0) -> dict:
     print("start", json.dumps(start), flush=True)
     bs = cfg["batch_size"]
     per_epoch = len(train) if overfit else min(cfg["pages_per_epoch"], len(train))
-    epochs = 12 if overfit else cfg["epochs"]
+    epochs = 8 if overfit else cfg["epochs"]
     steps = epochs * (per_epoch // bs)
-    opt = torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
+    if cfg.get("freeze_backbone"):  # only the neck and head learn; a full backward pass is too slow on a CPU
+        for p in model.feat_extractor.parameters():
+            p.requires_grad = False
+    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=cfg["lr"], total_steps=max(steps, 1), pct_start=0.1)
     rng = np.random.default_rng(cfg["seed"])
     aug = None if overfit else {"p": cfg["aug_p"], "warp": cfg["aug_warp"], "blur": cfg["aug_blur"]}
