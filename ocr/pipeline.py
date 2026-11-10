@@ -12,6 +12,7 @@ photo goes on to OCR. This keeps scans and screenshots (no page border) from bei
 """
 from __future__ import annotations
 
+import os
 import time
 
 import numpy as np
@@ -62,7 +63,7 @@ def scanner_decision(page: dict, boxes: np.ndarray, W: int, H: int) -> tuple[boo
 class OcrPipeline:
     """Holds the three models. `run` is safe to call repeatedly."""
 
-    def __init__(self, det_model, rec_model, use_scanner: bool = True, name: str = "custom"):
+    def __init__(self, det_model, rec_model, use_scanner: bool = True, name: dict | str = "custom"):
         self.det = models.det_predictor(det_model)
         self.rec = models.rec_predictor(rec_model)
         self.use_scanner = use_scanner
@@ -75,8 +76,13 @@ class OcrPipeline:
         if weights not in ("finetuned", "pretrained"):
             raise ValueError("weights must be 'finetuned' or 'pretrained'")
         ft = weights == "finetuned"
-        return cls(models.load_det(ckpt=models.DET_CKPT if ft else None),
-                   models.load_rec(ckpt=models.REC_CKPT if ft else None), use_scanner, weights)
+        # a stage with no fine-tuned checkpoint in models/ocr keeps its pretrained weights
+        det = models.DET_CKPT if ft and os.path.exists(models.DET_CKPT) else None
+        rec = models.REC_CKPT if ft and os.path.exists(models.REC_CKPT) else None
+        if ft and rec is None and det is None:
+            raise FileNotFoundError("no fine-tuned checkpoint in models/ocr; use weights='pretrained'")
+        name = {"detector": "finetuned" if det else "pretrained", "recogniser": "finetuned" if rec else "pretrained"}
+        return cls(models.load_det(ckpt=det), models.load_rec(ckpt=rec), use_scanner, name)
 
     def detect(self, img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Word boxes (N, 4) in pixels of img and their detection scores."""

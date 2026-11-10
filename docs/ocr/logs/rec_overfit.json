@@ -1,0 +1,129 @@
+{
+ "config": {
+  "arch": "crnn_mobilenet_v3_large",
+  "out_dir": "runs/rec",
+  "seed": 2026,
+  "epochs": 12,
+  "patience": 3,
+  "batch_size": 64,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "aug_p": 0.35,
+  "aug_warp": 0.04,
+  "aug_blur": 1.2,
+  "threads": 4
+ },
+ "overfit": 48,
+ "train_crops": 48,
+ "val_crops": 48,
+ "train_dropped_not_in_vocab_or_too_long": 0,
+ "epochs": [
+  {
+   "epoch": 10,
+   "train_loss": 0.1323,
+   "val": {
+    "funsd": {
+     "cer": 0.0285,
+     "wer": 0.1042,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0285
+   },
+   "seconds": 1,
+   "lr": 0.0002936984520536159
+  },
+  {
+   "epoch": 20,
+   "train_loss": 0.0309,
+   "val": {
+    "funsd": {
+     "cer": 0.0203,
+     "wer": 0.0833,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0203
+   },
+   "seconds": 1,
+   "lr": 0.00024641835578041504
+  },
+  {
+   "epoch": 30,
+   "train_loss": 0.0113,
+   "val": {
+    "funsd": {
+     "cer": 0.0041,
+     "wer": 0.0208,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0041
+   },
+   "seconds": 1,
+   "lr": 0.00016741446746303606
+  },
+  {
+   "epoch": 40,
+   "train_loss": 0.0046,
+   "val": {
+    "funsd": {
+     "cer": 0.0041,
+     "wer": 0.0208,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0041
+   },
+   "seconds": 0,
+   "lr": 8.26809922494388e-05
+  },
+  {
+   "epoch": 50,
+   "train_loss": 0.0027,
+   "val": {
+    "funsd": {
+     "cer": 0.0041,
+     "wer": 0.0208,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0041
+   },
+   "seconds": 1,
+   "lr": 2.0097309047576465e-05
+  },
+  {
+   "epoch": 60,
+   "train_loss": 0.0025,
+   "val": {
+    "funsd": {
+     "cer": 0.0041,
+     "wer": 0.0208,
+     "chars": 246,
+     "words": 48,
+     "n": 48
+    },
+    "mean_cer": 0.0041
+   },
+   "seconds": 1,
+   "lr": 2.549752442047364e-07
+  }
+ ],
+ "start": {
+  "funsd": {
+   "cer": 0.0366,
+   "wer": 0.1458,
+   "chars": 246,
+   "words": 48,
+   "n": 48
+  },
+  "mean_cer": 0.0366
+ },
+ "best_val_mean_cer": 0.0366
+}

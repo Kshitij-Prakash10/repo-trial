@@ -1,0 +1,9 @@
+start {"funsd": {"precision": 0.8778, "recall": 0.8075, "f1": 0.8412, "tp": 1271, "n_pred": 1448, "n_true": 1574}, "sroie": {"precision": 0.7114, "recall": 0.7788, "f1": 0.7436, "tp": 609, "n_pred": 856, "n_true": 782}, "cord": {"precision": 0.9362, "recall": 0.9908, "f1": 0.9627, "tp": 323, "n_pred": 345, "n_true": 326}, "mean_f1": 0.8492}
+epoch 1 train_loss 0.4259
+epoch 2 train_loss 0.4065
+epoch 3 train_loss 0.3937
+{"epoch": 4, "train_loss": 0.3865, "val": {"funsd": {"precision": 0.8494, "recall": 0.7846, "f1": 0.8157, "tp": 1235, "n_pred": 1454, "n_true": 1574}, "sroie": {"precision": 0.6367, "recall": 0.6969, "f1": 0.6654, "tp": 545, "n_pred": 856, "n_true": 782}, "cord": {"precision": 0.8697, "recall": 0.9417, "f1": 0.9043, "tp": 307, "n_pred": 353, "n_true": 326}, "mean_f1": 0.7951}, "seconds": 153, "lr": 5.688680584054199e-05}
+epoch 5 train_loss 0.3814
+epoch 6 train_loss 0.3792
+epoch 7 train_loss 0.3753
+{"epoch": 8, "train_loss": 0.3794, "val": {"funsd": {"precision": 0.844, "recall": 0.777, "f1": 0.8091, "tp": 1223, "n_pred": 1449, "n_true": 1574}, "sroie": {"precision": 0.6257, "recall": 0.6841, "f1": 0.6536, "tp": 535, "n_pred": 855, "n_true": 782}, "cord": {"precision": 0.8438, "recall": 0.911, "f1": 0.8761, "tp": 297, "n_pred": 352, "n_true": 326}, "mean_f1": 0.7796}, "seconds": 146, "lr": 3.3449331715642514e-08}

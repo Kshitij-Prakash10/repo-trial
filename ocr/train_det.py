@@ -8,6 +8,7 @@ Starts from docTR pretrained weights. Pages are letterboxed to the model's squar
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import time
@@ -63,6 +64,24 @@ def make_batch(items: list[dict], size: int, mean, std, rng, aug: dict | None):
     return x, targets
 
 
+def kernel_loss(model, x: torch.Tensor, targets: list[dict]) -> torch.Tensor:
+    """Dice loss between the model's output map and the shrunken text kernels.
+
+    docTR's own FAST loss also pulls a slightly dilated copy of the output towards the full word boxes.
+    Starting from the pretrained weights that term is large (the output is kernel-shaped) and it moves
+    every predicted box, so F1 falls even on the training pages. Only the kernel target is used here,
+    over the whole page, with docTR's own target builder (same shrink ratio as the pretrained model)."""
+    feats = model.feat_extractor(x)
+    logits = model.prob_head(model.neck([feats[str(i)] for i in range(len(feats))]))
+    logits = torch.nn.functional.interpolate(logits, size=x.shape[-2:], mode="bilinear")
+    _, mask, kernel = model.build_target(targets, logits.shape[1:])
+    mask, kernel = torch.from_numpy(mask).float(), torch.from_numpy(kernel).float()
+    prob = torch.sigmoid(logits)
+    inter = (mask * prob * kernel).sum((1, 2, 3))
+    dice = 1 - 2 * inter / ((mask * (prob + kernel)).sum((1, 2, 3)) + 1e-6)
+    return dice.mean()
+
+
 def freeze_batchnorm(model) -> None:
     """Keep the pretrained BatchNorm statistics: batches of 2 pages are too small to re-estimate them."""
     for m in model.modules():
@@ -72,7 +91,8 @@ def freeze_batchnorm(model) -> None:
 
 def evaluate(model, pages: list[dict]) -> dict:
     """Word-box precision / recall / F1 at IoU 0.5 per dataset, and the unweighted mean F1."""
-    pred = det_predictor(model)
+    # a copy: docTR's predictor fuses FAST layers in place, which must not happen to the model in training
+    pred = det_predictor(copy.deepcopy(model).eval())
     counts = {}
     for i in range(0, len(pages), 8):
         chunk = pages[i:i + 8]
@@ -112,7 +132,7 @@ def main(cfg: dict, overfit: int = 0) -> dict:
     print("start", json.dumps(start), flush=True)
     bs = cfg["batch_size"]
     per_epoch = len(train) if overfit else min(cfg["pages_per_epoch"], len(train))
-    epochs = 8 if overfit else cfg["epochs"]
+    epochs = 16 if overfit else cfg["epochs"]
     steps = epochs * (per_epoch // bs)
     if cfg.get("freeze_backbone"):  # only the neck and head learn; a full backward pass is too slow on a CPU
         for p in model.feat_extractor.parameters():
@@ -129,7 +149,7 @@ def main(cfg: dict, overfit: int = 0) -> dict:
         order = rng.permutation(len(train))[:per_epoch]
         for i in range(0, len(order) - bs + 1, bs):
             x, targets = make_batch([train[j] for j in order[i:i + bs]], size, mean, std, rng, aug)
-            loss = model(x, targets)["loss"]
+            loss = kernel_loss(model, x, targets) if cfg.get("loss") == "kernel" else model(x, targets)["loss"]
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
