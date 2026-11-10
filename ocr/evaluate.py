@@ -107,7 +107,7 @@ def eval_recognition(system: str, split: str, limit: int | None, workers: int) -
                 preds = [t for part in pool.map(_tess_words, chunks) for t in part]
         else:
             preds = [p[0] for p in rec(crops)]
-        counts = [error_counts(p, t) for p, t in zip(preds, texts)]
+        counts = [error_counts(p, t, ds) for p, t in zip(preds, texts)]
         out[ds] = {**rates(counts), "seconds": round(time.time() - t0)}
         _write(f"{system}_{split}", f"{ds}_rec", [{"page": i, "index": k, "true": t, "pred": p, **c}
                                                   for k, (i, t, p, c) in enumerate(zip(ids, texts, preds, counts))])
@@ -152,9 +152,9 @@ def eval_pages(system: str, split: str, limit: int | None, workers: int) -> tupl
             rows_det.append({"page": p["id"], "tp": m, "n_pred": len(pb), "n_true": len(tb)})
             ref = reference_text(p)
             text = r["text"] if "text" in r else page_text(r["texts"], pb)
-            c = error_counts(text, ref)
+            c = error_counts(text, ref, ds)
             counts.append(c)
-            counts_ns.append(error_counts(r["text_no_scanner"], ref) if "text_no_scanner" in r else c)
+            counts_ns.append(error_counts(r["text_no_scanner"], ref, ds) if "text_no_scanner" in r else c)
             used += bool(r.get("scanner_used"))
             rows_e2e.append({"page": p["id"], "true": ref, "pred": text, **c,
                              "scanner_used": r.get("scanner_used"), "scanner_reason": r.get("scanner_reason")})

@@ -51,6 +51,36 @@ def load_split(split: str, vocab: str, max_len: int, train: bool, limit_pages: i
     return crops, texts, names, dropped
 
 
+@torch.no_grad()
+def fix_sroie_labels(model, crops, texts, names, size) -> tuple[list, list, list, dict]:
+    """Clean the SROIE training labels with the pretrained recogniser (training set only).
+
+    SROIE transcriptions are upper case whatever the print, and some derived word boxes are misaligned.
+    For each SROIE crop: if the pretrained reading equals the label apart from case, the reading's case
+    is used; else if the label has no letters and the reading is within half its length, the label is
+    kept; otherwise the crop is dropped. Other datasets pass through unchanged."""
+    idx = [i for i, n in enumerate(names) if n == "sroie"]
+    model.eval()
+    mean, std = model.cfg["mean"], model.cfg["std"]
+    preds = []
+    for i in range(0, len(idx), 256):
+        out = model(to_batch([crops[j] for j in idx[i:i + 256]], size, mean, std), return_preds=True)
+        preds += [p[0] for p in out["preds"]]
+    new, stats = dict(), {"sroie_recased": 0, "sroie_kept_no_letters": 0, "sroie_dropped": 0}
+    for j, p in zip(idx, preds):
+        t = texts[j]
+        if p.upper() == t.upper():
+            new[j] = p
+            stats["sroie_recased"] += 1
+        elif not any(c.isalpha() for c in t) and error_counts(p, t)["char_err"] <= 0.5 * len(t):
+            new[j] = t
+            stats["sroie_kept_no_letters"] += 1
+        else:
+            stats["sroie_dropped"] += 1
+    keep = [i for i, n in enumerate(names) if n != "sroie" or i in new]
+    return [crops[i] for i in keep], [new.get(i, texts[i]) for i in keep], [names[i] for i in keep], stats
+
+
 def to_batch(crops: list[np.ndarray], size: tuple[int, int], mean, std) -> torch.Tensor:
     """Resize keeping the aspect ratio, pad right and bottom with zeros, normalise (as docTR's predictor)."""
     H, W = size
@@ -75,7 +105,7 @@ def evaluate(model, crops, texts, names, size, bs: int = 256) -> dict:
         preds += [p[0] for p in out["preds"]]
     res = {}
     for ds in sorted(set(names)):
-        res[ds] = rates([error_counts(p, t) for p, t, n in zip(preds, texts, names) if n == ds])
+        res[ds] = rates([error_counts(p, t, ds) for p, t, n in zip(preds, texts, names) if n == ds])
     res["mean_cer"] = round(float(np.mean([res[ds]["cer"] for ds in res])), 4)
     return res
 
@@ -94,7 +124,11 @@ def main(cfg: dict, overfit: int = 0) -> dict:
         va_c, va_t, va_n = tr_c, tr_t, tr_n
     else:
         va_c, va_t, va_n, _ = load_split("val", model.vocab, model.max_length, False)
-    log = {"config": cfg, "overfit": overfit, "train_crops": len(tr_c), "val_crops": len(va_c),
+    label_stats = {}
+    if not overfit:
+        tr_c, tr_t, tr_n, label_stats = fix_sroie_labels(model, tr_c, tr_t, tr_n, size)
+        print("labels", json.dumps(label_stats), flush=True)
+    log = {"config": cfg, "sroie_train_labels": label_stats, "overfit": overfit, "train_crops": len(tr_c), "val_crops": len(va_c),
            "train_dropped_not_in_vocab_or_too_long": dropped, "epochs": []}
     start = evaluate(model, va_c, va_t, va_n, size)
     log["start"] = start

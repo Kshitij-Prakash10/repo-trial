@@ -146,3 +146,8 @@ def test_scanner_crop_is_used_only_when_safe():
     assert scanner_decision(page, np.zeros((0, 4)), 1000, 1000)[0] is False
     full = dict(page, corners=[[5, 5], [995, 5], [995, 995], [5, 995]])
     assert scanner_decision(full, inside, 1000, 1000)[0] is False  # nothing to gain from the warp
+
+
+def test_sroie_is_scored_without_case():
+    assert common.error_counts("Total", "TOTAL", "sroie")["char_err"] == 0
+    assert common.error_counts("Total", "TOTAL", "funsd")["char_err"] == 4

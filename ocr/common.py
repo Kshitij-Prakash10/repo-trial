@@ -12,6 +12,9 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA = os.path.join(ROOT, "data")
 DATASETS = ("funsd", "sroie", "cord")
+# SROIE's transcriptions are upper case even where the receipt prints mixed case ("Total" is labelled
+# "TOTAL"), so text from these datasets is compared without case. FUNSD and CORD keep case.
+CASE_INSENSITIVE = ("sroie",)
 SEGMENT_GAP = 2.0  # a horizontal gap wider than this many line heights splits a line into segments
 
 
@@ -90,9 +93,12 @@ def edit_distance(a, b) -> int:
     return int(Levenshtein.distance(a, b))
 
 
-def error_counts(pred: str, true: str) -> dict:
-    """Character and word edit counts for one pair, after normalise()."""
+def error_counts(pred: str, true: str, dataset: str | None = None) -> dict:
+    """Character and word edit counts for one pair, after normalise(); case is folded for the datasets
+    in CASE_INSENSITIVE."""
     p, t = normalise(pred), normalise(true)
+    if dataset in CASE_INSENSITIVE:
+        p, t = p.upper(), t.upper()
     return {"char_err": edit_distance(p, t), "char_n": len(t),
             "word_err": edit_distance(p.split(), t.split()), "word_n": len(t.split())}
 
