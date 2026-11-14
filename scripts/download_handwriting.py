@@ -29,20 +29,30 @@ HF = {
 }
 # Handwriting fonts from github.com/google/fonts (SIL Open Font License 1.1), pinned commit.
 FONTS_COMMIT = "main"
-FONTS = ["ofl/caveat/Caveat%5Bwght%5D.ttf", "ofl/kalam/Kalam-Regular.ttf", "ofl/kalam/Kalam-Light.ttf",
-         "ofl/indieflower/IndieFlower-Regular.ttf", "ofl/shadowsintolight/ShadowsIntoLight.ttf",
-         "ofl/patrickhand/PatrickHand-Regular.ttf", "ofl/gloriahallelujah/GloriaHallelujah.ttf",
-         "ofl/reeniebeanie/ReenieBeanie.ttf", "ofl/homemadeapple/HomemadeApple-Regular.ttf",
-         "ofl/nothingyoucoulddo/NothingYouCouldDo.ttf", "ofl/coveredbyyourgrace/CoveredByYourGrace.ttf",
-         "ofl/justanotherhand/JustAnotherHand-Regular.ttf", "ofl/gochihand/GochiHand-Regular.ttf",
-         "ofl/handlee/Handlee-Regular.ttf", "ofl/dekko/Dekko-Regular.ttf", "ofl/zeyada/Zeyada.ttf",
-         "ofl/waitingforthesunrise/WaitingfortheSunrise.ttf", "ofl/schoolbell/Schoolbell-Regular.ttf",
-         "ofl/swankyandmoomoo/SwankyandMooMoo.ttf", "ofl/rocksalt/RockSalt-Regular.ttf",
-         "ofl/sueellenfrancisco/SueEllenFrancisco-Regular.ttf", "ofl/overtherainbow/OvertheRainbow.ttf",
-         "ofl/lovedbytheking/LovedbytheKing.ttf", "ofl/cedarvillecursive/Cedarville-Cursive.ttf",
-         "ofl/dawningofanewday/DawningofaNewDay.ttf", "ofl/shortstack/ShortStack-Regular.ttf",
-         "ofl/neucha/Neucha.ttf", "ofl/annieuseyourtelescope/AnnieUseYourTelescope-Regular.ttf",
-         "ofl/crafty girls/CraftyGirls-Regular.ttf", "ofl/comingsoon/ComingSoon-Regular.ttf"]
+FONTS = ["ofl/caveat/Caveat%5Bwght%5D.ttf",
+         "ofl/kalam/Kalam-Regular.ttf",
+         "ofl/kalam/Kalam-Light.ttf",
+         "ofl/indieflower/IndieFlower-Regular.ttf",
+         "ofl/shadowsintolight/ShadowsIntoLight.ttf",
+         "ofl/patrickhand/PatrickHand-Regular.ttf",
+         "ofl/gloriahallelujah/GloriaHallelujah.ttf",
+         "ofl/reeniebeanie/ReenieBeanie.ttf",
+         "ofl/nothingyoucoulddo/NothingYouCouldDo.ttf",
+         "ofl/coveredbyyourgrace/CoveredByYourGrace.ttf",
+         "ofl/gochihand/GochiHand-Regular.ttf",
+         "ofl/handlee/Handlee-Regular.ttf",
+         "ofl/dekko/Dekko-Regular.ttf",
+         "ofl/zeyada/Zeyada.ttf",
+         "ofl/waitingforthesunrise/WaitingfortheSunrise.ttf",
+         "ofl/swankyandmoomoo/SwankyandMooMoo.ttf",
+         "ofl/sueellenfrancisco/SueEllenFrancisco-Regular.ttf",
+         "ofl/overtherainbow/OvertheRainbow.ttf",
+         "ofl/lovedbytheking/LovedbytheKing.ttf",
+         "ofl/cedarvillecursive/Cedarville-Cursive.ttf",
+         "ofl/dawningofanewday/DawningofaNewDay.ttf",
+         "ofl/shortstack/ShortStack-Regular.ttf",
+         "ofl/neucha/Neucha.ttf",
+         "ofl/annieuseyourtelescope/AnnieUseYourTelescope-Regular.ttf"]
 
 
 def check_space(need_gb: float) -> None:
