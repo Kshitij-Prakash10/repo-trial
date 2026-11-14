@@ -111,12 +111,13 @@ class OcrPipeline:
         crops = [img[int(y0):int(np.ceil(y1)), int(x0):int(np.ceil(x1))] for x0, y0, x1, y1 in boxes]
         return [(t, float(c)) for t, c in self.rec(crops)] if crops else []
 
-    def run(self, image: Image.Image, keep_first_pass: bool = False) -> dict:
+    def run(self, image: Image.Image, keep_first_pass: bool = False, keep_page: bool = False) -> dict:
         """Full pipeline on one photo or scan. Returns the result dict described in README.md.
 
         keep_first_pass adds "first_pass_boxes" (the detector's word boxes on the uncropped photo, in
         source pixels) and "first_pass_text" (the text read without the scanner's crop); the evaluation
-        uses them to score detection and the scanner-stage ablation without a second run."""
+        uses them to score detection and the scanner-stage ablation without a second run.
+        keep_page adds "page_image": the RGB array the boxes refer to (the photo, or the flattened page)."""
         t0 = time.perf_counter()
         img = to_rgb(image)
         W0, H0 = img.size
@@ -172,6 +173,8 @@ class OcrPipeline:
                           "box": [round(v, 1) for v in union(boxes[ln])],
                           "confidence": round(float(np.mean([words[w]["confidence"] for w in ln])), 4)})
         extra = {"first_pass_boxes": first_pass, "first_pass_text": first_text} if keep_first_pass else {}
+        if keep_page:
+            extra["page_image"] = arr
         return {**extra, "text": "\n".join(ln["text"] for ln in lines), "lines": lines, "words": words,
                 "page": {"width": int(arr.shape[1]), "height": int(arr.shape[0]),
                          "is_scanner_crop": bool(scan["used"])},
