@@ -1,0 +1,20 @@
+{
+ "out_dir": "runs/hw",
+ "init": "microsoft/trocr-small-handwritten",
+ "seed": 2026,
+ "steps": 3600,
+ "batch_size": 8,
+ "lr": 2e-05,
+ "weight_decay": 0.01,
+ "aug_p": 0.4,
+ "eval_every": 300,
+ "patience": 4,
+ "val_iam_lines": 200,
+ "val_gnhk_lines": 300,
+ "threads": 4,
+ "curriculum": [
+  {"until": 0.2, "mix": {"synth": 0.6, "iam": 0.25, "gnhk": 0.1, "printed": 0.05}},
+  {"until": 0.55, "mix": {"synth": 0.2, "iam": 0.5, "gnhk": 0.25, "printed": 0.05}},
+  {"until": 1.01, "mix": {"synth": 0.1, "iam": 0.3, "gnhk": 0.5, "printed": 0.1}}
+ ]
+}
