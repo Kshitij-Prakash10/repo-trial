@@ -1,0 +1,14 @@
+{
+ "out_dir": "runs/orient",
+ "seed": 2026,
+ "epochs": 10,
+ "steps_per_epoch": 150,
+ "batch_size": 16,
+ "lr": 0.0003,
+ "weight_decay": 0.0001,
+ "aug_p": 0.4,
+ "iam_lines": 1500,
+ "iam_page_share": 0.15,
+ "patience": 3,
+ "threads": 2
+}

@@ -1,0 +1,11 @@
+{
+ "out_dir": "runs/scriptclf",
+ "seed": 2026,
+ "epochs": 12,
+ "steps_per_epoch": 300,
+ "batch_size": 64,
+ "lr": 0.002,
+ "weight_decay": 0.0001,
+ "patience": 3,
+ "threads": 1
+}
