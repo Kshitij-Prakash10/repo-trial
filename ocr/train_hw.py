@@ -30,7 +30,7 @@ from ocr import augment, hwdata, synth_hw
 from ocr.common import ROOT, error_counts, rates
 from ocr.handwriting import HW_NAME, MAX_TOKENS, HandwritingReader, prep_line
 
-SYSTEM_FONTS = "/usr/share/fonts/truetype/*/*.ttf"
+SYSTEM_FONTS = ("/usr/share/fonts/truetype/dejavu/*.ttf", "/usr/share/fonts/truetype/liberation/*.ttf")
 
 
 def seed_all(seed: int) -> None:
@@ -105,7 +105,7 @@ def main(cfg: dict, overfit: int = 0, resume: bool = False) -> dict:
     rng = np.random.default_rng(cfg["seed"] + start_step)
     train = load_real("train", 4 if overfit else None)
     texts = [t for src in ("iam", "gnhk") for _, t in train[src]]  # corpus for the synthetic lines
-    hw_fonts, pr_fonts = synth_hw.font_files(), sorted(glob.glob(SYSTEM_FONTS))
+    hw_fonts, pr_fonts = synth_hw.font_files(), sorted(f for pat in SYSTEM_FONTS for f in glob.glob(pat))
     if overfit:
         fixed = (train["iam"] + train["gnhk"])[:overfit]
         val = {"overfit": fixed}
