@@ -19,7 +19,7 @@ import time
 import cv2
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageOps
 
 from ocr import augment, hwdata
 from ocr import orientation as O
@@ -37,7 +37,7 @@ def seed_all(seed: int) -> None:
 
 def _load(path: str) -> np.ndarray:
     with Image.open(path) as im:
-        im = im.convert("RGB")
+        im = ImageOps.exif_transpose(im).convert("RGB")
         im.thumbnail((STORE, STORE), Image.BILINEAR)
         return np.asarray(im)
 

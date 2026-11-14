@@ -10,5 +10,5 @@
  "iam_lines": 1500,
  "iam_page_share": 0.15,
  "patience": 3,
- "threads": 1
+ "threads": 4
 }

@@ -89,8 +89,7 @@ def load_words(split: str, limit: int | None = None, per_printed: int = 12000, s
     rng = np.random.default_rng(seed)
     out: dict[str, list] = {k: [] for k in ("gnhk_hw", "iam_hw", "gnhk_pr", "sroie_pr", "cord_pr")}
     for page in hwdata.gnhk_pages(split)[:limit]:
-        with Image.open(page["path"]) as im:
-            img = np.asarray(im.convert("RGB"))
+        img = hwdata.load_image(page["path"])
         for w in page["words"]:
             if w["text"] in hwdata.GNHK_SPECIAL:
                 continue

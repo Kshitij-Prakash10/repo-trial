@@ -78,6 +78,14 @@ def gnhk_pages(split: str) -> list[dict]:
     return pages
 
 
+def load_image(path: str) -> np.ndarray:
+    """RGB array with the EXIF rotation applied. GNHK's annotations refer to the rotated image:
+    about a fifth of its photos are stored sideways or upside down with an EXIF orientation tag."""
+    from PIL import ImageOps
+    with Image.open(path) as im:
+        return np.asarray(ImageOps.exif_transpose(im).convert("RGB"))
+
+
 def rect_crop(img: np.ndarray, points: np.ndarray, pad: float = 0.08) -> np.ndarray:
     """Crop the minimum-area rectangle around points (N, 2) and turn it upright (text left to right)."""
     (cx, cy), (w, h), ang = cv2.minAreaRect(np.asarray(points, np.float32))
@@ -101,8 +109,7 @@ def gnhk_lines(page: dict, img: np.ndarray | None = None) -> list[dict]:
     Words keep the annotation order inside a line when sorted by their left edge. "special" marks
     lines with a GNHK special token; they are left out of recognition scoring."""
     if img is None:
-        with Image.open(page["path"]) as im:
-            img = np.asarray(im.convert("RGB"))
+        img = load_image(page["path"])
     lines: dict[int, list[dict]] = {}
     for w in page["words"]:
         lines.setdefault(w["line"], []).append(w)
