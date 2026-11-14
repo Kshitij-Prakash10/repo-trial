@@ -75,11 +75,11 @@ In **Documents**, a document with text shows a "Text" mark and is found by the
 words in it. **View** shows the text beside the page, with Copy and Save text for
 corrections; an image without text offers Read text there too (PDFs do not).
 
-Reading text needs the optional OCR packages and model files:
-`pip install -r requirements-ocr.txt`, and the docTR weights in the local cache
-(see "OCR scanner" below; they are fetched once during setup, never by the
-server). Without them the rest of the app works as before: the Read text action
-is disabled and a line next to it says why.
+Reading text needs the optional OCR packages and the docTR model files; see
+"Setup" under "OCR scanner" below for the three commands. The model files are
+downloaded once during setup, never by the server. Without them the rest of the
+app works as before: the Read text action is disabled and a line next to it says
+why.
 
 Without the server (opened as a file) or without the scanner, the Scan view
 still saves the photo as a document, without scanning.
@@ -102,16 +102,35 @@ outside it); otherwise the whole image is read. Design notes and the reasons for
 
 ### Setup
 
-```bash
-pip install -r requirements-ocr.txt
-```
+1. **Linux only, recommended:** install the CPU-only build of PyTorch first. Without this step,
+   `pip` on Linux installs the GPU build, which adds several GB of CUDA libraries (about 6 GB in all
+   in a test install) that the CPU pipeline never uses. On macOS and Windows, skip this step.
 
-```bash
-sudo apt-get install -y tesseract-ocr
-```
+   ```bash
+   pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu
+   ```
 
-Tesseract is needed only for the baseline comparison. The first run downloads the docTR pretrained
-weights (about 60 MB) into `~/.cache/doctr`; after that everything runs offline.
+2. Install the OCR packages:
+
+   ```bash
+   pip install -r requirements-ocr.txt
+   ```
+
+3. Download the docTR pretrained weights (about 60 MB, into `~/.cache/doctr`). This needs the
+   internet once; after that everything runs offline. `ocr_scan.py` would also fetch them on its
+   first run, but the server never does, so run this before using Read text in the app:
+
+   ```bash
+   python -c "from doctr.models import detection, recognition; detection.fast_base(pretrained=True); recognition.crnn_mobilenet_v3_large(pretrained=True)"
+   ```
+
+   Then start (or restart) `python server.py`; the Read text action becomes available.
+
+4. Only for the baseline comparison in `RESULTS.md`, install Tesseract:
+
+   ```bash
+   sudo apt-get install -y tesseract-ocr
+   ```
 
 Limits: pages turned by 90 or 180 degrees are not corrected (rotate them first; EXIF rotation is
 applied), and handwriting is out of scope.
@@ -190,8 +209,10 @@ page end to end (CER / WER) on the test split of every dataset, and writes
 ## Tests
 
 ```bash
-python -m pytest -q                     # server, scanner and OCR API tests (fine-tuning tests need requirements-finetune.txt;
-                                        # the one real OCR read is skipped without requirements-ocr.txt)
+python -m pytest -q                     # server, scanner and OCR tests
+                                        # tests needing the optional packages skip without them:
+                                        # requirements-finetune.txt (fine-tuning), requirements-ocr.txt
+                                        # (OCR code), and the docTR weights (the one real OCR read)
 npm install playwright && npx playwright install chromium   # once
 node tests/ui/check.js                  # UI flows in headless Chromium (starts server.py)
 ```
