@@ -25,7 +25,7 @@ from ocr import augment, hwdata
 from ocr import orientation as O
 from ocr.common import DATASETS, ROOT, load_pages
 
-STORE = 640  # px, long side of the cached pages
+STORE = 512  # px, long side of the cached pages (the model's input size)
 
 
 def seed_all(seed: int) -> None:
@@ -52,7 +52,7 @@ def iam_page(lines: list[np.ndarray], rng: np.random.Generator) -> np.ndarray:
     y = m
     for p in pick:
         x = m + int(rng.integers(0, max(1, w - p.shape[1] + 1)) * (rng.random() < 0.3))
-        page[y:y + p.shape[0], x:x + p.shape[1]] = p
+        page[y:y + p.shape[0], x:x + p.shape[1]] = p[..., None]
         y += p.shape[0] + gap
     return page
 
@@ -108,7 +108,7 @@ def main(cfg: dict, overfit: int = 0) -> dict:
         val, iam = train, []
     else:
         val = pages("val")
-        iam = [np.asarray(im) for _, im, _ in hwdata.iam_lines("train", cfg["iam_lines"])]
+        iam = [np.asarray(im.convert("L").reduce(2)) for _, im, _ in hwdata.iam_lines("train", cfg["iam_lines"])]
     log = {"config": cfg, "overfit": overfit, "train_pages": len(train), "val_pages": len(val), "epochs": []}
     log["start"] = evaluate(model, val)
     print("start", json.dumps(log["start"]), flush=True)

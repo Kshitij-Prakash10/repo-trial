@@ -41,7 +41,7 @@ def seed_all(seed: int) -> None:
 
 
 def _gray(crop: np.ndarray) -> np.ndarray:
-    return prep_line(crop)[..., 0]
+    return prep_line(crop)[..., 0].copy()  # a copy: a view would keep all three channels alive
 
 
 def load_real(split: str, limit: int | None = None) -> dict[str, list[tuple[np.ndarray, str]]]:
