@@ -164,9 +164,10 @@ fine-tuned weights). Boxes are `[x0, y0, x1, y1]` in pixels.
 python scripts/download_data.py
 ```
 
-Downloads FUNSD, SROIE and CORD v2 from Hugging Face (pinned revisions, about 6 GB on disk) into
-`data/<dataset>/` and converts them to one annotation format with fixed train / val / test splits.
-The data is not committed. The script checks free disk space first and refuses to pass 30 GB.
+SROIE and CORD v2 are already in the repository (Git LFS; run `git lfs pull` after cloning). FUNSD's
+licence does not allow re-sharing, so this script downloads it from Hugging Face (pinned revision) into
+`data/funsd/` and converts it to the same annotation format with fixed train / val / test splits. It
+skips datasets already on disk, checks free disk space first and refuses to pass 30 GB.
 
 ### Train
 
@@ -252,8 +253,9 @@ downloads anything.
 python scripts/download_handwriting.py
 ```
 
-Downloads IAM lines and GNHK from Hugging Face at pinned revisions and 24 OFL handwriting fonts, about
-1 GB, into `data/raw/`. Every source and licence is listed in `data/DATASETS.md`.
+GNHK (Git LFS) and the 24 OFL handwriting fonts are already in the repository; this downloads IAM
+lines (0.27 GB, research-only, so not committed) from Hugging Face at a pinned revision into
+`data/raw/iam/` and skips what is present. Every source and licence is listed in `data/DATASETS.md`.
 
 ```bash
 python -m ocr.train_hw --config configs/ocr/hw.json --overfit 32

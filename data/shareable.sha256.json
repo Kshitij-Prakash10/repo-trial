@@ -1,0 +1,26 @@
+{
+ "gnhk": {
+  "path": "data/raw/gnhk/GNHK-dataset.zip",
+  "files": 1,
+  "bytes": 1010143400,
+  "sha256": "5f4b470030b41cd80e32d3a5ae7bc8bc41acc79b4bf770a451e7ec54ca3be34d"
+ },
+ "fonts": {
+  "path": "data/raw/fonts",
+  "files": 24,
+  "bytes": 3005364,
+  "sha256": "33072bf7359a43f18a9960f5e10647ff4af0ed433a477c0ee4fc8c332a30b1ce"
+ },
+ "sroie": {
+  "path": "data/sroie",
+  "files": 991,
+  "bytes": 574709227,
+  "sha256": "928bad355aff6c5a2fedb2b03619584221d0a28c0b1c55494992e1288129973a"
+ },
+ "cord": {
+  "path": "data/cord",
+  "files": 1004,
+  "bytes": 2316181311,
+  "sha256": "38f63347f083c7d2fd545795198a1b16108d9a00d951963947e4aa3f052aee3c"
+ }
+}
