@@ -25,6 +25,8 @@ DOCTR_CLASSES = [0, -90, 180, 90]  # docTR's own output order, in degrees counte
 MAX_SKEW = 15.0  # degrees
 MIN_SKEW = 0.5  # smaller estimated angles are left alone
 SKEW_MIN_GAIN = 1.08  # the profile must be this much sharper than at 0 degrees to rotate
+FLIP_WORDS = 48  # largest word boxes used by the 180-degree check
+FLIP_MARGIN = 0.10  # flip when crops read this much more confidently upside down (chosen on val)
 
 
 def load_orient(ckpt: str | None = ORIENT_CKPT):
@@ -118,3 +120,20 @@ def rotate(img: np.ndarray, angle: float) -> np.ndarray:
     M[0, 2] += nw / 2 - w / 2
     M[1, 2] += nh / 2 - h / 2
     return cv2.warpAffine(img, M, (nw, nh), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+
+def flip_margin(rec, img: np.ndarray, boxes: np.ndarray) -> tuple[float, int]:
+    """(mean recogniser confidence as-is minus turned 180 degrees, number of crops used).
+
+    The classifier never confuses the 90-degree axis on validation; all its errors are 180-degree
+    flips. A word recogniser reads upright crops far more confidently than upside-down ones, so a
+    clearly negative value means the page is still upside down. rec is a docTR recognition predictor.
+    """
+    if not len(boxes):
+        return 0.0, 0
+    area = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    sel = boxes[np.argsort(-area)[:FLIP_WORDS]]
+    crops = [img[int(y0):int(np.ceil(y1)), int(x0):int(np.ceil(x1))] for x0, y0, x1, y1 in sel]
+    c0 = np.mean([c for _, c in rec(crops)])
+    c2 = np.mean([c for _, c in rec([np.ascontiguousarray(c[::-1, ::-1]) for c in crops])])
+    return float(c0 - c2), len(crops)

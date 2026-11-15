@@ -151,22 +151,53 @@ def _all_pages(split: str, limit: int | None) -> list[tuple[str, str]]:
 def task_orientation(split: str, limit: int | None, osd_pages: int = 25) -> None:
     import pytesseract
     from ocr import orientation as O
+    from ocr.scan import ORIENT_MIN_CONF
     summary, rows = {"what": "orientation accuracy, every test page at 0 / 90 / 180 / 270 degrees"}, {"orientation": []}
     rng = np.random.default_rng(SEED)
+    from ocr.pipeline import MAX_SIDE, OcrPipeline
+    ocr = OcrPipeline.load("finetuned", use_scanner=False)
+
+    def margin(img: np.ndarray) -> float:  # the scanner's 180-degree check, at the pipeline's working size
+        s = min(1.0, MAX_SIDE / max(img.shape[:2]))
+        if s < 1:
+            img = np.asarray(Image.fromarray(img).resize((max(1, int(img.shape[1] * s)), max(1, int(img.shape[0] * s))), Image.BOX))
+        return O.flip_margin(ocr.rec, img, ocr.detect(img)[0])[0]
+
     for name, ckpt in (("pretrained_doctr", None), ("finetuned", O.ORIENT_CKPT)):
         model = O.load_orient(ckpt)
         hit: dict[str, list[int]] = {}
+        hit_flip: dict[str, list[int]] = {}
         for ds, path in _all_pages(split, limit):
-            img = hwdata.load_image(path)
-            img = np.asarray(Image.fromarray(img).resize((max(1, img.shape[1] * 1024 // max(img.shape[:2])),
-                                                         max(1, img.shape[0] * 1024 // max(img.shape[:2])))))
+            full = hwdata.load_image(path)
+            img = np.asarray(Image.fromarray(full).resize((max(1, full.shape[1] * 1024 // max(full.shape[:2])),
+                                                          max(1, full.shape[0] * 1024 // max(full.shape[:2])))))
+            d_up = None
             for k in range(4):
                 pk, conf = O.predict_k(model, np.ascontiguousarray(np.rot90(img, k)))
                 hit.setdefault(ds, []).append(int(pk == k))
-                if name == "finetuned":
-                    rows["orientation"].append({"dataset": ds, "page": os.path.basename(path), "k": k, "pred": pk, "confidence": round(conf, 4)})
+                if name != "finetuned":
+                    continue
+                # the page after the classifier's turn is upright (res 0), upside down (2) or sideways (1, 3).
+                # An upside-down page's word crops are the upright crops turned 180 degrees, so its margin is -d_up.
+                res = (pk - k) % 4 if conf >= ORIENT_MIN_CONF else k
+                if res % 2 == 0:
+                    d_up = margin(full) if d_up is None else d_up
+                    d = d_up if res == 0 else -d_up
+                else:
+                    d = margin(np.ascontiguousarray(np.rot90(full, res)))
+                final = (res + 2) % 4 if d < -O.FLIP_MARGIN else res
+                hit_flip.setdefault(ds, []).append(int(final == 0))
+                rows["orientation"].append({"dataset": ds, "page": os.path.basename(path), "k": k, "pred": pk, "confidence": round(conf, 4),
+                                            "flip_margin": round(d, 4), "final_correct": final == 0})
         summary[name] = {**{ds: round(float(np.mean(v)), 4) for ds, v in hit.items()},
                          "all": round(float(np.mean([x for v in hit.values() for x in v])), 4), "n": sum(len(v) for v in hit.values())}
+        if hit_flip:
+            summary["finetuned_with_flip_check"] = {**{ds: round(float(np.mean(v)), 4) for ds, v in hit_flip.items()},
+                                                    "all": round(float(np.mean([x for v in hit_flip.values() for x in v])), 4),
+                                                    "n": sum(len(v) for v in hit_flip.values()),
+                                                    "note": f"what Scanner does: classifier (turn applied at confidence >= {ORIENT_MIN_CONF}), "
+                                                            f"then the 180-degree recogniser-confidence check (margin {O.FLIP_MARGIN})"}
+        print(name, summary[name], summary.get("finetuned_with_flip_check"), flush=True)
     # Tesseract OSD on a fixed random subset (it is slow and fails on pages with little text)
     hit, failed = {}, 0
     for ds in list(DATASETS) + ["gnhk"]:

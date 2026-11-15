@@ -35,10 +35,12 @@ class Scanner:
     """Holds all models. Stages can be switched off for ablations."""
 
     def __init__(self, orientation: bool = True, deskew: bool = True, handwriting: bool = True,
-                 page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned"):
+                 page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
+                 flip_check: bool = True):
         self.ocr = OcrPipeline.load(weights, use_scanner=page_scanner)
         self.orient = O.load_orient() if orientation else None
         self.do_deskew = deskew
+        self.flip_check = flip_check
         self.clf = scriptclf.load_clf() if handwriting else None
         self.hw = HandwritingReader() if handwriting else None
         self.postcorrect = postcorrect
@@ -59,6 +61,16 @@ class Scanner:
         page = base.pop("page_image")
         words = base["words"]
         boxes = np.array([w["box"] for w in words], float).reshape(-1, 4)
+        if self.orient is not None and self.flip_check:
+            margin, n = O.flip_margin(self.ocr.rec, page, boxes)
+            pre["flip_check"] = {"margin": round(margin, 4), "crops": n, "flipped": bool(margin < -O.FLIP_MARGIN)}
+            if margin < -O.FLIP_MARGIN:  # still upside down: turn it and read again
+                img = O.upright(img, 2)
+                pre["quarter_turns"] = (pre["quarter_turns"] + 2) % 4
+                base = self.ocr.run(Image.fromarray(img), keep_page=True)
+                page = base.pop("page_image")
+                words = base["words"]
+                boxes = np.array([w["box"] for w in words], float).reshape(-1, 4)
         p_hw = np.zeros(len(words))
         if self.clf is not None and len(words):
             crops = [page[int(y0):int(np.ceil(y1)), int(x0):int(np.ceil(x1))] for x0, y0, x1, y1 in boxes]
