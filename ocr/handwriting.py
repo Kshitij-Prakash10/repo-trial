@@ -51,7 +51,7 @@ class HandwritingReader:
         if revision and not os.path.isdir(path_or_name):
             kw["revision"] = revision
         self.processor = TrOCRProcessor.from_pretrained(path_or_name, use_fast=False, **kw)
-        self.model = VisionEncoderDecoderModel.from_pretrained(path_or_name, **kw).eval()
+        self.model = VisionEncoderDecoderModel.from_pretrained(path_or_name, dtype=torch.float32, **kw).eval()
         self.name = path_or_name
 
     @torch.no_grad()

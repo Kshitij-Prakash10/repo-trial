@@ -1,0 +1,7 @@
+{
+ "base": "microsoft/trocr-small-handwritten",
+ "best_step": 3300,
+ "val_mean_cer": 0.0786,
+ "stored_dtype": "float16 (loaded as float32)",
+ "seed": 2026
+}
