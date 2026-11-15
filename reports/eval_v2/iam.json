@@ -1,0 +1,29 @@
+{
+ "what": "IAM lines, official writer-independent split",
+ "pretrained": {
+  "cer": 0.0559,
+  "wer": 0.1312,
+  "chars": 125615,
+  "words": 25931,
+  "n": 2915,
+  "seconds_per_line": 0.193,
+  "model": "microsoft/trocr-small-handwritten",
+  "with_lexicon_correction": {
+   "cer": 0.0561,
+   "wer": 0.1307
+  }
+ },
+ "finetuned": {
+  "cer": 0.0547,
+  "wer": 0.1475,
+  "chars": 125615,
+  "words": 25931,
+  "n": 2915,
+  "seconds_per_line": 0.19,
+  "model": "/home/user/repo-trial/checkpoints/handwriting_v1",
+  "with_lexicon_correction": {
+   "cer": 0.055,
+   "wer": 0.147
+  }
+ }
+}

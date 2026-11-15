@@ -1,0 +1,73 @@
+{
+ "what": "GNHK (photographed handwriting), official test pages",
+ "lines_pretrained": {
+  "all": {
+   "cer": 0.2904,
+   "wer": 0.6727,
+   "chars": 46651,
+   "words": 8631,
+   "n": 2130
+  },
+  "handwritten_only": {
+   "cer": 0.2855,
+   "wer": 0.6693,
+   "chars": 41703,
+   "words": 7720,
+   "n": 1918
+  },
+  "with_lexicon_correction": {
+   "cer": 0.2907,
+   "wer": 0.6728
+  }
+ },
+ "lines_finetuned": {
+  "all": {
+   "cer": 0.1281,
+   "wer": 0.3704,
+   "chars": 46651,
+   "words": 8631,
+   "n": 2130
+  },
+  "handwritten_only": {
+   "cer": 0.1251,
+   "wer": 0.3749,
+   "chars": 41703,
+   "words": 7720,
+   "n": 1918
+  },
+  "with_lexicon_correction": {
+   "cer": 0.1286,
+   "wer": 0.3705
+  }
+ },
+ "pages_full": {
+  "cer": 0.2586,
+  "wer": 0.5357,
+  "chars": 54391,
+  "words": 9659,
+  "n": 172,
+  "pages": 172,
+  "seconds_per_page": 4.3,
+  "lines": 2347,
+  "lines_routed_to_handwriting": 1656,
+  "with_lexicon_correction": {
+   "cer": 0.259,
+   "wer": 0.536
+  }
+ },
+ "pages_printed_reader_only": {
+  "cer": 0.4206,
+  "wer": 0.8613,
+  "chars": 54391,
+  "words": 9659,
+  "n": 172,
+  "pages": 172,
+  "seconds_per_page": 2.34,
+  "lines": 2345,
+  "lines_routed_to_handwriting": 0,
+  "with_lexicon_correction": {
+   "cer": 0.4206,
+   "wer": 0.8613
+  }
+ }
+}

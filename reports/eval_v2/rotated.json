@@ -1,0 +1,43 @@
+{
+ "what": "end-to-end CER of the same pages at 0 / 90 / 180 / 270 degrees (25 random test pages per set, seed 2026), and with a small skew of up to 10 degrees",
+ "funsd": {
+  "0": 0.0943,
+  "90": 0.0943,
+  "180": 0.0943,
+  "270": 0.0943,
+  "skewed": 0.4065,
+  "skewed_with_deskew": 0.1233,
+  "worst_minus_upright_points": 0.0,
+  "pages": 25
+ },
+ "sroie": {
+  "0": 0.1025,
+  "90": 0.1025,
+  "180": 0.1025,
+  "270": 0.1025,
+  "skewed": 0.3515,
+  "skewed_with_deskew": 0.103,
+  "worst_minus_upright_points": 0.0,
+  "pages": 25
+ },
+ "cord": {
+  "0": 0.1173,
+  "90": 0.1173,
+  "180": 0.1173,
+  "270": 0.1173,
+  "skewed": 0.3595,
+  "skewed_with_deskew": 0.1437,
+  "worst_minus_upright_points": 0.0,
+  "pages": 25
+ },
+ "gnhk": {
+  "0": 0.3133,
+  "90": 0.3187,
+  "180": 0.3133,
+  "270": 0.321,
+  "skewed": 0.5525,
+  "skewed_with_deskew": 0.3378,
+  "worst_minus_upright_points": 0.77,
+  "pages": 25
+ }
+}

@@ -1,0 +1,38 @@
+{
+ "what": "orientation accuracy, every test page at 0 / 90 / 180 / 270 degrees",
+ "pretrained_doctr": {
+  "funsd": 0.995,
+  "sroie": 0.9855,
+  "cord": 0.945,
+  "gnhk": 0.8895,
+  "all": 0.9561,
+  "n": 2732
+ },
+ "finetuned": {
+  "funsd": 1.0,
+  "sroie": 0.9945,
+  "cord": 0.995,
+  "gnhk": 0.9506,
+  "all": 0.9839,
+  "n": 2732
+ },
+ "finetuned_with_flip_check": {
+  "funsd": 1.0,
+  "sroie": 0.9986,
+  "cord": 1.0,
+  "gnhk": 0.9738,
+  "all": 0.9927,
+  "n": 2732,
+  "note": "what Scanner does: classifier (turn applied at confidence >= 0.6), then the 180-degree recogniser-confidence check (margin 0.1)"
+ },
+ "tesseract_osd": {
+  "funsd": 0.67,
+  "sroie": 0.78,
+  "cord": 0.29,
+  "gnhk": 0.45,
+  "all": 0.5475,
+  "n": 400,
+  "failed_to_answer": 78,
+  "note": "25 random pages per dataset (seed 2026); a failure counts as wrong"
+ }
+}

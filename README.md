@@ -288,7 +288,7 @@ python -m ocr.evaluate_v2 --task all
 The tasks are `printed`, `iam`, `gnhk`, `orientation` and `rotated`; run one with `--task <name>`, add
 `--split val` to score on validation, or `--limit N` for a smoke test. Summaries go to
 `reports/eval_v2/<task>.json` and per-item rows to `runs/eval_v2/`. All tasks together take about
-4 hours on 4 CPU cores. `printed` compares against `reports/baseline.json`.
+2.5 hours on 4 CPU cores. `printed` compares against `reports/baseline.json`.
 
 ## Tests
 

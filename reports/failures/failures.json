@@ -1,0 +1,88 @@
+[
+ {
+  "kind": "GNHK line",
+  "id": "eng_EU_261 line 7",
+  "true": "info@willowireland.com",
+  "pred": "WOOD PUELAUMOIIM POYUI",
+  "cer": 1.0,
+  "confidence": 0.4026,
+  "image": "failures/gnhk_eng_EU_261_7.jpg"
+ },
+ {
+  "kind": "GNHK line",
+  "id": "eng_EU_285 line 7",
+  "true": "730 545 Lesson Phone 6 Sprint Call 2",
+  "pred": "100m/m/m.m.mt2m",
+  "cer": 0.944,
+  "confidence": 0.0879,
+  "image": "failures/gnhk_eng_EU_285_7.jpg"
+ },
+ {
+  "kind": "GNHK line",
+  "id": "eng_NA_136 line 3",
+  "true": "(2years) + (3years)",
+  "pred": "(slcc. If it really )",
+  "cer": 0.895,
+  "confidence": 0.1042,
+  "image": "failures/gnhk_eng_NA_136_3.jpg"
+ },
+ {
+  "kind": "GNHK line",
+  "id": "eng_EU_174 line 12",
+  "true": "emergency contact information and any updates to med",
+  "pred": "1 1 1 2 3 1 3 0 0 0 0 1 0 0 0 2 0 0 0",
+  "cer": 0.865,
+  "confidence": 0.1981,
+  "image": "failures/gnhk_eng_EU_174_12.jpg"
+ },
+ {
+  "kind": "IAM line",
+  "id": "test_01481",
+  "true": "became great sighs of ecstacy .",
+  "pred": "become a bad rials at economic",
+  "cer": 0.548,
+  "confidence": 0.5059,
+  "image": "failures/iam_test_01481.jpg"
+ },
+ {
+  "kind": "IAM line",
+  "id": "test_02658",
+  "true": "-----------------------------------------------------",
+  "pred": "sentence Valuable",
+  "cer": 1.0,
+  "confidence": 0.6255,
+  "image": "failures/iam_test_02658.jpg"
+ },
+ {
+  "kind": "IAM line",
+  "id": "test_02742",
+  "true": "he shrugged diffidently , \" I like the work . One gets plenty",
+  "pred": "HE SUDUCESED OFFICENTU, \" I live THE NODOL . ONE GETS PUENTS",
+  "cer": 0.721,
+  "confidence": 0.5575,
+  "image": "failures/iam_test_02742.jpg"
+ },
+ {
+  "kind": "GNHK page, end to end",
+  "id": "eng_AS_072",
+  "true": "Summary: markets\n. buyers, sellers of goods, services\nmonitoring charges is important\nmarkets can change\n- changing food taste means\nchanging food line\nvalue adding\n-\n- repacking ,labelling\n- processing , rooting",
+  "pred": "p66590 CunSsoncal 0 -\n/\n-\nCoupawi@/Gasise\ncouboueu? PIpPU pnlian\nMowpuss e9) & WOUSi 6 1 35 200\nout 5v: sum:\nyow,p-gP/P ITBLSSTOI 22t 200\n1\nS VwAN Safssdupros forfosys\nbongcode Ol bioboasg 3101\n6\nySMOL CMMOPLON - mtow\nCoop 324\nbcemou gore - 17\nfusfiod Sco SJ Telos Suwgtivou 6\nV\n2bougor\nToMAg 15 pPO6",
+  "cer": 1.283,
+  "image": "failures/page_eng_AS_072.jpg"
+ },
+ {
+  "kind": "GNHK page, end to end",
+  "id": "eng_NA_137",
+  "true": "3 How to do it\nLegal,\n(2 companies=)\ndebie. to change Huaxih\n(Friday, )\nConsultancy approved? (Wuhan. select consultancy?)\nControl of Huaxih=\nHuaxih\nHuaxih\nKeep HQ office.\n27-28.",
+  "pred": "How to do be.\nNel - ) Muaxt LsoLn\nnatd4/2z) Muchd File/ Clean Melger.\nLoyal, CSRe.Nertoke\n(2 Use/ companies.\ndebate . Jeremy to choose the asth.\nFriday,\nConsuleaux approved ? (Wahun. select consultancy\ncontrol of theaxiht.\n[ Wwlr (occow 4\nHuaglu nauret\n(Feoxin d'Oryov.\nuucus gpag,\nTobacco ( (cnes).\n",
+  "cer": 1.18,
+  "image": "failures/page_eng_NA_137.jpg"
+ },
+ {
+  "kind": "orientation miss",
+  "id": "gnhk eng_EU_315.jpg turned 90 degrees CCW",
+  "true": "k=1",
+  "pred": "classifier k=3 (confidence 0.9892), flip margin 0.0166",
+  "image": "failures/orient_gnhk_eng_EU_315_1.jpg"
+ }
+]
