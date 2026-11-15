@@ -14,7 +14,7 @@ from PIL import Image
 from ocr.common import ROOT
 
 HW_NAME = "microsoft/trocr-small-handwritten"
-HW_REVISION = None  # set by _resolve() from checkpoints/handwriting_v1/source.json when present
+HW_REVISION = "b4648cfa171985a6745f37ddd637e98c0da958ac"  # Hugging Face commit of HW_NAME (main, as used here)
 HW_DIR = os.path.join(ROOT, "checkpoints", "handwriting_v1")
 MAX_TOKENS = 96
 NO_REPEAT = 4  # stops the decoder from looping on short or unclear lines
@@ -48,6 +48,8 @@ class HandwritingReader:
         if path_or_name is None:
             path_or_name = HW_DIR if os.path.exists(os.path.join(HW_DIR, "config.json")) else HW_NAME
         kw = {"local_files_only": local_only}
+        if revision is None and path_or_name == HW_NAME:
+            revision = HW_REVISION
         if revision and not os.path.isdir(path_or_name):
             kw["revision"] = revision
         self.processor = TrOCRProcessor.from_pretrained(path_or_name, use_fast=False, **kw)

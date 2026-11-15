@@ -1,0 +1,5 @@
+funsd 20 {'full': 0.1687, 'no_deskew': 0.138, 'no_hw': 0.1491, 'neither': 0.1227}
+sroie 60 {'full': 0.0984, 'no_deskew': 0.097, 'no_hw': 0.0978, 'neither': 0.0963}
+cord 60 {'full': 0.0961, 'no_deskew': 0.0749, 'no_hw': 0.0954, 'neither': 0.0746}
+
+[exited with code 0]

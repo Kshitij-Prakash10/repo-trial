@@ -32,8 +32,10 @@ FLIP_MARGIN = 0.10  # flip when crops read this much more confidently upside dow
 def load_orient(ckpt: str | None = ORIENT_CKPT):
     """The classifier with outputs reordered to k = 0..3 quarter-turns counter-clockwise."""
     from doctr.models import classification
-    model = getattr(classification, ORIENT_ARCH)(pretrained=True)
-    if ckpt and os.path.exists(ckpt):
+    have = bool(ckpt) and os.path.exists(ckpt)
+    # with our checkpoint every weight is replaced, so docTR's file is never needed (keeps scan() offline)
+    model = getattr(classification, ORIENT_ARCH)(pretrained=not have)
+    if have:
         model.load_state_dict(torch.load(ckpt, map_location="cpu")["model"])
     return model.eval()
 

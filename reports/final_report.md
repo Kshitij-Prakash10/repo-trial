@@ -46,13 +46,15 @@ took 1.3 s). Reasons and probes are in `reports/plan.md`; data and licences in `
 | GNHK test page CER / WER, end to end (172 pages) | report | 0.421 / 0.861 (printed path only) | 0.259 / 0.536 | |
 | Orientation accuracy, all test pages x 4 turns (2,732) | >= 99 % | 0.956 (pretrained docTR); Tesseract OSD 0.548 on 400 | 0.9927 | pass |
 | Rotated pages: worst of 90/180/270 minus upright, page CER | within 1 pt | (not handled) | FUNSD 0.00, SROIE 0.00, CORD 0.00, GNHK 0.77 pt | pass |
-| Time per page (printed sets) | compare | FUNSD 3.13 s, SROIE 2.32 s, CORD 2.07 s | 4.75 s, 3.41 s, 2.80 s | about 1.4 to 1.5 x |
-| Time per page (GNHK) | compare | 2.34 s (printed path only) | 4.30 s | |
+| Time per page (printed sets) | compare | FUNSD 3.13 s, SROIE 2.32 s, CORD 2.07 s | 4.75 s, 3.41 s, 2.80 s | 1.35 to 1.52 x |
+| Time per page (GNHK) | compare | 2.34 s (printed path only) | 4.30 s | 1.84 x |
 | Model files | compare | 84 MB (recogniser 18 MB + detector 66 MB) | 210 MB (+ TrOCR 119 MB fp16, orientation 6 MB, router 0.3 MB) | |
 
 Orientation by dataset (classifier alone / with the 180-degree check): FUNSD 1.000 / 1.000, SROIE
 0.995 / 0.999, CORD 0.995 / 1.000, GNHK 0.951 / 0.974. Tesseract OSD failed to answer on 78 of 400
-tries (counted as wrong).
+tries (counted as wrong). The orientation task simulates the scanner's two orientation steps rather
+than running the scanner: no page-scanner stage, and the upside-down margin is taken as minus the
+upright one. The rotated-page task, which runs the real `Scanner`, confirms it on 25 pages per set.
 
 Lexicon post-correction, reported with and without as asked: it does not help. IAM CER 0.0547 ->
 0.0550, GNHK lines 0.1281 -> 0.1286, GNHK pages 0.2586 -> 0.2590. It stays off by default.
@@ -77,6 +79,8 @@ evaluation takes about 2.5 h.
 2. **EXIF rotation in GNHK photos.** About a fifth of the photos carry an EXIF rotation tag that the
    annotations assume. The first models were trained on sideways crops; all three were retrained after
    the fix (`hwdata.load_image`).
+   All the validation studies are in `reports/val_studies/` with their scripts in
+   `scripts/val_studies/`; `python scripts/val_studies/analyse.py` reprints every table.
 3. **Orientation stuck at 97.7 % on validation.** Every remaining error was a 180-degree flip. The
    recogniser-confidence check fixed most of them (validation 0.977 -> 0.997, test 0.984 -> 0.993).
 
@@ -126,14 +130,32 @@ Patterns:
   perspective, and interpolation blur on low-resolution scans. Until then, turn it on only for pages
   known to be skewed.
 - **Orientation on handwriting** is 97.4 % (GNHK), below the overall 99.3 %.
-- **Speed**: pages are 1.4 to 1.9 times slower (orientation, the 180-degree check, and TrOCR for
+- **Speed**: pages are 1.35 to 1.84 times slower (orientation, the 180-degree check, and TrOCR for
   handwritten lines). TrOCR needs about 240 MB of RAM in fp32.
 - **Data limits**: no CVL or Imgur5K (unreachable or unclear licences). The IAM mirror has no writer
   ids, so writer independence relies on the official RWTH split. GNHK validation is a 10 % split of
   the official training pages. IAM is for research use only (see `data/DATASETS.md`).
+- **GNHK test duplicate**: the test split holds one image twice with different annotations
+  (`eng_AS_059` and `eng_AS_077`), so one of the 172 pages is scored against a reference that does
+  not match it. It is kept, so the numbers stay comparable with other uses of the official split.
 - **The app** (`/api/ocr`) still uses the printed pipeline; `ocr.scan` is not wired into the UI yet.
 - **Settings**: CPU only; the brief's 6 GPU-hour limit was applied as 6 hours of CPU wall-clock per
   run (the longest run was 3.4 h).
+
+## Independent test (Agent C)
+
+A separate agent re-ran the test suite and reproduced a sample of the results (IAM 300 lines, 15
+printed pages per set and 48 rotated-page rows, all identical). It found no train/test overlap in
+GNHK or IAM and tried 25 kinds of edge-case input, with no crash. It found these bugs, now fixed:
+- `scan()` needed a docTR download on a fresh install. The orientation model now loads without
+  docTR's own weights when our checkpoint exists; checked with the network blocked and only the
+  README-prefetched docTR files.
+- `--limit` changed which rotated pages were drawn. The full plan is now drawn first, so the published
+  numbers are unchanged.
+- The orientation task stored a wrong diagnostic for pages left sideways (accuracy was unaffected).
+- The pretrained TrOCR revision is now pinned.
+- 16-bit grey images are scaled correctly.
+- Two weak tests were fixed, and an end-to-end handwriting test was added.
 
 ## AI and open-source disclosure
 

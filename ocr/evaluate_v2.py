@@ -179,7 +179,7 @@ def task_orientation(split: str, limit: int | None, osd_pages: int = 25) -> None
                     continue
                 # the page after the classifier's turn is upright (res 0), upside down (2) or sideways (1, 3).
                 # An upside-down page's word crops are the upright crops turned 180 degrees, so its margin is -d_up.
-                res = (pk - k) % 4 if conf >= ORIENT_MIN_CONF else k
+                res = (k - pk) % 4 if conf >= ORIENT_MIN_CONF else k  # turns left after undoing pk
                 if res % 2 == 0:
                     d_up = margin(full) if d_up is None else d_up
                     d = d_up if res == 0 else -d_up
@@ -195,7 +195,7 @@ def task_orientation(split: str, limit: int | None, osd_pages: int = 25) -> None
             summary["finetuned_with_flip_check"] = {**{ds: round(float(np.mean(v)), 4) for ds, v in hit_flip.items()},
                                                     "all": round(float(np.mean([x for v in hit_flip.values() for x in v])), 4),
                                                     "n": sum(len(v) for v in hit_flip.values()),
-                                                    "note": f"what Scanner does: classifier (turn applied at confidence >= {ORIENT_MIN_CONF}), "
+                                                    "note": f"a simulation of Scanner's orientation steps (no page-scanner stage; the upside-down margin is taken as minus the upright one): classifier (turn applied at confidence >= {ORIENT_MIN_CONF}), "
                                                             f"then the 180-degree recogniser-confidence check (margin {O.FLIP_MARGIN})"}
         print(name, summary[name], summary.get("finetuned_with_flip_check"), flush=True)
     # Tesseract OSD on a fixed random subset (it is slow and fails on pages with little text)
@@ -225,15 +225,20 @@ def task_rotated(split: str, limit: int | None, per_set: int = 25) -> None:
     rng = np.random.default_rng(SEED)
     summary, rows = {"what": f"end-to-end CER of the same pages at 0 / 90 / 180 / 270 degrees ({per_set} random test pages per set, seed {SEED}), "
                              "and with a small skew of up to 10 degrees"}, {"rotated": []}
+    # The whole plan (pages and skew angles for every set) is drawn first, in the order the full run uses,
+    # so --limit N scores the first N pages of exactly the full run's plan.
+    plan = {}
     for ds in list(DATASETS) + ["gnhk"]:
         pages = hwdata.gnhk_pages(split) if ds == "gnhk" else load_pages(ds, split)
-        pick = [pages[int(i)] for i in rng.permutation(len(pages))[:(limit or per_set)]]
+        pick = [pages[int(i)] for i in rng.permutation(len(pages))[:per_set]]
+        plan[ds] = [(p, float(rng.uniform(3, 10) * rng.choice([-1, 1]))) for p in pick][:limit]
+    for ds, pick in plan.items():
         counts = {k: [] for k in ("0", "90", "180", "270", "skewed", "skewed_with_deskew")}
-        for p in pick:
+        for p, skew in pick:
             img = hwdata.load_image(p["path"])
             ref = gnhk_reference(p) if ds == "gnhk" else reference_text(p)
             variants = {str(90 * k): np.ascontiguousarray(np.rot90(img, k)) for k in range(4)}
-            variants["skewed"] = O.rotate(img, float(rng.uniform(3, 10) * rng.choice([-1, 1])))
+            variants["skewed"] = O.rotate(img, skew)
             variants["skewed_with_deskew"] = variants["skewed"]
             for name, v in variants.items():
                 sc.do_deskew = name == "skewed_with_deskew"  # deskew is off by default (it hurts real pages on val)

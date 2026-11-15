@@ -38,6 +38,12 @@ def to_rgb(image: Image.Image) -> Image.Image:
         rgba = image.convert("RGBA")
         white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
         return Image.alpha_composite(white, rgba).convert("RGB")
+    if image.mode in ("I;16", "I;16B", "I;16L", "I", "F"):  # 16-bit or float grey: scale to 8 bits
+        a = np.asarray(image, dtype=np.float64)
+        hi = 65535.0 if image.mode.startswith("I;16") else max(float(a.max()), 1.0)
+        if image.mode == "I" and a.max() <= 255:
+            hi = 255.0
+        return Image.fromarray(np.clip(a / hi * 255.0, 0, 255).astype(np.uint8)).convert("RGB")
     return image.convert("RGB")
 
 

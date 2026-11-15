@@ -1,0 +1,6 @@
+funsd 6 {'plain': 0.1862, 'replicate': 0.2522, 'white_grow': 0.2521, 'white_keep': 0.2526}
+sroie 4 {'plain': 0.1658, 'replicate': 0.1964, 'white_grow': 0.1715, 'white_keep': 0.1759}
+cord 22 {'plain': 0.1086, 'replicate': 0.1569, 'white_grow': 0.2016, 'white_keep': 0.1655}
+gnhk 21 {'plain': 0.3905, 'replicate': 0.4171, 'white_grow': 0.4172, 'white_keep': 0.4159}
+
+[exited with code 0]

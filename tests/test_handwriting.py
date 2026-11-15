@@ -121,7 +121,7 @@ def test_prep_line_returns_grey_rgb_of_same_size():
 def test_postcorrect_fixes_one_typo_and_leaves_numbers():
     pytest.importorskip("symspellpy")
     from ocr.postcorrect import correct_line
-    assert correct_line("the quik brown 1234") in ("the quik brown 1234", "the quick brown 1234")
+    assert correct_line("the quik brown 1234") == "the quick brown 1234"
     out = correct_line("meeting tomorow at 10:30")
     assert out.endswith("at 10:30") and "tomorrow" in out
 
@@ -142,3 +142,36 @@ def test_scan_reads_rotated_page(tmp_path):
     Image.fromarray(np.ascontiguousarray(np.rot90(page, 1))).save(p)
     text, conf = scan(str(p))
     assert "quick" in text.lower() and len(conf) == len(text.splitlines())
+
+
+@pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",
+                    reason="slow: set OCR_SLOW=1 (needs checkpoints/ and the docTR weights)")
+def test_scan_reads_handwriting_line_page(tmp_path):
+    """A page of synthetic handwriting lines is routed to the handwriting reader and read."""
+    from PIL import Image
+    from ocr import synth_hw
+    from ocr.scan import Scanner
+    fonts = synth_hw.font_files()
+    if not fonts:
+        pytest.skip("handwriting fonts not downloaded")
+    rng = np.random.default_rng(3)
+    lines = [synth_hw.render_line(t, rng, fonts) for t in ("meeting notes for tuesday", "call the bank about the loan")]
+    lines = [np.repeat(x[..., None], 3, 2) if x.ndim == 2 else x for x in lines]
+    w = max(x.shape[1] for x in lines) + 80
+    page = np.full((sum(x.shape[0] for x in lines) + 200, w, 3), 255, np.uint8)
+    y = 60
+    for x in lines:
+        page[y:y + x.shape[0], 40:40 + x.shape[1]] = x
+        y += x.shape[0] + 40
+    r = Scanner().run(Image.fromarray(page))
+    assert any(ln["script"] == "handwritten" for ln in r["lines"])
+    assert "bank" in r["text"].lower() or "meeting" in r["text"].lower()
+
+
+def test_to_rgb_scales_16_bit_grey():
+    from PIL import Image
+    from ocr.pipeline import to_rgb
+    a = (np.linspace(0, 65535, 64 * 64).reshape(64, 64)).astype(np.uint16)
+    out = np.asarray(to_rgb(Image.fromarray(a)))
+    assert out.dtype == np.uint8 and out.shape == (64, 64, 3)
+    assert out[0, 0, 0] == 0 and out[-1, -1, 0] == 255 and 100 < out[32, 32, 0] < 160
