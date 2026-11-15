@@ -9,7 +9,9 @@ low-confidence flag, plus what the orientation and deskew steps did.
 
 Printed lines are read word by word by the frozen printed recogniser (ocr.pipeline, unchanged).
 Lines whose words look handwritten are cut out as straightened rectangles and read by the
-handwriting recogniser (ocr.handwriting).
+handwriting recogniser (ocr.handwriting) too; its reading replaces the printed one only when its
+confidence is higher. On validation this keeps printed pages at least as good as printed-only
+reading, while still reading most handwriting with the handwriting model.
 """
 from __future__ import annotations
 
@@ -91,8 +93,10 @@ class Scanner:
                 if self.postcorrect:
                     from ocr.postcorrect import correct_line
                     text = correct_line(text)
-                lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
-                                text=text, confidence=round(conf, 4), script="handwritten")
+                lines[i].update(handwriting_text=text, handwriting_confidence=round(conf, 4))
+                if conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
+                    lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
+                                    text=text, confidence=round(conf, 4), script="handwritten")
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
         lines = [ln for ln in lines if ln["text"].strip()]
