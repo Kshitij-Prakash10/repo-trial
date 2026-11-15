@@ -1,0 +1,42 @@
+{
+ "what": "printed test sets, full upgraded pipeline, end to end",
+ "funsd": {
+  "cer": 0.0986,
+  "wer": 0.32,
+  "pages": 50,
+  "seconds_per_page": 4.75,
+  "lines_routed_to_handwriting": 52,
+  "lines": 1431,
+  "pages_turned": 0,
+  "pages_deskewed": 0,
+  "baseline_cer": 0.0981,
+  "baseline_wer": 0.3186,
+  "cer_change_points": 0.05
+ },
+ "sroie": {
+  "cer": 0.1015,
+  "wer": 0.2071,
+  "pages": 361,
+  "seconds_per_page": 3.41,
+  "lines_routed_to_handwriting": 138,
+  "lines": 10752,
+  "pages_turned": 0,
+  "pages_deskewed": 0,
+  "baseline_cer": 0.1017,
+  "baseline_wer": 0.2067,
+  "cer_change_points": -0.02
+ },
+ "cord": {
+  "cer": 0.1183,
+  "wer": 0.2673,
+  "pages": 100,
+  "seconds_per_page": 2.8,
+  "lines_routed_to_handwriting": 12,
+  "lines": 1024,
+  "pages_turned": 0,
+  "pages_deskewed": 0,
+  "baseline_cer": 0.1183,
+  "baseline_wer": 0.2673,
+  "cer_change_points": 0.0
+ }
+}

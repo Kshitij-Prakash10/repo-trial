@@ -1,0 +1,11 @@
+# Handwriting and rotated pages (ocr/scan.py, ocr/handwriting.py, ocr/train_hw.py, ocr/evaluate_v2.py).
+# Install after requirements-ocr.txt, as a separate command: transformers 4.57 needs huggingface_hub < 1.0,
+# so this pin replaces the one in requirements-ocr.txt (the data download scripts work with both).
+transformers==4.57.1
+tokenizers==0.22.2
+sentencepiece==0.2.3
+safetensors==0.8.0
+huggingface_hub==0.36.2
+# optional lexicon post-correction (ocr/postcorrect.py); ships its own English frequency list
+symspellpy==6.9.0
+editdistpy==0.5.0

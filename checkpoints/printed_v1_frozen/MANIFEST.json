@@ -1,0 +1,12 @@
+{
+ "frozen_on": "2026-11-14",
+ "files": {
+  "rec_crnn_mobilenet_v3_large_ft.pt": "c514a2a601fa180ee253bd00c598fde9690c8570431a2c1121aaf8ed75fa97b8"
+ },
+ "not_copied": {
+  "models/scanner_real.joblib": "227f73f815ceebb1176084fd7fabd788635a6a1af3f485fab411990fee418836",
+  "models/scanner.joblib": "b7727392a7377ccd91b060bb835feff2e13c16b1615cee23ed6233213cb5f9ef",
+  "docTR fast_base-688a8b34.pt (downloaded at setup)": "688a8b3489e9f5d0290c476c6272ec3b18de3ee646c8a0dc158203b1a9c62ace"
+ },
+ "rule": "never overwrite; new models go to checkpoints/<new name>/"
+}

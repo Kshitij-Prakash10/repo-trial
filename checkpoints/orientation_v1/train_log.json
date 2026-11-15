@@ -1,0 +1,149 @@
+{
+ "config": {
+  "out_dir": "runs/orient",
+  "seed": 2026,
+  "epochs": 10,
+  "steps_per_epoch": 150,
+  "batch_size": 16,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "aug_p": 0.4,
+  "iam_lines": 1500,
+  "iam_page_share": 0.15,
+  "patience": 3,
+  "threads": 4
+ },
+ "overfit": 0,
+ "train_pages": 1957,
+ "val_pages": 232,
+ "epochs": [
+  {
+   "epoch": 1,
+   "train_loss": 0.362,
+   "val": {
+    "funsd": 0.95,
+    "sroie": 0.9792,
+    "cord": 0.9475,
+    "gnhk": 0.9279,
+    "all": 0.9515,
+    "n": 928
+   },
+   "seconds": 221
+  },
+  {
+   "epoch": 2,
+   "train_loss": 0.2019,
+   "val": {
+    "funsd": 0.975,
+    "sroie": 0.9875,
+    "cord": 0.9525,
+    "gnhk": 0.9375,
+    "all": 0.9601,
+    "n": 928
+   },
+   "seconds": 227
+  },
+  {
+   "epoch": 3,
+   "train_loss": 0.1282,
+   "val": {
+    "funsd": 0.9875,
+    "sroie": 0.9917,
+    "cord": 0.96,
+    "gnhk": 0.9375,
+    "all": 0.9655,
+    "n": 928
+   },
+   "seconds": 220
+  },
+  {
+   "epoch": 4,
+   "train_loss": 0.1246,
+   "val": {
+    "funsd": 0.975,
+    "sroie": 1.0,
+    "cord": 0.97,
+    "gnhk": 0.9567,
+    "all": 0.9752,
+    "n": 928
+   },
+   "seconds": 221
+  },
+  {
+   "epoch": 5,
+   "train_loss": 0.1066,
+   "val": {
+    "funsd": 0.975,
+    "sroie": 1.0,
+    "cord": 0.9725,
+    "gnhk": 0.9471,
+    "all": 0.9741,
+    "n": 928
+   },
+   "seconds": 233
+  },
+  {
+   "epoch": 6,
+   "train_loss": 0.0922,
+   "val": {
+    "funsd": 0.975,
+    "sroie": 1.0,
+    "cord": 0.9725,
+    "gnhk": 0.9615,
+    "all": 0.9774,
+    "n": 928
+   },
+   "seconds": 226
+  },
+  {
+   "epoch": 7,
+   "train_loss": 0.0979,
+   "val": {
+    "funsd": 0.9875,
+    "sroie": 1.0,
+    "cord": 0.9725,
+    "gnhk": 0.9567,
+    "all": 0.9774,
+    "n": 928
+   },
+   "seconds": 217
+  },
+  {
+   "epoch": 8,
+   "train_loss": 0.0745,
+   "val": {
+    "funsd": 0.9875,
+    "sroie": 1.0,
+    "cord": 0.9725,
+    "gnhk": 0.9567,
+    "all": 0.9774,
+    "n": 928
+   },
+   "seconds": 223
+  },
+  {
+   "epoch": 9,
+   "train_loss": 0.0861,
+   "val": {
+    "funsd": 0.9875,
+    "sroie": 0.9958,
+    "cord": 0.9725,
+    "gnhk": 0.9567,
+    "all": 0.9763,
+    "n": 928
+   },
+   "seconds": 232
+  }
+ ],
+ "start": {
+  "funsd": 0.975,
+  "sroie": 0.9833,
+  "cord": 0.925,
+  "gnhk": 0.9135,
+  "all": 0.9418,
+  "n": 928
+ },
+ "best_epoch": 6,
+ "best_val_accuracy": 0.9774,
+ "stopped_early_at": 9
+}
