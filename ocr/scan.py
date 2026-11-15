@@ -91,7 +91,8 @@ class Scanner:
                 if self.postcorrect:
                     from ocr.postcorrect import correct_line
                     text = correct_line(text)
-                lines[i].update(text=text, confidence=round(conf, 4), script="handwritten")
+                lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
+                                text=text, confidence=round(conf, 4), script="handwritten")
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
         lines = [ln for ln in lines if ln["text"].strip()]
