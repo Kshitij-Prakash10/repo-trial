@@ -212,7 +212,7 @@ page end to end (CER / WER) on the test split of every dataset, and writes
 `ocr.scan` extends the printed scanner above, which stays frozen (`checkpoints/printed_v1_frozen/`):
 
 ```
-image -> orientation (0/90/180/270) -> 180-degree check -> deskew (+/- 15 degrees) -> page scanner
+image -> orientation (0/90/180/270) -> 180-degree check -> [deskew, off by default] -> page scanner
       -> detection -> printed / handwritten routing per line -> printed recogniser or handwriting recogniser
 ```
 

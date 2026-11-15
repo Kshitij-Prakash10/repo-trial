@@ -228,13 +228,15 @@ def task_rotated(split: str, limit: int | None, per_set: int = 25) -> None:
     for ds in list(DATASETS) + ["gnhk"]:
         pages = hwdata.gnhk_pages(split) if ds == "gnhk" else load_pages(ds, split)
         pick = [pages[int(i)] for i in rng.permutation(len(pages))[:(limit or per_set)]]
-        counts = {k: [] for k in ("0", "90", "180", "270", "skewed")}
+        counts = {k: [] for k in ("0", "90", "180", "270", "skewed", "skewed_with_deskew")}
         for p in pick:
             img = hwdata.load_image(p["path"])
             ref = gnhk_reference(p) if ds == "gnhk" else reference_text(p)
             variants = {str(90 * k): np.ascontiguousarray(np.rot90(img, k)) for k in range(4)}
             variants["skewed"] = O.rotate(img, float(rng.uniform(3, 10) * rng.choice([-1, 1])))
+            variants["skewed_with_deskew"] = variants["skewed"]
             for name, v in variants.items():
+                sc.do_deskew = name == "skewed_with_deskew"  # deskew is off by default (it hurts real pages on val)
                 r = sc.run(Image.fromarray(v))
                 c = error_counts(r["text"], ref, ds)
                 counts[name].append(c)

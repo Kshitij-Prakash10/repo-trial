@@ -1,4 +1,4 @@
-"""The full scanner: orientation -> deskew -> page scanner -> detection -> routing -> recognition.
+"""The full scanner: orientation -> (optional deskew, off by default) -> page scanner -> detection -> routing -> recognition.
 
     from ocr.scan import scan
     text, confidences = scan("photo.jpg")
@@ -36,7 +36,7 @@ _DEFAULT: "Scanner | None" = None
 class Scanner:
     """Holds all models. Stages can be switched off for ablations."""
 
-    def __init__(self, orientation: bool = True, deskew: bool = True, handwriting: bool = True,
+    def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
                  flip_check: bool = True):
         self.ocr = OcrPipeline.load(weights, use_scanner=page_scanner)
