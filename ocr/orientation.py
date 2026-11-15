@@ -21,7 +21,7 @@ ORIENT_ARCH = "mobilenet_v3_small_page_orientation"
 ORIENT_CKPT = os.path.join(ROOT, "checkpoints", "orientation_v1", "orientation.pt")
 SIZE = 512  # px, square input (the pretrained model's size)
 MEAN, STD = (0.694, 0.695, 0.693), (0.299, 0.296, 0.301)  # docTR's normalisation for this model
-DOCTR_CLASSES = [0, -90, 180, 90]  # docTR's own output order, in degrees counter-clockwise
+DOCTR_CLASSES = [0, -90, 180, 90]  # docTR's output order, angles clockwise-positive: its -90 is our k=1
 MAX_SKEW = 15.0  # degrees
 MIN_SKEW = 0.5  # smaller estimated angles are left alone
 SKEW_MIN_GAIN = 1.08  # the profile must be this much sharper than at 0 degrees to rotate

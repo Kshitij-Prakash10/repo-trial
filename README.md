@@ -132,8 +132,9 @@ outside it); otherwise the whole image is read. Design notes and the reasons for
    sudo apt-get install -y tesseract-ocr
    ```
 
-Limits: pages turned by 90 or 180 degrees are not corrected (rotate them first; EXIF rotation is
-applied), and handwriting is out of scope.
+Limits of `ocr_scan.py` and the app's Read text action: pages turned by 90 or 180 degrees are not
+corrected and handwriting is read poorly. Both are handled by `ocr.scan` (next section), which the
+app does not use yet.
 
 ### Run inference
 
@@ -206,10 +207,94 @@ Each run scores recognition (CER / WER), detection (precision / recall / F1 at I
 page end to end (CER / WER) on the test split of every dataset, and writes
 `runs/eval/<system>_test.json` plus per-item files. OCR tests: `python -m pytest -q tests/test_ocr.py`.
 
+## Handwriting and rotated pages (`ocr.scan`)
+
+`ocr.scan` extends the printed scanner above, which stays frozen (`checkpoints/printed_v1_frozen/`):
+
+```
+image -> orientation (0/90/180/270) -> 180-degree check -> deskew (+/- 15 degrees) -> page scanner
+      -> detection -> printed / handwritten routing per line -> printed recogniser or handwriting recogniser
+```
+
+```python
+from ocr.scan import scan, Scanner
+text, confidences = scan("page.jpg")      # one confidence (0..1) per output line
+result = Scanner().run(pil_image)         # lines with box, script, confidence, low_confidence flag
+```
+
+Models (all in `checkpoints/`, each with its training config and log):
+
+| Stage | Model | Size |
+|---|---|---|
+| orientation | docTR `mobilenet_v3_small_page_orientation`, fine-tuned | 6 MB |
+| 180-degree check | no model: printed recogniser confidence on word crops as-is vs turned | - |
+| routing | small CNN on word crops (`ocr/scriptclf.py`, 0.1 M parameters) | 0.3 MB |
+| handwriting | `microsoft/trocr-small-handwritten`, fine-tuned (stored fp16, run fp32) | 119 MB |
+
+Results, the before / after table and the known limits are in `reports/final_report.md`; the data
+sources and licences are in `data/DATASETS.md`.
+
+### Setup
+
+After the OCR setup above (CPU-only):
+
+```bash
+pip install -r requirements-handwriting.txt
+```
+
+The fine-tuned weights are in the repository. The evaluation's pretrained comparison also loads
+`microsoft/trocr-small-handwritten` from Hugging Face once (cached afterwards); `scan()` itself never
+downloads anything.
+
+### Retrain
+
+```bash
+python scripts/download_handwriting.py
+```
+
+Downloads IAM lines and GNHK from Hugging Face at pinned revisions and 24 OFL handwriting fonts, about
+1 GB, into `data/raw/`. Every source and licence is listed in `data/DATASETS.md`.
+
+```bash
+python -m ocr.train_hw --config configs/ocr/hw.json --overfit 32
+```
+
+```bash
+python -m ocr.train_hw --config configs/ocr/hw.json
+```
+
+The handwriting recogniser: the overfit test, then the curriculum run (synthetic, then IAM, then
+GNHK, with printed lines replayed throughout). About 3.5 hours on 4 CPU cores; `--resume` continues
+from `runs/hw/last/`. Best weights go to `runs/hw/best/`.
+
+```bash
+python -m ocr.train_orient --config configs/ocr/orient.json
+```
+
+```bash
+python -m ocr.scriptclf --config configs/ocr/scriptclf.json
+```
+
+The orientation classifier (about 35 minutes) and the printed / handwritten classifier (about 10
+minutes). They write `runs/orient/best.pt` and `runs/scriptclf/best.pt`. Copy each best checkpoint to
+its folder in `checkpoints/` to use it. Seeds are fixed in every config (2026).
+
+### Evaluate
+
+```bash
+python -m ocr.evaluate_v2 --task all
+```
+
+The tasks are `printed`, `iam`, `gnhk`, `orientation` and `rotated`; run one with `--task <name>`, add
+`--split val` to score on validation, or `--limit N` for a smoke test. Summaries go to
+`reports/eval_v2/<task>.json` and per-item rows to `runs/eval_v2/`. All tasks together take about
+4 hours on 4 CPU cores. `printed` compares against `reports/baseline.json`.
+
 ## Tests
 
 ```bash
-python -m pytest -q                     # server, scanner and OCR tests
+python -m pytest -q                     # server, scanner, OCR and handwriting tests
+                                        # OCR_SLOW=1 adds one real scan() of a turned page
                                         # tests needing the optional packages skip without them:
                                         # requirements-finetune.txt (fine-tuning), requirements-ocr.txt
                                         # (OCR code), and the docTR weights (the one real OCR read)
