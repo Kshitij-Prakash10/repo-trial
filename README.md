@@ -49,6 +49,11 @@ pip install -r requirements.txt
 python server.py            # http://127.0.0.1:8000  (HOST and PORT env vars to change)
 ```
 
+The server (waitress) listens on this computer only. It refuses `/api/` requests that come from
+another website, and requests addressed to any host name other than `127.0.0.1` or `localhost`. With
+`HOST=0.0.0.0` it is reachable from the network: there is no login and no encryption, so anyone on
+that network can use the scanner and the text reader. The server stores nothing either way.
+
 Opening `index.html` directly also works; only scanning and reading text need the server.
 
 ### Scanning a document
@@ -110,6 +115,10 @@ outside it); otherwise the whole image is read. Design notes and the reasons for
    pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu
    ```
 
+   `requirements-ocr-cpu.txt` is meant to do steps 1 and 2 in one command
+   (`pip install -r requirements-ocr-cpu.txt`); it has not been tried on a clean machine yet, so the
+   two separate steps here are the safe route.
+
 2. Install the OCR packages:
 
    ```bash
@@ -164,8 +173,10 @@ fine-tuned weights). Boxes are `[x0, y0, x1, y1]` in pixels.
 python scripts/download_data.py
 ```
 
-SROIE and CORD v2 are already in the repository (Git LFS; run `git lfs pull` after cloning). FUNSD's
-licence does not allow re-sharing, so this script downloads it from Hugging Face (pinned revision) into
+SROIE and CORD v2 are **not** in the repository yet: Git LFS is set up for them (`.gitattributes`), but
+the upload has not been done, so `git lfs pull` brings nothing. Until then
+`scripts/fetch_shareable_data.sh` fetches them (about 2.8 GB; it also commits them to Git LFS, so run it
+only where that is wanted). FUNSD's licence does not allow re-sharing, so this script downloads it from Hugging Face (pinned revision) into
 `data/funsd/` and converts it to the same annotation format with fixed train / val / test splits. It
 skips datasets already on disk, checks free disk space first and refuses to pass 30 GB.
 
@@ -220,8 +231,13 @@ image -> orientation (0/90/180/270) -> 180-degree check -> [deskew, off by defau
 ```python
 from ocr.scan import scan, Scanner
 text, confidences = scan("page.jpg")      # one confidence (0..1) per output line
-result = Scanner().run(pil_image)         # lines with box, script, confidence, low_confidence flag
+result = Scanner().run(pil_image)         # lines with box, script, confidence, low_confidence, confirm_numbers
 ```
+
+`confirm_numbers` is true for every line that went to the handwriting reader and holds a digit or a
+dose unit. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
+must be checked by a person whatever its confidence. The lexicon correction (`ocr/postcorrect.py`) is
+switched off: it rewrote medicine names and units (digoxin to dioxin, mmol to mol).
 
 Models (all in `checkpoints/`, each with its training config and log):
 
@@ -253,7 +269,8 @@ downloads anything.
 python scripts/download_handwriting.py
 ```
 
-GNHK (Git LFS) and the 24 OFL handwriting fonts are already in the repository; this downloads IAM
+The 24 OFL handwriting fonts are in the repository. GNHK is not there yet (Git LFS is set up, the upload
+has not been done; `scripts/fetch_shareable_data.sh` fetches it). This downloads IAM
 lines (0.27 GB, research-only, so not committed) from Hugging Face at a pinned revision into
 `data/raw/iam/` and skips what is present. Every source and licence is listed in `data/DATASETS.md`.
 

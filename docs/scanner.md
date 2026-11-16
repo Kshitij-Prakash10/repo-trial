@@ -75,7 +75,15 @@ warm light). Splits are by generator seed and disjoint.
 6. **Enhancement** (`scanner/enhance.py`): shading removal (divide by a max-filtered, blurred background
    estimate), contrast stretch; `bw` is an adaptive threshold on a lightly denoised page.
 7. **Confidence**: mean page probability inside the quad x (1 - mean outside) x an angle plausibility
-   term. `page_found` needs confidence >= 0.35 and a quad covering at least 5 percent of the photo.
+   term. `page_found` needs confidence >= 0.60 and a quad covering at least 5 percent of the photo.
+   The 0.60 was chosen on the 1,000 DocCornerDataset validation photos (fine-tuned model) as the highest
+   value that keeps at least 99.5 percent of the well-outlined pages (IoU >= 0.9). Until then it was
+   0.35, which every number in this document and in `docs/finetune/results.md` was measured with. From
+   the stored per-photo results, 0.35 -> 0.60 changes: false alarms on photos without a document,
+   validation 37 % -> 4 %, test 31 % -> 7 %; pages reported found, validation 99 % -> 94 %, test
+   97 % -> 79 %. On test, about two thirds of the pages no longer reported had a poor outline
+   (IoU < 0.5); 99 % of the well-outlined ones are kept. A page that is not reported found is shown
+   whole, and the app offers to set the corners by hand.
 
 **Baseline** (non-ML): Otsu threshold on grid brightness, then exactly the same component, quad fit and
 edge refinement. The comparison therefore isolates what the learned page mask adds.
@@ -146,7 +154,8 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
   page) are the main failure mode.
 - Pages are assumed flat: folded or curled pages are rectified as a plane.
 - No text-orientation detection: a page photographed sideways comes out sideways.
-- The confidence score is weakly informative: on the test set every photo was above the 0.35 threshold;
+- The confidence score is weakly informative on synthetic photos (measured at the earlier 0.35
+  threshold): on the test set every photo was above the 0.35 threshold;
   on the ood set, photos above it succeeded 59 percent of the time and the one below it failed.
 - Thin, faint strokes can break up in `bw` mode.
 

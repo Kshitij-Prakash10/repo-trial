@@ -4,8 +4,8 @@ Nothing inside a download is executed; archives are only read. English only.
 
 ## In this repository
 
-The datasets whose licences allow redistribution are stored with Git LFS. Run `git lfs pull` after
-cloning (without it the files are small LFS pointer files). They are added by running
+The datasets whose licences allow redistribution are meant to be stored with Git LFS. **That upload has
+not been done yet**, so today `git lfs pull` brings nothing. They are added by running
 `scripts/fetch_shareable_data.sh` once on a machine whose git can upload LFS files; if the paths below
 are missing in your clone, that upload has not been done yet and the same script fetches the data.
 `python scripts/shareable_manifest.py` verifies the files against `data/shareable.sha256.json`.

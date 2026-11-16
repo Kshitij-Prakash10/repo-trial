@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import os
 
-import cv2
 import numpy as np
 import pytest
 
+cv2 = pytest.importorskip("cv2")  # optional (requirements-ocr.txt): skip, do not fail, without it
 torch = pytest.importorskip("torch")
 
 from ocr import orientation as O  # noqa: E402
