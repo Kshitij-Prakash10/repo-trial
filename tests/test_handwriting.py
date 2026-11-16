@@ -175,3 +175,10 @@ def test_to_rgb_scales_16_bit_grey():
     out = np.asarray(to_rgb(Image.fromarray(a)))
     assert out.dtype == np.uint8 and out.shape == (64, 64, 3)
     assert out[0, 0, 0] == 0 and out[-1, -1, 0] == 255 and 100 < out[32, 32, 0] < 160
+
+
+def test_scanner_refuses_lexicon_correction():
+    """It rewrites medicine names and units (digoxin -> dioxin, mmol -> mol), so it cannot be switched on."""
+    from ocr.scan import Scanner
+    with pytest.raises(ValueError, match="medicine names and units"):
+        Scanner(postcorrect=True)
