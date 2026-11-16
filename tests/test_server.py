@@ -186,3 +186,30 @@ def test_bind_address(env, expected):
 def test_bind_address_rejects_bad_port(port):
     with pytest.raises(ValueError):
         server.bind_address({"PORT": port})
+
+
+# ---------------------------------------------------------------- requests from other websites
+
+def test_api_requests_from_another_website_are_refused(client):
+    r = client.post("/api/scan", headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403 and "other websites" in r.get_json()["error"]
+    assert client.get("/api/scan/status", headers={"Origin": "null"}).status_code == 403
+    # the app's own pages send their own origin, or none at all
+    assert client.get("/api/nothing", headers={"Origin": "http://localhost"}).status_code == 404
+    assert client.get("/api/nothing").status_code == 404
+    # pages are not affected (a link from another site may open the app)
+    assert client.get("/", headers={"Origin": "https://evil.example"}).status_code == 200
+
+
+def test_only_allowed_host_names_are_answered():
+    a = server.create_app(with_scanner=False, with_ocr=False, allowed_hosts=server.LOOPBACK_HOSTS)
+    c = a.test_client()
+    assert c.get("/", headers={"Host": "127.0.0.1:8000"}).status_code == 200
+    assert c.get("/", headers={"Host": "localhost:8000"}).status_code == 200
+    assert c.get("/", headers={"Host": "[::1]:8000"}).status_code == 200
+    assert c.get("/", headers={"Host": "attacker.example:8000"}).status_code == 421
+    assert c.get("/api/scan/status", headers={"Host": "attacker.example"}).status_code == 421
+
+
+def test_any_host_name_is_answered_when_no_list_is_given(client):
+    assert client.get("/", headers={"Host": "diary.lan:8000"}).status_code == 200

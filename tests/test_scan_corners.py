@@ -154,3 +154,51 @@ def test_empty_corners_field_means_detect(monkeypatch):
                                content_type="multipart/form-data")
     assert r.status_code == 200 and calls == ["gray"]
     assert r.get_json()["method"] == "fallback"
+
+
+@pytest.mark.parametrize("text", [
+    "[[1" + "0" * 320 + ",0],[10,0],[10,10],[0,10]]",  # an integer too large for a float (under the length cap)
+    "[" * 5000,  # nested too deeply for the JSON parser
+    "[[0." + "0" * 500 + ", 0], [10, 0], [10, 10], [0, 10]]",  # valid, but far longer than 4 points need
+])
+def test_hostile_corners_are_400_not_500(client, text):
+    r = _post(client, text)
+    assert r.status_code == 400 and "corner" in r.get_json()["error"]
+
+
+def _flat_png(w: int, h: int) -> io.BytesIO:
+    """A one-colour PNG: a few kB on disk however many pixels it declares."""
+    buf = io.BytesIO()
+    Image.new("L", (w, h), 255).save(buf, "PNG", compress_level=9)
+    buf.seek(0)
+    return buf
+
+
+@pytest.mark.parametrize("w, h, message", [
+    (30000, 100, "too narrow"),  # a strip: few pixels, extreme shape (and over the side limit)
+    (13000, 1000, "too many pixels"),  # one side over the limit
+    (6000, 5000, "too many pixels"),  # 30 MP: allowed for JPEG, not for PNG (decoded at full size)
+    (4000, 100, "too narrow"),  # 40:1
+])
+def test_oversized_or_extreme_images_are_rejected_before_decoding(monkeypatch, w, h, message):
+    from scanner import api
+
+    def no_decode(*a, **k):
+        raise AssertionError("the image must be rejected from its header, before it is decoded")
+
+    monkeypatch.setattr(api.ImageOps, "exif_transpose", no_decode)
+    app = Flask(__name__)
+    app.register_blueprint(scan_bp)
+    r = app.test_client().post("/api/scan", data={"image": (_flat_png(w, h), "p.png")},
+                               content_type="multipart/form-data")
+    assert r.status_code == 400
+    assert message in r.get_json()["error"] or "too many pixels" in r.get_json()["error"]
+
+
+def test_image_size_rule():
+    from scanner.api import image_size_problem
+    assert image_size_problem("JPEG", 8000, 6000) is None  # a 48 MP phone photo
+    assert image_size_problem("PNG", 4000, 3000) is None
+    assert image_size_problem("PNG", 8000, 6000) is not None
+    assert image_size_problem("JPEG", 1, 49_000_000) is not None
+    assert image_size_problem("PNG", 2000, 99) is not None

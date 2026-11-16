@@ -26,7 +26,11 @@ from scanner import infer
 scan_bp = Blueprint("scan", __name__)
 
 MAX_BYTES = 10 * 1024 * 1024  # upload limit, bytes
-MAX_PIXELS = 50_000_000  # decoded size limit, pixels (decompression-bomb guard)
+MAX_PIXELS = 50_000_000  # decoded size limit for JPEG, pixels (48 MP phone photos; decoded at reduced size)
+MAX_PIXELS_OTHER = 25_000_000  # the same for PNG and WebP, which are always decoded at full size
+MAX_SIDE = 12_000  # px, the longest side accepted
+MAX_ASPECT = 20  # long side / short side; beyond this it is not a photo of a page
+MAX_CORNERS_CHARS = 400  # characters of the corners field (4 points need far fewer)
 WORK_SIDE = 2400  # px, the long side the photo is reduced to before scanning
 FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO: JPEG variant some phones write
 MODES = ("color", "gray", "bw")
@@ -35,19 +39,24 @@ CORNER_MARGIN = 0.10  # manual corners may lie this fraction of the image size o
 
 def _parse_corners(text: str):
     """Manual corners from the form field: 4 finite [x, y] points (px), or an error message (str)."""
+    if len(text) > MAX_CORNERS_CHARS:
+        return "corners must be an array of exactly 4 [x, y] points"
     try:
         pts = json.loads(text)
-    except ValueError:
+    except (ValueError, RecursionError):
         return "corners must be JSON: an array of 4 [x, y] points"
     if not isinstance(pts, list) or len(pts) != 4:
         return "corners must be an array of exactly 4 [x, y] points"
     out = []
     for p in pts:
-        if (not isinstance(p, list) or len(p) != 2
-                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in p)
-                or not all(math.isfinite(v) for v in p)):
+        try:
+            if (not isinstance(p, list) or len(p) != 2
+                    or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in p)
+                    or not all(math.isfinite(v) for v in p)):
+                return "each corner must be an [x, y] pair of finite numbers"
+            out.append([float(p[0]), float(p[1])])
+        except OverflowError:  # an integer too large for a float
             return "each corner must be an [x, y] pair of finite numbers"
-        out.append([float(p[0]), float(p[1])])
     return np.array(out, float)
 
 
@@ -58,6 +67,20 @@ def _check_corners(q: np.ndarray, w: int, h: int):
         return f"corners must lie within the image ({w} x {h} px) or at most 10 % outside it"
     if not geo.is_convex(q):
         return "corners must form a convex four-sided shape"
+    return None
+
+
+def image_size_problem(fmt: str, w: int, h: int):
+    """None when a w x h image of this format is small enough to decode safely, else a message.
+
+    The pixel count alone is not enough: a small, highly compressible file can declare a huge or extremely
+    narrow image that takes more than a gigabyte to decode.
+    """
+    limit = MAX_PIXELS if fmt in ("JPEG", "MPO") else MAX_PIXELS_OTHER
+    if w < 1 or h < 1 or w * h > limit or max(w, h) > MAX_SIDE:
+        return "image has too many pixels"
+    if max(w, h) > MAX_ASPECT * min(w, h):
+        return "image is too narrow to be a photo of a page"
     return None
 
 
@@ -79,7 +102,7 @@ def _file_size(f) -> int:
 
 @scan_bp.before_app_request
 def _allow_upload_size():
-    """Let /api/scan bodies through up to the 10 MB file limit plus form overhead (app default is lower)."""
+    """Let /api/scan bodies through up to the 10 MB file limit plus form overhead (set per route)."""
     if request.path == "/api/scan":
         request.max_content_length = MAX_BYTES + 512 * 1024
 
@@ -119,8 +142,9 @@ def scan_route():
             im = Image.open(io.BytesIO(data))
             if im.format not in FORMATS:
                 return _err("file must be a JPEG, PNG or WebP image", 400)
-            if im.size[0] * im.size[1] > MAX_PIXELS:
-                return _err("image has too many pixels", 400)
+            problem = image_size_problem(im.format, *im.size)
+            if problem:
+                return _err(problem, 400)
             ow, oh = im.size
             if (im.getexif().get(0x0112) or 1) in (5, 6, 7, 8):  # EXIF orientation swaps width and height
                 ow, oh = oh, ow
