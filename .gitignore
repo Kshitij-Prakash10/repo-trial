@@ -3,14 +3,17 @@ __pycache__/
 .pytest_cache/
 .venv/
 .DS_Store
-# large datasets are downloaded during setup and never committed
-data/raw/
+# Downloaded data. GNHK (CC BY 4.0, Git LFS) and the OFL fonts are committed (data/DATASETS.md);
+# IAM (research-only) and the unpacked GNHK pages and download caches are not.
+data/raw/iam/
+data/raw/gnhk/pages/
+data/raw/gnhk/pages.part/
+data/raw/gnhk/.cache/
 node_modules/
 
-# OCR datasets are downloaded by scripts/download_data.py and never committed
+# FUNSD (research-only licence) and caches are downloaded by scripts/download_data.py and never committed
 data/_hf_cache/
+data/sroie/words_*.jsonl
 data/funsd/
-data/sroie/
-data/cord/
 data/synth_text/
 runs/

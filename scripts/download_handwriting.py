@@ -65,6 +65,10 @@ def check_space(need_gb: float) -> None:
 def get_hf(name: str) -> None:
     from huggingface_hub import hf_hub_download
     spec = HF[name]
+    have = [os.path.join(RAW, name, f) for f in spec["files"]]
+    if all(os.path.exists(f) and os.path.getsize(f) > 1000 for f in have):  # e.g. GNHK, committed with Git LFS
+        print(name, "already present, not downloaded", flush=True)
+        return
     check_space(spec["gb"])
     for f in spec["files"]:
         p = hf_hub_download(spec["repo"], f, repo_type="dataset", revision=spec["revision"],
