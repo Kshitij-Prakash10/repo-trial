@@ -138,7 +138,10 @@ Patterns:
 - **GNHK test duplicate**: the test split holds one image twice with different annotations
   (`eng_AS_059` and `eng_AS_077`), so one of the 172 pages is scored against a reference that does
   not match it. It is kept, so the numbers stay comparable with other uses of the official split.
-- **The app** (`/api/ocr`) still uses the printed pipeline; `ocr.scan` is not wired into the UI yet.
+- **The app** (`/api/ocr`, Read text) uses `ocr.scan` when the handwriting packages and checkpoints
+  are installed and the printed-only pipeline otherwise. The Handwritten / Check labels on lines and
+  the "page was rotated" line are shown right after a read and are not stored with the document, and
+  the picture of the page shown in the app is not turned, only the text is read upright.
 - **Settings**: CPU only; the brief's 6 GPU-hour limit was applied as 6 hours of CPU wall-clock per
   run (the longest run was 3.4 h).
 

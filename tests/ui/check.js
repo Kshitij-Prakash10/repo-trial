@@ -12,6 +12,7 @@
  * `corners` field), page-not-found help, save and the scan listed in Documents; the real scanner (also with
  * manual corners) when the server reports it available; reading text against a mocked /api/ocr (Read text
  * after a scan, progress, the text panel, word count, Copy, low-confidence / no-text notes, inline error,
+ * the turned-page line and the Handwritten / Check labels on the lines of a handwriting-mode answer,
  * edited text saved with the document, the Text indicator, search and the viewer in Documents, an older
  * record without text, no Read text for a PDF, the actions disabled when /api/ocr/status says unavailable)
  * and once against the real OCR when the server reports it available; scanner missing and file:// (save the photo without
@@ -511,7 +512,13 @@ async function main() {
 
   /* ---------- reading text (OCR): mocked /api/ocr ---------- */
   const OCR_TEXT = "SYNTHETIC LAB REPORT\nHaemoglobin 13.5 g/dL";
-  let ocrMode = "ok"; // ok | low | empty | error
+  let ocrMode = "ok"; // ok | low | empty | error | hand (a turned page with handwriting, as ocr.scan answers)
+  const HAND_TEXT = "SYNTHETIC LAB REPORT\ntake one <b>daily</b>\nsmudged wrd";
+  const HAND_LINES = [
+    { text: "SYNTHETIC LAB REPORT", confidence: 0.95, script: "printed", low_confidence: false },
+    { text: "take one <b>daily</b>", confidence: 0.82, script: "handwritten", low_confidence: false },
+    { text: "smudged wrd", confidence: 0.36, script: "handwritten", low_confidence: true },
+  ];
   let ocrRequests = [];
   let ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
   const mockOcr = async (p) => {
@@ -523,12 +530,22 @@ async function main() {
       if (ocrMode === "error") {
         return r.fulfill({ status: 503, contentType: "application/json", body: '{"error":"The text-reading models could not be loaded (mock)."}' });
       }
+      if (ocrMode === "hand") {
+        const lines = HAND_LINES.map((ln, i) => ({ ...ln, box: [10, 10 + i * 30, 400, 30 + i * 30] }));
+        const words = HAND_TEXT.split(/\s+/).map((t, i) => ({ text: t, confidence: 0.3, box: [10 + i * 50, 10, 50 + i * 50, 30], line: Math.min(2, Math.floor(i / 3)) }));
+        return r.fulfill({ status: 200, contentType: "application/json",
+          body: JSON.stringify({ text: HAND_TEXT, lines, words, page: { width: 800, height: 600 }, seconds: 0.5, handwriting: true,
+            models: { ...ocrStatus.models, handwriting: "handwriting_v1" },
+            preprocessing: { quarter_turns: 1, orientation_confidence: 0.97, deskew_degrees: 0, flip_check: { margin: 0.4, crops: 9, flipped: false } } }) });
+      }
       const text = ocrMode === "empty" ? "" : OCR_TEXT;
       const conf = ocrMode === "low" ? 0.41 : 0.93;
       const words = text.split(/\s+/).filter(Boolean).map((t, i) => ({ text: t, confidence: conf, box: [10 + i * 50, 10, 50 + i * 50, 30], line: i < 3 ? 0 : 1 }));
-      const lines = text ? text.split("\n").map((t, i) => ({ text: t, box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf })) : [];
+      const lines = text ? text.split("\n").map((t, i) => ({ text: t, box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf,
+        script: "printed", low_confidence: conf < 0.5 })) : [];
       return r.fulfill({ status: 200, contentType: "application/json",
-        body: JSON.stringify({ text, lines, words, page: { width: 600, height: 800 }, seconds: 0.25, models: ocrStatus.models }) });
+        body: JSON.stringify({ text, lines, words, page: { width: 600, height: 800 }, seconds: 0.25, models: ocrStatus.models,
+          handwriting: false, preprocessing: null }) });
     });
   };
   const unmockOcr = async (p) => { await p.unroute("**/api/ocr"); await p.unroute("**/api/ocr/status"); };
@@ -560,6 +577,7 @@ async function main() {
     assert((await page.inputValue("#scan-ocr-text")) === OCR_TEXT, "text: " + await page.inputValue("#scan-ocr-text"));
     assert((await page.textContent("#scan-ocr-count")) === "6 words", await page.textContent("#scan-ocr-count"));
     assert(await page.isHidden("#scan-ocr-note"), "no note for a confident read");
+    assert(await page.isHidden("#scan-ocr-turned") && await page.isHidden("#scan-ocr-lines"), "no turned line and no line list for a plain printed page");
     assert(/6 words/.test(await page.textContent('#scan-ocr [data-ocr="live"]')), "result announced");
     assert(await page.isEnabled("#scan-next"), "Continue enabled again");
     assert((await page.textContent("#scan-ocr-read")).trim() === "Read again");
@@ -575,6 +593,9 @@ async function main() {
     await page.click("#scan-ocr-read");
     await page.waitForFunction(() => !document.querySelector("#scan-ocr-note").hidden);
     const low = await page.textContent("#scan-ocr-note");
+    // every line of this answer is below the line limit: each one is listed with a Check label
+    assert(await page.isVisible("#scan-ocr-lines") && await page.locator("#scan-ocr-lines li .ocr-tag.check").count() === 2, "low-confidence printed lines are labelled");
+    assert(await page.locator("#scan-ocr-lines li .ocr-tag:not(.check)").count() === 0, "no Handwritten label on printed lines");
     assert(/hard to read/.test(low) && low.includes("41%"), low);
     ocrMode = "empty";
     await page.click("#scan-ocr-read");
@@ -591,6 +612,31 @@ async function main() {
     await page.click("#scan-ocr-read");
     await page.waitForFunction((t) => document.querySelector("#scan-ocr-text").value === t, OCR_TEXT);
     assert(await page.isHidden("#scan-ocr-error"), "error cleared by a good read");
+    // A handwriting-mode answer: the page was turned, one handwritten line, one handwritten line to check.
+    ocrMode = "hand";
+    await page.click("#scan-ocr-read");
+    await page.waitForFunction((t) => document.querySelector("#scan-ocr-text").value === t, HAND_TEXT);
+    assert((await page.textContent("#scan-ocr-turned")).trim() === "Page was rotated 90 degrees before reading.", await page.textContent("#scan-ocr-turned"));
+    assert(await page.isVisible("#scan-ocr-turned") && await page.isVisible("#scan-ocr-lines"), "turned line and line list shown");
+    const sum = await page.textContent("#scan-ocr-lines summary");
+    assert(/\(3\)/.test(sum) && /2 handwritten/.test(sum) && /1 to check/.test(sum), "summary: " + sum);
+    const items = await page.$$eval("#scan-ocr-lines li", (els) => els.map((li) => ({
+      text: li.querySelector(".ocr-line-text").textContent, flagged: li.classList.contains("flagged"),
+      tags: [...li.querySelectorAll(".ocr-tag")].map((t) => t.textContent.trim()), titles: [...li.querySelectorAll(".ocr-tag")].map((t) => t.title) })));
+    assert(items.length === 3 && items[0].tags.length === 0 && !items[0].flagged, JSON.stringify(items[0]));
+    assert(items[1].text === "take one <b>daily</b>" && items[1].flagged && items[1].tags.join("|") === "Handwritten", JSON.stringify(items[1]));
+    assert(items[2].tags.join("|") === "Handwritten|Check (36%)" && /Low confidence \(36%\)/.test(items[2].titles[1]), JSON.stringify(items[2]));
+    assert(await page.locator("#scan-ocr-lines li b").count() === 0, "line text is escaped");
+    const live = await page.textContent('#scan-ocr [data-ocr="live"]');
+    assert(/rotated 90 degrees/.test(live) && /2 handwritten lines/.test(live) && /1 line to check/.test(live), "announced: " + live);
+    // the average comes from the lines (0.95, 0.82, 0.36), not from the printed reader's words (0.3)
+    assert(await page.isHidden("#scan-ocr-note"), "no hard-to-read note: " + await page.textContent("#scan-ocr-note"));
+    assert(await page.evaluate(() => { const l = document.querySelector("#scan-ocr-lines ol"); return l.tabIndex === 0 && Boolean(l.getAttribute("aria-labelledby")); }), "the line list can be reached and is named");
+    if (SHOTS) { await clearToasts(page); await page.locator("#scan-ocr").screenshot({ path: path.join(SHOTS, "ocr-handwriting-lines.png") }); }
+    ocrMode = "ok";
+    await page.click("#scan-ocr-read");
+    await page.waitForFunction((t) => document.querySelector("#scan-ocr-text").value === t, OCR_TEXT);
+    assert(await page.isHidden("#scan-ocr-turned") && await page.isHidden("#scan-ocr-lines"), "the turned line and the labels go with the next plain read");
     await page.check('input[name="scan-mode"][value="bw"]', { force: true });
     await scanIdle(page);
     assert(/page has changed/.test(await page.textContent("#scan-ocr-hint")), "stale hint after a mode switch");

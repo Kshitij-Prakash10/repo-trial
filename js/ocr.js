@@ -1,13 +1,17 @@
 /*
  * Health Diary: reading the text on a page (OCR) with the local server.
  *
- *   GET  api/ocr/status  -> { available, reason? }
- *   POST api/ocr (image) -> { text, words: [{ text, confidence, ... }], ... }
+ *   GET  api/ocr/status  -> { available, reason?, handwriting }
+ *   POST api/ocr (image) -> { text, lines: [{ text, confidence, script, low_confidence }],
+ *                             words: [{ text, confidence, ... }], preprocessing: { quarter_turns } | null, ... }
  *
  * Ocr.widget(root, options) builds the "Text" box used in the Scan view and in the document viewer:
  * a Read text button, a progress line, and after reading an editable textarea with a word count, a Copy
- * button and a note when the text was hard to read. When the server cannot read text the button is
- * disabled and a one-line hint says why. Uses UI. English printed text only; nothing leaves this computer.
+ * button and a note when the text was hard to read. Right after a read it also says when the page was
+ * turned before reading and, when some lines are handwritten or were hard to read, lists the lines as
+ * read with a "Handwritten" or "Check" label on those. When the server cannot read text the button is
+ * disabled and a one-line hint says why. Uses UI. English text: printed, and handwriting when the server
+ * has the handwriting models; nothing leaves this computer.
  */
 const Ocr = (() => {
   const { $, esc, icon, fmtBytes } = UI;
@@ -28,7 +32,7 @@ const Ocr = (() => {
       return { available: false, reason: `The local server did not answer. ${SERVER_HINT}` };
     }
     const s = r.ok ? await r.json().catch(() => null) : null;
-    if (s && s.available) return { available: true, reason: "" };
+    if (s && s.available) return { available: true, reason: "", handwriting: s.handwriting === true };
     if (s) return { available: false, reason: s.reason || "The server cannot read text." };
     return { available: false, reason: r.status === 404
       ? "It is not installed on this server." : `The server answered ${r.status}.` };
@@ -38,9 +42,29 @@ const Ocr = (() => {
   const wordCount = (text) => String(text || "").trim().split(/\s+/).filter(Boolean).length;
   const wordsText = (n) => `${n} ${n === 1 ? "word" : "words"}`;
 
+  /** Sentence for a page the server turned by `turns` quarter-turns (1..3) before reading, else "". */
+  function turnedText(turns) {
+    if (turns !== 1 && turns !== 2 && turns !== 3) return "";
+    return `Page was rotated ${turns === 2 ? 180 : 90} degrees before reading.`;
+  }
+
+  /** Mean confidence (0..1) of the lines, each weighted by its number of words; null without lines. */
+  function lineConfidence(lines) {
+    let sum = 0, n = 0;
+    for (const ln of lines) {
+      if (typeof ln.confidence !== "number") continue;
+      const w = wordCount(ln.text) || 1;
+      sum += ln.confidence * w;
+      n += w;
+    }
+    return n ? sum / n : null;
+  }
+
   /**
    * Read the text on an image (Blob: JPEG, PNG or WebP, at most 10 MB). Resolves to
-   * { text, words (count), confidence (mean word confidence 0..1, or null without words), seconds, models }.
+   * { text, words (count), confidence (mean confidence 0..1, or null without words), seconds, models,
+   *   lines: [{ text, confidence, handwritten, low }], turns (quarter-turns the page was turned, 0..3),
+   *   handwriting (the server read with the handwriting models) }.
    * Rejects with an Error whose message can be shown to the user.
    */
   async function read(blob, signal) {
@@ -61,12 +85,22 @@ const Ocr = (() => {
       throw new Error((data && data.error) || `the server answered ${r.status}.`);
     }
     const conf = (data.words || []).map((w) => w.confidence).filter((c) => typeof c === "number");
+    const lines = (Array.isArray(data.lines) ? data.lines : []).filter((ln) => ln && typeof ln.text === "string")
+      .map((ln) => ({ text: ln.text, confidence: typeof ln.confidence === "number" ? ln.confidence : null,
+        handwritten: ln.script === "handwritten", low: ln.low_confidence === true }));
+    // A handwritten line keeps the handwriting reader's confidence, which the printed reader's words do
+    // not have, so the average comes from the lines; an answer without lines falls back to the words.
+    const byLine = lineConfidence(lines);
+    const turns = data.preprocessing ? Number(data.preprocessing.quarter_turns) : 0;
     return {
       text: data.text.slice(0, MAX_CHARS),
       words: conf.length || wordCount(data.text),
-      confidence: conf.length ? conf.reduce((a, b) => a + b, 0) / conf.length : null,
+      confidence: byLine !== null ? byLine : (conf.length ? conf.reduce((a, b) => a + b, 0) / conf.length : null),
       seconds: typeof data.seconds === "number" ? data.seconds : null,
       models: data.models || null,
+      lines,
+      turns: turns === 1 || turns === 2 || turns === 3 ? turns : 0,
+      handwriting: data.handwriting === true,
     };
   }
 
@@ -113,6 +147,11 @@ const Ocr = (() => {
         <label for="${id}-text">Text read from the page (you can correct it)
           <textarea id="${id}-text" class="ocr-text" rows="8" maxlength="${MAX_CHARS}" spellcheck="false" autocapitalize="off"></textarea></label>
         <p class="notice ocr-note" id="${id}-note" hidden></p>
+        <p class="muted small ocr-turned" id="${id}-turned" hidden></p>
+        <details class="ocr-lines" id="${id}-lines" hidden>
+          <summary id="${id}-lines-sum"></summary>
+          <ol class="ocr-line-list" tabindex="0" aria-labelledby="${id}-lines-sum"></ol>
+        </details>
         <div class="ocr-foot">
           <span class="muted small ocr-count" id="${id}-count"></span>
           <span class="small ocr-done" role="status" data-ocr="done"></span>
@@ -125,6 +164,8 @@ const Ocr = (() => {
       read: $('[data-ocr="read"]', root), hint: $(".ocr-hint", root), busy: $(".ocr-busy", root),
       live: $('[data-ocr="live"]', root), error: $(".ocr-error", root), panel: $(".ocr-panel", root),
       text: $(".ocr-text", root), note: $(".ocr-note", root), count: $(".ocr-count", root),
+      turned: $(".ocr-turned", root), lines: $(".ocr-lines", root), lineSum: $(".ocr-lines summary", root),
+      lineList: $(".ocr-line-list", root),
       done: $('[data-ocr="done"]', root), save: $('[data-ocr="save"]', root), copy: $('[data-ocr="copy"]', root),
     };
     const s = {
@@ -133,6 +174,7 @@ const Ocr = (() => {
       stale: false, // the page changed after the text was read
       info: null, // { confidence, words, readAt, models } of the last read, or what was stored
       readText: "", // the text as it was read or last saved, to tell whether the user edited it
+      detail: null, // { lines, turns } of the read just made; not stored with the document
       doneTimer: null,
     };
 
@@ -161,6 +203,33 @@ const Ocr = (() => {
       el.note.textContent = note;
       el.note.hidden = !note;
       el.note.classList.toggle("warn", warn);
+    }
+
+    /** The parts that describe the read just made: the turned-page line and the lines as read. */
+    function showDetail() {
+      const d = s.has ? s.detail : null;
+      const turned = d ? turnedText(d.turns) : "";
+      el.turned.textContent = turned;
+      el.turned.hidden = !turned;
+      const lines = d ? d.lines : [];
+      const hand = lines.filter((ln) => ln.handwritten).length;
+      const low = lines.filter((ln) => ln.low).length;
+      el.lines.hidden = !(hand || low);
+      if (el.lines.hidden) {
+        el.lineList.innerHTML = "";
+        return;
+      }
+      const parts = [];
+      if (hand) parts.push(`${hand} handwritten`);
+      if (low) parts.push(`${low} to check`);
+      el.lineSum.textContent = `Lines as read from the page (${lines.length}): ${parts.join(", ")}`;
+      el.lineList.innerHTML = lines.map((ln) => {
+        const pct = ln.confidence === null ? "" : ` (${Math.round(ln.confidence * 100)}%)`;
+        const tags = (ln.handwritten ? `<span class="tag ocr-tag" title="Read as handwriting">${icon("edit")}Handwritten</span>` : "")
+          + (ln.low ? `<span class="tag ocr-tag check" title="Low confidence${pct}: check this line against the page">${icon("eye")}Check${pct}</span>` : "");
+        return `<li${ln.handwritten || ln.low ? ' class="flagged"' : ""}><span class="ocr-line-text">${esc(ln.text)}</span>${tags}</li>`;
+      }).join("");
+      el.lines.open = true;
     }
 
     function showError(msg) {
@@ -194,14 +263,19 @@ const Ocr = (() => {
       } };
     }
 
-    /** Show `text` in the panel. `info`: the stored { confidence, words, edited, readAt, models }, if any. */
-    function setText(text, info = null) {
+    /**
+     * Show `text` in the panel. `info`: the stored { confidence, words, edited, readAt, models }, if any.
+     * `detail`: { lines, turns } of a read just made (see read()); stored text has none.
+     */
+    function setText(text, info = null, detail = null) {
       el.text.value = text || "";
       s.readText = el.text.value.trim();
       s.info = info;
+      s.detail = detail;
       s.has = true;
       s.stale = false;
       update();
+      showDetail();
     }
 
     async function doRead() {
@@ -218,8 +292,13 @@ const Ocr = (() => {
         const res = await read(blob, s.ctl.signal);
         if (mine !== s.seq) return;
         setText(res.text, { confidence: res.confidence, words: res.words, edited: false,
-          readAt: new Date().toISOString(), models: res.models });
-        el.live.textContent = res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.";
+          readAt: new Date().toISOString(), models: res.models }, { lines: res.lines, turns: res.turns });
+        const hand = res.lines.filter((ln) => ln.handwritten).length;
+        const low = res.lines.filter((ln) => ln.low).length;
+        el.live.textContent = (res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.")
+          + (res.turns ? ` ${turnedText(res.turns)}` : "")
+          + (hand ? ` ${hand} handwritten ${hand === 1 ? "line" : "lines"}.` : "")
+          + (low ? ` ${low} ${low === 1 ? "line" : "lines"} to check.` : "");
         if (onRead) await onRead(value());
       } catch (err) {
         if (mine !== s.seq || (err && err.name === "AbortError")) return;
@@ -234,8 +313,9 @@ const Ocr = (() => {
     function reset() {
       s.seq++;
       if (s.ctl) s.ctl.abort();
-      Object.assign(s, { has: false, stale: false, info: null, readText: "", ctl: null });
+      Object.assign(s, { has: false, stale: false, info: null, detail: null, readText: "", ctl: null });
       el.text.value = "";
+      showDetail();
       el.live.textContent = "";
       showError("");
       flash("");
@@ -292,5 +372,5 @@ const Ocr = (() => {
       isBusy: () => s.busy, flash, showError };
   }
 
-  return { MAX_BYTES, LOW_CONFIDENCE, status, read, copy, wordCount, wordsText, widget };
+  return { MAX_BYTES, LOW_CONFIDENCE, status, read, copy, wordCount, wordsText, turnedText, widget };
 })();

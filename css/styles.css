@@ -568,6 +568,20 @@ input[type="search"] { padding-left: 36px; }
 .ocr-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
 .ocr-count { margin-right: auto; font-variant-numeric: tabular-nums; }
 .ocr-done { font-weight: 600; color: var(--ok-ink); }
+/* After a read: the turned-page line, and the lines as read with labels on handwritten and unsure ones. */
+.ocr-lines { font-size: var(--fs-sm); min-width: 0; }
+.ocr-lines summary { cursor: pointer; font-weight: 500; }
+.ocr-line-list {
+  margin: var(--s2) 0 0; padding: var(--s1) var(--s2) var(--s1) 2.4em; max-height: 14em; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.ocr-line-list li { padding: 2px var(--s2); border-left: 3px solid transparent; }
+.ocr-line-list li::marker { color: var(--muted); font-size: var(--fs-xs); }
+.ocr-line-list li.flagged { border-left-color: var(--border-strong); }
+.ocr-line-text { overflow-wrap: anywhere; margin-right: var(--s2); }
+.ocr-tag { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; white-space: nowrap; vertical-align: 1px; }
+.ocr-tag .icon { width: 1em; height: 1em; }
+.ocr-tag.check { background: var(--warn-soft); border-color: transparent; color: var(--warn-ink); font-weight: 600; }
 .scan-save-text { margin: 0; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

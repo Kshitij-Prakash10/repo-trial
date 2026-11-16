@@ -23,11 +23,13 @@ A basic web app that works as a personal health diary. Each user keeps their
   up to 20 MB) per user, with title, category, date, tags, notes and an
   optional link to a visit or condition. Search, filter, view, download, edit,
   delete. The latest documents show on the Dashboard.
-- **Read text**: get the printed text of a scanned page or a stored image (JPEG,
-  PNG, WebP; not PDFs) with the local OCR model. The text can be corrected,
+- **Read text**: get the text of a scanned page or a stored image (JPEG,
+  PNG, WebP; not PDFs) with the local OCR models. The text can be corrected,
   copied, and is saved with the document; documents with text show a "Text"
   mark, View shows the text next to the page, and search also looks in it.
-  English printed text; needs the optional OCR packages (see below).
+  English printed text with the optional OCR packages; with the optional
+  handwriting packages as well, handwritten lines are read and pages turned by
+  90 or 180 degrees are put upright first (see below).
 - **Scan**: its own view (sidebar, Dashboard quick action, or Documents) in three
   steps, Photo, Check and Save. Take or choose a photo (or drop one); the local
   scanner finds the page with a trained machine-learning model, straightens it
@@ -67,7 +69,12 @@ Opening `index.html` directly also works; only scanning and reading text need th
    corrected page. It takes a few seconds (10 to 20 the first time, while the
    models load). The text appears in a box where you can correct it; Copy puts it
    on the clipboard. A note tells you when parts were hard to read or nothing was
-   found. If you change the output or the corners afterwards, choose Read again.
+   found. With the handwriting models installed, a line says when the page was
+   turned before reading ("Page was rotated 90 degrees before reading."), and
+   when some lines are handwritten or were hard to read, the lines as read are
+   listed with a "Handwritten" or "Check" label on those (shown right after
+   reading; the labels are not stored with the document). If you change the
+   output or the corners afterwards, choose Read again.
 5. **Save**: give it a title, category, date, tags and notes, then "View in
    Documents" or "Scan another". The text you read is saved with the document.
 
@@ -79,7 +86,9 @@ Reading text needs the optional OCR packages and the docTR model files; see
 "Setup" under "OCR scanner" below for the three commands. The model files are
 downloaded once during setup, never by the server. Without them the rest of the
 app works as before: the Read text action is disabled and a line next to it says
-why.
+why. Handwriting and turned pages need one more optional install
+(`requirements-handwriting.txt`, see "Handwriting and rotated pages" below);
+without it Read text still works, for upright printed pages.
 
 Without the server (opened as a file) or without the scanner, the Scan view
 still saves the photo as a document, without scanning.
@@ -132,9 +141,9 @@ outside it); otherwise the whole image is read. Design notes and the reasons for
    sudo apt-get install -y tesseract-ocr
    ```
 
-Limits of `ocr_scan.py` and the app's Read text action: pages turned by 90 or 180 degrees are not
-corrected and handwriting is read poorly. Both are handled by `ocr.scan` (next section), which the
-app does not use yet.
+Limits of `ocr_scan.py`: pages turned by 90 or 180 degrees are not corrected and handwriting is read
+poorly. Both are handled by `ocr.scan` (next section). The app's Read text action uses `ocr.scan` when
+its packages and checkpoints are installed, and has the same limits as `ocr_scan.py` when they are not.
 
 ### Run inference
 
@@ -146,12 +155,28 @@ This writes `result.json` and `result.txt` (the plain text). Options: `--weights
 weights without fine-tuning), `--no-scanner` (skip the page scanner stage), `--overlay boxes.png`
 (the page with the word boxes drawn).
 
-The local server offers the same pipeline to the app (`ocr/api.py`): `GET /api/ocr/status` answers
-`{"available", "reason" or "models"}` without loading the models, and `POST /api/ocr` (form field
-`image`: JPEG, PNG or WebP up to 10 MB; optional `scanner=1` to run the page-scanner stage, off by
-default because the app sends an already flattened page) answers `{"text", "lines", "words", "page",
-"seconds", "models"}`. The models load on the first request and one page is read at a time. It answers
-503 with a reason when the packages or weights are missing; it never downloads anything.
+The local server offers reading to the app (`ocr/api.py`) in one of two modes: `ocr.scan.Scanner`
+(handwriting and turned pages, next section) when the packages of `requirements-handwriting.txt` and
+the three checkpoints in `checkpoints/` are present, otherwise the printed-only pipeline above.
+
+- `GET /api/ocr/status` answers `{"available", "reason" or "models", "loaded", "handwriting"}` without
+  loading the models. `handwriting` is `true` when pages are (or will be) read by `ocr.scan.Scanner`;
+  when it is `false` and reading is available, `handwriting_reason` says why the printed-only
+  pipeline is used (packages missing, a checkpoint file missing, or the models failed to load).
+- `POST /api/ocr` (form field `image`: JPEG, PNG or WebP up to 10 MB; optional `scanner=1` to run the
+  page-scanner stage, off by default because the app sends an already flattened page) answers
+  `{"text", "lines", "words", "page", "seconds", "models", "handwriting", "preprocessing"}`. Each line
+  has `text`, `box`, `confidence`, `script` (`"printed"` or `"handwritten"`: the reader whose text was
+  kept) and `low_confidence` (confidence below 0.5). `words` (`text`, `confidence`, `box`, `line`) are
+  the printed recogniser's words; `line` is an index into `lines`, or `null`. `handwriting` says which
+  mode read the page. `preprocessing` is `{"quarter_turns", "orientation_confidence",
+  "deskew_degrees", "flip_check"}` in the handwriting mode (`quarter_turns` 1 to 3: the page was
+  turned upright before reading, and `page` and all boxes refer to the upright page) and `null` in
+  the printed-only mode, where every line is `"printed"`.
+
+The models load on the first request (about 12 seconds for the handwriting mode on the test machine)
+and one page is read at a time. It answers 503 with a reason when the OCR packages or docTR weights
+are missing; it never downloads anything, in either mode.
 
 `result.json` holds: `text`; `lines` (`text`, `box`, `confidence`, `words` as indices); `words`
 (`text`, `confidence`, `detection_score`, `box` on the processed page, `source_quad` in the pixels of
@@ -247,6 +272,11 @@ The fine-tuned weights are in the repository. The evaluation's pretrained compar
 `microsoft/trocr-small-handwritten` from Hugging Face once (cached afterwards); `scan()` itself never
 downloads anything.
 
+The app uses it too: start (or restart) `python server.py` after the install and the Read text action
+reads with `ocr.scan.Scanner` (`GET /api/ocr/status` then answers `"handwriting": true`). Without
+this install, or when a checkpoint file is missing, Read text keeps working with the printed-only
+pipeline.
+
 ### Retrain
 
 ```bash
@@ -299,7 +329,8 @@ python -m pytest -q                     # server, scanner, OCR and handwriting t
                                         # OCR_SLOW=1 adds one real scan() of a turned page
                                         # tests needing the optional packages skip without them:
                                         # requirements-finetune.txt (fine-tuning), requirements-ocr.txt
-                                        # (OCR code), and the docTR weights (the one real OCR read)
+                                        # (OCR code), the docTR weights (the real OCR reads) and
+                                        # requirements-handwriting.txt (the handwriting-mode reads)
 npm install playwright && npx playwright install chromium   # once
 node tests/ui/check.js                  # UI flows in headless Chromium (starts server.py)
 ```
