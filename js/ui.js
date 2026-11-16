@@ -133,7 +133,15 @@ const UI = (() => {
     if (!dlg) return;
     $("#viewer-close").addEventListener("click", closeViewer);
     dlg.addEventListener("click", (e) => { if (e.target === dlg) closeViewer(); });
-    dlg.addEventListener("close", () => { $("#viewer-body").innerHTML = ""; clearViewerExtra(); });
+    dlg.addEventListener("close", () => {
+      $("#viewer-body").innerHTML = "";
+      clearViewerExtra();
+      // Let go of the file: it must not stay in memory, or reachable from the link, after closing.
+      $("#viewer-open").removeAttribute("href");
+      $("#viewer-download").onclick = null;
+      if (viewerUrl) { URL.revokeObjectURL(viewerUrl); viewerUrl = null; }
+    });
+    document.addEventListener("user:close", closeViewer);
   });
 
   /** Decode base64 (no data: prefix) into a Blob. */
