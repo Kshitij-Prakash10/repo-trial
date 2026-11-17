@@ -86,28 +86,82 @@ def load_image(path: str) -> np.ndarray:
         return np.asarray(ImageOps.exif_transpose(im).convert("RGB"))
 
 
-def rect_crop(img: np.ndarray, points: np.ndarray, pad: float = 0.08) -> np.ndarray:
-    """Crop the minimum-area rectangle around points (N, 2) and turn it upright (text left to right)."""
-    (cx, cy), (w, h), ang = cv2.minAreaRect(np.asarray(points, np.float32))
-    if w < h:  # make the long side horizontal
-        w, h, ang = h, w, ang + 90
-    if ang > 90:
-        ang -= 180
-    if ang < -90:
-        ang += 180
+LINE_MIN_ASPECT = 2.0  # several words spanning a rectangle at least this elongated are a line along it
+
+
+def _text_axis(points: np.ndarray) -> tuple[tuple[float, float], float, float, float]:
+    """Minimum-area rectangle around points as (centre, width, height, angle in degrees): the width
+    runs along the text.
+
+    The text direction is the rectangle's long side when that side is within 45 degrees of
+    horizontal (the page is upright: EXIF, orientation classifier), or when the points come from
+    several words (more than 4 points) spread at least LINE_MIN_ASPECT times longer than high.
+    Otherwise (one word box taller than wide, e.g. "I" or "1") the side nearest horizontal is used,
+    so a narrow word is not turned on its side."""
+    pts = np.asarray(points, np.float32).reshape(-1, 2)
+    (cx, cy), (w, h), ang = cv2.minAreaRect(pts)
+    # OpenCV: the side of length w runs at `ang` degrees, the side of length h at ang + 90
+    sides = [(float(w), float(h), (ang + 90.0) % 180.0 - 90.0), (float(h), float(w), (ang + 180.0) % 180.0 - 90.0)]
+    long_side = max(sides, key=lambda t: t[0])
+    flat_side = min(sides, key=lambda t: (round(abs(t[2]), 6), -t[0]))  # nearest horizontal; tie: longer
+    several_words = len(pts) > 4 and long_side[0] >= LINE_MIN_ASPECT * max(long_side[1], 1e-6)
+    width, height, angle = long_side if (abs(long_side[2]) <= 45.0 or several_words) else flat_side
+    return (float(cx), float(cy)), width, height, angle
+
+
+def rect_crop(img: np.ndarray, points: np.ndarray, pad: float = 0.08, words: list | None = None,
+              mask_dilate: float = 0.15) -> np.ndarray:
+    """Crop the minimum-area rectangle around points (N, 2) and turn it upright (text left to right).
+
+    words (optional, off by default): the polygons ((K, 2) arrays, e.g. the 4 corners of each word box)
+    of the line's words, in the same pixels as img. Then, after turning the crop upright, everything
+    outside the union of those words (each grown by mask_dilate x the median word height) is painted
+    with the paper colour, so that words of neighbouring lines caught by the rectangle of a curved or
+    gappy line are not read. Not validated on real handwriting (GNHK), hence off by default."""
+    (cx, cy), w, h, ang = _text_axis(points)
     w, h = w + 2 * pad * h, h * (1 + 2 * pad)
     M = cv2.getRotationMatrix2D((cx, cy), ang, 1.0)
     M[0, 2] += w / 2 - cx
     M[1, 2] += h / 2 - cy
-    return cv2.warpAffine(img, M, (max(2, int(round(w))), max(2, int(round(h)))), flags=cv2.INTER_LINEAR,
-                          borderMode=cv2.BORDER_REPLICATE)
+    size = (max(2, int(round(w))), max(2, int(round(h))))
+    crop = cv2.warpAffine(img, M, size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    if words is not None and len(words):
+        crop = mask_outside(crop, [np.asarray(q, np.float64) @ M[:, :2].T + M[:, 2] for q in words], mask_dilate)
+    return crop
 
 
-def gnhk_lines(page: dict, img: np.ndarray | None = None) -> list[dict]:
+def mask_outside(crop: np.ndarray, polys: list, dilate: float = 0.15) -> np.ndarray:
+    """Paint pixels of crop outside the (grown) union of polys with the local paper colour.
+
+    The paper colour is the per-channel median of the brighter half of the pixels inside the kept
+    area (ink is the darker part)."""
+    H, W = crop.shape[:2]
+    keep = np.zeros((H, W), np.uint8)
+    heights = []
+    for q in polys:
+        q = np.asarray(q, np.float64).reshape(-1, 2)
+        heights.append(float(q[:, 1].max() - q[:, 1].min()))
+        cv2.fillConvexPoly(keep, np.round(cv2.convexHull(q.astype(np.float32))).astype(np.int32).reshape(-1, 2), 1)
+    r = int(round(dilate * float(np.median(heights)))) if heights else 0
+    if r > 0:
+        keep = cv2.dilate(keep, np.ones((2 * r + 1, 2 * r + 1), np.uint8))
+    keep = keep.astype(bool)
+    if not keep.any() or keep.all():
+        return crop
+    inside = crop[keep].reshape(-1, crop.shape[2] if crop.ndim == 3 else 1)
+    grey = inside.mean(1)
+    paper = np.median(inside[grey >= np.median(grey)], 0)
+    out = crop.copy()
+    out[~keep] = paper.astype(crop.dtype).reshape(out[~keep].shape[1:]) if crop.ndim == 3 else paper.astype(crop.dtype)[0]
+    return out
+
+
+def gnhk_lines(page: dict, img: np.ndarray | None = None, mask_neighbours: bool = False) -> list[dict]:
     """Text lines of a GNHK page: {"text", "type" (H, P or mixed), "special", "poly_points", "crop"}.
 
     Words keep the annotation order inside a line when sorted by their left edge. "special" marks
-    lines with a GNHK special token; they are left out of recognition scoring."""
+    lines with a GNHK special token; they are left out of recognition scoring. mask_neighbours paints
+    out everything outside the line's own words (see rect_crop; off by default, not yet validated)."""
     if img is None:
         img = load_image(page["path"])
     lines: dict[int, list[dict]] = {}
@@ -121,7 +175,8 @@ def gnhk_lines(page: dict, img: np.ndarray | None = None) -> list[dict]:
         out.append({"line": k, "text": " ".join(w["text"] for w in ws),
                     "type": types.pop() if len(types) == 1 else "mixed",
                     "special": any(w["text"] in GNHK_SPECIAL for w in ws),
-                    "points": pts, "crop": rect_crop(img, pts)})
+                    "points": pts,
+                    "crop": rect_crop(img, pts, words=[w["poly"] for w in ws] if mask_neighbours else None)})
     return out
 
 

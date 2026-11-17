@@ -17,6 +17,7 @@ reading, while still reading most handwriting with the handwriting model.
 from __future__ import annotations
 
 import os
+import re
 import time
 
 import numpy as np
@@ -32,6 +33,9 @@ from ocr.pipeline import OcrPipeline, to_rgb
 LOW_CONFIDENCE = 0.5  # lines below this are flagged
 ORIENT_MIN_CONF = 0.6  # a turn is applied only when the classifier is at least this sure
 HW_LINE_SHARE = 0.5  # a line is handwritten when its words' mean P(handwritten) reaches this
+_RULE_TEXT = re.compile(r"[-_=.:~\u2013\u2014\u00b7]{2,}")  # a printed reading of dashes / dots / rules only
+_LETTER = re.compile(r"[^\W\d_]")
+_ALNUM = re.compile(r"[^\W_]")
 _DEFAULT: "Scanner | None" = None
 
 
@@ -40,7 +44,7 @@ class Scanner:
 
     def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
-                 flip_check: bool = True):
+                 flip_check: bool = True, mask_neighbours: bool = False):
         if postcorrect:
             # Withdrawn: on medical text it rewrites drug names and units (digoxin -> dioxin,
             # mmol -> mol), and the evaluation found no gain from it (reports/final_report.md).
@@ -52,6 +56,9 @@ class Scanner:
         self.clf = scriptclf.load_clf() if handwriting else None
         self.hw = HandwritingReader() if handwriting else None
         self.postcorrect = postcorrect
+        # Paint out words of neighbouring lines inside a handwriting line's crop (ocr.hwdata.rect_crop).
+        # Off by default: its effect on real handwriting (GNHK) has not been measured yet.
+        self.mask_neighbours = mask_neighbours
 
     def run(self, image: Image.Image) -> dict:
         t0 = time.perf_counter()
@@ -90,14 +97,18 @@ class Scanner:
                      "handwritten_share": round(share, 3), "words": ln["words"]}
             if self.hw is not None and share >= HW_LINE_SHARE:
                 b = boxes[ln["words"]]
-                pts = np.concatenate([b[:, [0, 1]], b[:, [2, 1]], b[:, [2, 3]], b[:, [0, 3]]])
+                quads = np.stack([b[:, [0, 1]], b[:, [2, 1]], b[:, [2, 3]], b[:, [0, 3]]], 1)  # (n, 4, 2)
                 hw_idx.append(len(lines))
-                hw_crops.append(rect_crop(page, pts))
+                mask = getattr(self, "mask_neighbours", False)
+                hw_crops.append(rect_crop(page, quads.reshape(-1, 2), words=list(quads) if mask else None))
             lines.append(entry)
         if hw_crops:
-            for i, (text, conf) in zip(hw_idx, self.hw.read(hw_crops)):
+            for i, crop, (text, conf) in zip(hw_idx, hw_crops, self.hw.read(hw_crops)):
                 lines[i].update(handwriting_text=text, handwriting_confidence=round(conf, 4))
-                if conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
+                keep, why = keep_printed(lines[i]["text"], text, crop)
+                if keep:
+                    lines[i]["handwriting_rejected"] = why
+                elif conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
                     lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
                                     text=text, confidence=round(conf, 4), script="handwritten")
         for ln in lines:
@@ -105,13 +116,59 @@ class Scanner:
             # Handwritten numbers are misread with high confidence (2.5 mg read as 25 mg), so a line that
             # went to the handwriting reader and holds a number or a unit must be confirmed by a person,
             # whatever its confidence.
-            ln["confirm_numbers"] = bool("handwriting_text" in ln and has_number_or_unit(ln["text"]))
+            ln["confirm_numbers"] = confirm_numbers(ln)
         lines = [ln for ln in lines if ln["text"].strip()]
         return {"text": "\n".join(ln["text"] for ln in lines), "confidences": [ln["confidence"] for ln in lines],
                 "lines": lines, "words": words, "preprocessing": pre, "page": base["page"], "source": base["source"],
                 "scanner": base["scanner"], "models": {**(base["models"] if isinstance(base["models"], dict) else {}),
                                                        "handwriting": getattr(self.hw, "name", None)},
                 "seconds": round(time.perf_counter() - t0, 3)}
+
+
+def confirm_numbers(ln: dict) -> bool:
+    """A line that went to the handwriting reader must be checked by a person when ANY reading of it
+    (the one shown, the handwriting reader's or the printed reader's) holds a number or a unit: one
+    reader can turn the digits of a dose into letters while the other still sees them."""
+    if "handwriting_text" not in ln:
+        return False
+    return any(has_number_or_unit(ln.get(k) or "") for k in ("text", "handwriting_text", "printed_text"))
+
+
+def looks_like_rule(crop: np.ndarray) -> bool:
+    """True when a line crop holds a horizontal rule or a row of dashes / dots: the ink lies in a
+    thin band (at most a fifth of the crop height) yet runs along at least half of its width."""
+    if crop is None or crop.size == 0:
+        return False
+    g = crop.astype(np.float32).mean(2) if crop.ndim == 3 else crop.astype(np.float32)
+    paper, dark = float(np.median(g)), float(np.percentile(g, 1))
+    if paper - dark < 40:  # no clear ink
+        return False
+    ink = g < (paper + dark) / 2
+    H, W = ink.shape
+    rows = np.flatnonzero(ink.sum(1) > 0.02 * W)
+    if len(rows) == 0:
+        return False
+    band = rows[-1] - rows[0] + 1
+    cols = ink[rows[0]:rows[-1] + 1].any(0)
+    span = np.flatnonzero(cols)
+    return bool(band <= 0.2 * H and (span[-1] - span[0] + 1) >= 0.5 * W)
+
+
+def keep_printed(printed: str, handwriting: str, crop: np.ndarray | None = None) -> tuple[bool, str]:
+    """Must the printed reading stay, whatever the handwriting reader's confidence? (decision, reason)
+
+    The handwriting reader (TrOCR) invents words for lines without letters: it read a row of dashes
+    as "sentence Valuable" with confidence 0.63 (IAM test line 02658). So when the printed reader saw
+    only dashes, dots or rules (2 or more of them), or saw no letters or digits on a crop whose ink
+    is a thin horizontal band, an alphabetic handwriting reading does not replace it."""
+    if not _LETTER.search(handwriting or ""):
+        return False, ""
+    compact = "".join((printed or "").split())
+    if _RULE_TEXT.fullmatch(compact):
+        return True, "printed reading is a rule / row of dashes"
+    if not _ALNUM.search(compact) and crop is not None and looks_like_rule(crop):
+        return True, "the crop holds a horizontal rule"
+    return False, ""
 
 
 def scan(image_path: str) -> tuple[str, list[float]]:
