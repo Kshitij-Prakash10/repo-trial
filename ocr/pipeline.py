@@ -22,9 +22,11 @@ from ocr import models
 from ocr.common import group_lines, union
 from scanner import geometry as geo
 from scanner import infer as scanner_infer
+from scanner.convert import to_rgb  # noqa: F401  (kept importable as ocr.pipeline.to_rgb)
 
 MAX_SIDE = 2400  # px; larger photos are reduced first (the scanner's own working size)
-SCAN_MIN_CONF = 0.5  # scanner confidence needed to use its crop
+# scanner confidence needed to use its crop: the scanner's own threshold (one constant, not a copy)
+SCAN_MIN_CONF = scanner_infer.MIN_CONFIDENCE
 SCAN_MIN_TEXT_INSIDE = 0.98  # share of detected word centres that must lie inside the page quad
 SCAN_MAX_AREA = 0.9  # a quad covering more of the photo than this changes nothing useful; skip the warp
 SCAN_MIN_WORDS_KEPT = 0.98  # the flattened page must keep this share of the words found on the photo
@@ -32,35 +34,17 @@ SCAN_MIN_CONF_GAIN = 0.02  # ... and its mean recognition confidence must beat t
 MIN_BOX = 3  # px
 
 
-def to_rgb(image: Image.Image) -> Image.Image:
-    """RGB copy of any PIL image; transparent areas become white (a plain convert makes them black)."""
-    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
-        rgba = image.convert("RGBA")
-        white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
-        return Image.alpha_composite(white, rgba).convert("RGB")
-    if image.mode in ("I;16", "I;16B", "I;16L", "I", "F"):  # 16-bit or float grey: scale to 8 bits
-        a = np.asarray(image, dtype=np.float64)
-        hi = 65535.0 if image.mode.startswith("I;16") else max(float(a.max()), 1.0)
-        if image.mode == "I" and a.max() <= 255:
-            hi = 255.0
-        return Image.fromarray(np.clip(a / hi * 255.0, 0, 255).astype(np.uint8)).convert("RGB")
-    return image.convert("RGB")
-
-
 def _mean_conf(rec: list[tuple[str, float]]) -> float:
     return float(np.mean([c for _, c in rec])) if rec else 0.0
 
 
 def _inside(points: np.ndarray, quad: np.ndarray) -> np.ndarray:
-    """Which points lie inside a convex quad (TL TR BR BL)."""
-    ok = np.ones(len(points), bool)
-    sign = None
-    for a, b in zip(quad, np.roll(quad, -1, 0)):
-        cross = (b[0] - a[0]) * (points[:, 1] - a[1]) - (b[1] - a[1]) * (points[:, 0] - a[0])
-        s = cross >= 0
-        sign = s if sign is None else sign
-        ok &= s == sign
-    return ok
+    """Which points lie inside a convex quad or on its boundary. The corners may run either way round."""
+    points = np.asarray(points, float).reshape(-1, 2)
+    quad = np.asarray(quad, float)
+    cross = np.stack([(b[0] - a[0]) * (points[:, 1] - a[1]) - (b[1] - a[1]) * (points[:, 0] - a[0])
+                      for a, b in zip(quad, np.roll(quad, -1, 0))], 1)
+    return (cross >= -1e-9).all(1) | (cross <= 1e-9).all(1)
 
 
 def scanner_decision(page: dict, boxes: np.ndarray, W: int, H: int) -> tuple[bool, str]:

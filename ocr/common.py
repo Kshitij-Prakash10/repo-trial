@@ -36,32 +36,47 @@ def normalise(text: str) -> str:
 
 # ---------------------------------------------------------------- reading order
 
-def group_lines(boxes: np.ndarray) -> list[list[int]]:
+def group_lines(boxes: np.ndarray, split_gap: float | None = None) -> list[list[int]]:
     """Group boxes into text lines, top to bottom, each line left to right. Returns lists of indices.
 
     A box joins a line when its vertical centre lies inside the line's current vertical extent
-    (the median top and bottom of the boxes already in the line); otherwise it starts a new line."""
+    (the median top and bottom of the boxes already in the line) and it overlaps that extent by at
+    least 0.4 of its own height; otherwise it starts a new line. Every earlier line is a candidate
+    (the most recent match wins); lines whose bottom lies above the box's top cannot match.
+
+    split_gap (off by default): also split each line where the horizontal gap between neighbouring
+    boxes exceeds split_gap x the line height (see split_segments), so side-by-side columns become
+    separate lines. The segments of one line stay next to each other, left to right. It changes the
+    reading order of forms and receipts and has not been validated on FUNSD / SROIE / CORD, so the
+    pipeline does not use it."""
     boxes = np.asarray(boxes, float).reshape(-1, 4)
     if len(boxes) == 0:
         return []
     cy = (boxes[:, 1] + boxes[:, 3]) / 2
     lines: list[list[int]] = []
-    ext: list[tuple[float, float]] = []
+    tops: list[float] = []
+    bots: list[float] = []
     for i in np.argsort(cy, kind="stable"):
-        placed = False
-        for k in range(len(lines) - 1, max(-1, len(lines) - 6), -1):  # only recent lines can match
-            top, bot = ext[k]
-            if top <= cy[i] <= bot and min(bot, boxes[i, 3]) - max(top, boxes[i, 1]) >= 0.4 * (boxes[i, 3] - boxes[i, 1]):
-                lines[k].append(int(i))
-                b = boxes[lines[k]]
-                ext[k] = (float(np.median(b[:, 1])), float(np.median(b[:, 3])))
-                placed = True
-                break
-        if not placed:
+        k = -1
+        if lines:
+            t, b = np.asarray(tops), np.asarray(bots)
+            y0, y1 = boxes[i, 1], boxes[i, 3]
+            ok = (b >= y0) & (t <= cy[i]) & (cy[i] <= b) & (np.minimum(b, y1) - np.maximum(t, y0) >= 0.4 * (y1 - y0))
+            hits = np.flatnonzero(ok)
+            k = int(hits[-1]) if len(hits) else -1
+        if k >= 0:
+            lines[k].append(int(i))
+            bb = boxes[lines[k]]
+            tops[k], bots[k] = float(np.median(bb[:, 1])), float(np.median(bb[:, 3]))
+        else:
             lines.append([int(i)])
-            ext.append((float(boxes[i, 1]), float(boxes[i, 3])))
+            tops.append(float(boxes[i, 1]))
+            bots.append(float(boxes[i, 3]))
     order = np.argsort([np.median(boxes[ln][:, 1] + boxes[ln][:, 3]) / 2 for ln in lines], kind="stable")
-    return [sorted(lines[k], key=lambda j: boxes[j, 0]) for k in order]
+    out = [sorted(lines[k], key=lambda j: boxes[j, 0]) for k in order]
+    if split_gap is not None:
+        out = [seg for ln in out for seg in split_segments(ln, boxes, split_gap)]
+    return out
 
 
 def split_segments(line: list[int], boxes: np.ndarray, gap: float = SEGMENT_GAP) -> list[list[int]]:

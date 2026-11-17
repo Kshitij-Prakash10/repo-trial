@@ -14,22 +14,31 @@ DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
 REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 
 
-def load_det(arch: str = DET_ARCH, ckpt: str | None = None):
-    """Detection model: docTR pretrained weights, then the fine-tuned checkpoint when one is given."""
-    from doctr.models import detection
-    model = getattr(detection, arch)(pretrained=True)
-    if ckpt:
-        model.load_state_dict(torch.load(ckpt, map_location="cpu")["model"])
+def _load_checkpoint(model, ckpt: str):
+    """Load a fine-tuned checkpoint ({"model": state_dict}); every weight must match (strict)."""
+    state = torch.load(ckpt, map_location="cpu")
+    model.load_state_dict(state["model"] if isinstance(state, dict) and "model" in state else state, strict=True)
     return model
+
+
+def load_det(arch: str = DET_ARCH, ckpt: str | None = None):
+    """Detection model. With a checkpoint file: built without any download and filled from the file
+    (works offline). Without one: the docTR pretrained weights (downloaded on first use)."""
+    from doctr.models import detection
+    if ckpt and os.path.exists(ckpt):
+        return _load_checkpoint(getattr(detection, arch)(pretrained=False, pretrained_backbone=False), ckpt)
+    model = getattr(detection, arch)(pretrained=True)
+    return _load_checkpoint(model, ckpt) if ckpt else model  # a named but missing file raises here
 
 
 def load_rec(arch: str = REC_ARCH, ckpt: str | None = None):
-    """Recognition model: docTR pretrained weights, then the fine-tuned checkpoint when one is given."""
+    """Recognition model. With a checkpoint file: built without any download and filled from the file
+    (works offline). Without one: the docTR pretrained weights (downloaded on first use)."""
     from doctr.models import recognition
+    if ckpt and os.path.exists(ckpt):
+        return _load_checkpoint(getattr(recognition, arch)(pretrained=False, pretrained_backbone=False), ckpt)
     model = getattr(recognition, arch)(pretrained=True)
-    if ckpt:
-        model.load_state_dict(torch.load(ckpt, map_location="cpu")["model"])
-    return model
+    return _load_checkpoint(model, ckpt) if ckpt else model  # a named but missing file raises here
 
 
 def det_predictor(model, batch_size: int = 2):

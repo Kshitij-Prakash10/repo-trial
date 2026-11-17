@@ -1,0 +1,30 @@
+== 1. DocCorner, shipped model (ft_real_only): threshold only ==
+validation: 880 photos with a document, 120 without
+  val  t=0.35  found 0.988  false alarms 0.367  IoU>=0.9 kept 1.000  share of found with IoU<0.5 0.026
+  val  t=0.45  found 0.986  false alarms 0.292  IoU>=0.9 kept 1.000  share of found with IoU<0.5 0.026
+  val  t=0.5   found 0.978  false alarms 0.225  IoU>=0.9 kept 1.000  share of found with IoU<0.5 0.023
+  val  t=0.55  found 0.968  false alarms 0.125  IoU>=0.9 kept 0.998  share of found with IoU<0.5 0.020
+  val  t=0.6   found 0.944  false alarms 0.042  IoU>=0.9 kept 0.995  share of found with IoU<0.5 0.016
+
+== 2. confidence in [t_low, 0.60) accepted when the quad's geometry is plausible (chosen on val) ==
+constraint: validation false alarms at most +1 point over t=0.60; objective: most pages found
+  best on val: t_low=0.35 max angle deviation=10 deg, max opposite-side ratio=1.2, no corner outside the photo
+  val  t=0.60 alone   found 0.944  false alarms 0.042  IoU>=0.9 kept 0.995  share of found with IoU<0.5 0.016
+  val  combined       found 0.951  false alarms 0.050  IoU>=0.9 kept 0.997  share of found with IoU<0.5 0.017
+  neighbours on val (found / false alarms):
+    t_low 0.30 dev  5: 0.947/0.042 | t_low 0.30 dev 10: 0.951/0.050 | t_low 0.30 dev 15: 0.955/0.083
+    t_low 0.35 dev  5: 0.947/0.042 | t_low 0.35 dev 10: 0.951/0.050 | t_low 0.35 dev 15: 0.955/0.083
+    t_low 0.40 dev  5: 0.947/0.042 | t_low 0.40 dev 10: 0.951/0.050 | t_low 0.40 dev 15: 0.955/0.083
+
+  test, read once for the chosen rule:
+  test t=0.35         found 0.970  false alarms 0.305  IoU>=0.9 kept 1.000  share of found with IoU<0.5 0.193
+  test t=0.60 alone   found 0.786  false alarms 0.067  IoU>=0.9 kept 0.991  share of found with IoU<0.5 0.089
+  test combined       found 0.794  false alarms 0.075  IoU>=0.9 kept 0.993  share of found with IoU<0.5 0.093
+
+== 3. SmartDoc background01: predicted area of the shipped model vs the synthetic baseline ==
+The true quads are not stored, so the baseline's quad is used as the reference on frames where
+the baseline itself is very accurate (its iou_doc >= 0.95; baseline Jaccard on background01 is 0.905).
+  background01: 382 frames; area ratio median 1.003, >1.1 in 24.6%; ft iou_doc mean 0.935 (bloated 0.824); confidence of bloated frames median 0.826 vs others 0.908
+  background02: 222 frames; area ratio median 1.001, >1.1 in 15.3%; ft iou_doc mean 0.870 (bloated 0.233); confidence of bloated frames median 0.560 vs others 0.892
+  background03: 548 frames; area ratio median 1.001, >1.1 in 2.9%; ft iou_doc mean 0.971 (bloated 0.633); confidence of bloated frames median 0.667 vs others 0.900
+  background04: 141 frames; area ratio median 1.013, >1.1 in 31.2%; ft iou_doc mean 0.876 (bloated 0.678); confidence of bloated frames median 0.756 vs others 0.895

@@ -182,3 +182,154 @@ def test_scanner_refuses_lexicon_correction():
     from ocr.scan import Scanner
     with pytest.raises(ValueError, match="medicine names and units"):
         Scanner(postcorrect=True)
+
+
+# ---------------------------------------------------------------- line crops: narrow words, neighbouring lines
+
+def test_rect_crop_keeps_a_narrow_single_word_upright():
+    """A 15 x 40 word box (taller than wide, e.g. "I" or "1") used to be turned 90 degrees."""
+    img = np.full((200, 200, 3), 255, np.uint8)
+    img[52:88, 57:59] = 0  # a vertical stroke, like the letter I
+    box = np.array([[50, 50], [65, 50], [65, 90], [50, 90]], float)
+    c = rect_crop(img, box)
+    assert c.shape[0] > c.shape[1]  # still taller than wide
+    dark_rows = np.flatnonzero((c.mean(2) < 128).any(1))
+    assert dark_rows[-1] - dark_rows[0] > 25  # the stroke is still vertical
+
+
+@pytest.mark.parametrize("deg", [-30, -8, 0, 12, 40])
+def test_rect_crop_turns_a_tilted_line_horizontal(deg):
+    img = np.full((400, 600, 3), 255, np.uint8)
+    a = np.radians(deg)
+    d, n = np.array([np.cos(a), np.sin(a)]), np.array([-np.sin(a), np.cos(a)])
+    c0 = np.array([300.0, 200.0])
+    for x, y in np.array([c0 + t * d for t in np.linspace(-150, 150, 400)]).round().astype(int):
+        img[y - 1:y + 2, x - 1:x + 2] = 0
+    words = [np.array([c0 + s * d * 150 + u * d * 140 + v * n * 12 for u, v in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+             for s in (-0.5, 0.5)]  # two words of 280 x 24 px along the line
+    crop = rect_crop(img, np.concatenate(words))
+    assert crop.shape[1] > 4 * crop.shape[0]
+    rows = np.flatnonzero((crop.mean(2) < 128).mean(1) > 0.5)
+    assert len(rows) and rows[-1] - rows[0] <= 4  # the ink is one horizontal band
+
+
+def _two_line_page(with_b: bool = True):
+    """A gappy line A (two words, the second lower) and a word of line B under A's first word."""
+    img = np.full((200, 400, 3), 230, np.uint8)  # grey-white paper
+    a1, a2 = [20, 40, 170, 70], [200, 80, 380, 110]
+    b1 = [30, 85, 160, 112]  # the next line's word, inside line A's rectangle
+    for x0, y0, x1, y1 in (a1, a2, b1) if with_b else (a1, a2):
+        img[y0 + 8:y1 - 8, x0 + 5:x1 - 5] = 20
+    quads = [np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float) for x0, y0, x1, y1 in (a1, a2)]
+    return img, quads
+
+
+def test_masking_paints_out_a_neighbouring_line_only_when_asked():
+    img, quads = _two_line_page()
+    pts = np.concatenate(quads)
+    plain = rect_crop(img, pts)
+    masked = rect_crop(img, pts, words=quads)
+    only_a = rect_crop(_two_line_page(with_b=False)[0], pts)  # the crop if line B were not there
+    assert plain.shape == masked.shape == only_a.shape
+    ink = lambda c: int((c.mean(2) < 128).sum())
+    assert ink(plain) > ink(only_a) + 300  # without masking, part of line B's word is in the crop
+    assert abs(ink(masked) - ink(only_a)) <= 0.05 * ink(only_a)  # with masking only line A's ink is left
+    painted = (np.abs(masked.astype(int) - plain.astype(int)).sum(2) > 0)
+    assert np.all(np.abs(masked[painted].astype(int) - 230) <= 2)  # painted with the paper colour, not white
+    assert np.array_equal(rect_crop(img, pts, words=None), plain)
+
+
+# ---------------------------------------------------------------- reading choice and safety flag (no models)
+
+def test_dash_line_keeps_the_printed_reading():
+    from ocr.scan import keep_printed
+    assert keep_printed("-----------", "sentence Valuable")[0] is True
+    assert keep_printed("- - - - -", "sentence Valuable")[0] is True
+    assert keep_printed("......", "Mr Smith")[0] is True
+    assert keep_printed("==", "an")[0] is True
+    assert keep_printed("-", "Mr Smith")[0] is False  # a single character is not a rule
+    assert keep_printed("Mr Snith", "Mr Smith")[0] is False
+    assert keep_printed("2-3", "two to three")[0] is False
+    assert keep_printed("-----", "----")[0] is False  # nothing alphabetic to replace it with
+
+
+def test_rule_line_crop_is_recognised_from_its_ink():
+    from ocr.scan import keep_printed, looks_like_rule
+    rule = np.full((40, 300, 3), 240, np.uint8)
+    for x in range(10, 290, 12):
+        rule[19:22, x:x + 8] = 30  # a row of dashes
+    text = np.full((40, 300, 3), 240, np.uint8)
+    text[8:32, 10:60] = 30
+    text[14:28, 70:200] = 30
+    assert looks_like_rule(rule) and not looks_like_rule(text)
+    assert not looks_like_rule(np.full((40, 300, 3), 240, np.uint8))  # blank
+    assert keep_printed("", "sentence Valuable", rule)[0] is True  # printed saw nothing, the ink is a rule
+    assert keep_printed("", "meeting notes", text)[0] is False
+    assert keep_printed("ok", "sentence Valuable", rule)[0] is False  # the printed reader saw letters
+
+
+@pytest.mark.parametrize("line,flag", [
+    ({"text": "Ramipril 2.5 mg", "handwriting_text": "Ramipril 2.5 mg"}, True),
+    ({"text": "Ramipril Z.S my", "handwriting_text": "Ramipril Z.S my", "printed_text": "Ramipril 2.5 mg"}, True),
+    ({"text": "Ramipril 2.5", "handwriting_text": "Ramipril Z.S my"}, True),  # printed kept, hw lost the digits
+    ({"text": "Ramipril Z.S", "handwriting_text": "Ramipril 25 mg"}, True),  # only the hw reader saw them
+    ({"text": "call the bank", "handwriting_text": "call the bank"}, False),
+    ({"text": "Ramipril 2.5 mg"}, False),  # a printed line, never sent to the handwriting reader
+])
+def test_confirm_numbers_looks_at_every_reading(line, flag):
+    from ocr.scan import confirm_numbers
+    assert confirm_numbers(line) is flag
+
+
+class _FakeOcr:
+    """Stands in for OcrPipeline: one page with given printed lines (one word per line)."""
+
+    def __init__(self, page, lines):
+        self.page, self.lines, self.rec = page, lines, None
+
+    def run(self, image, keep_page=False):
+        words, lines = [], []
+        for k, (text, conf, box) in enumerate(self.lines):
+            words.append({"text": text, "confidence": conf, "box": box, "line": k})
+            lines.append({"text": text, "words": [k], "box": box, "confidence": conf})
+        return {"text": "\n".join(t for t, _, _ in self.lines), "lines": lines, "words": words,
+                "page_image": self.page, "page": {"width": self.page.shape[1], "height": self.page.shape[0],
+                                                  "is_scanner_crop": False},
+                "source": {}, "scanner": {}, "models": {"detector": "fake", "recogniser": "fake"}}
+
+
+class _FakeHw:
+    name = "fake-trocr"
+
+    def __init__(self, readings):
+        self.readings, self.crops = readings, None
+
+    def read(self, crops):
+        self.crops = crops
+        return self.readings[:len(crops)]
+
+
+def test_scanner_keeps_dashes_and_flags_lost_digits(monkeypatch):
+    """Scanner.run with fake readers: the dash line of IAM test 02658 and a dose whose digits the
+    handwriting reader turned into letters."""
+    from PIL import Image
+    from ocr import scan as S
+    page = np.full((300, 600, 3), 235, np.uint8)
+    printed = [("------------------", 0.31, [20, 30, 580, 55]),
+               ("Ramipril 2.5 mg", 0.42, [20, 100, 400, 140]),
+               ("call the bank", 0.40, [20, 200, 400, 240])]
+    handwritten = [("sentence Valuable", 0.6255), ("Ramipril Z.S my", 0.71), ("call the bank", 0.80)]
+    sc = object.__new__(S.Scanner)
+    sc.ocr, sc.hw = _FakeOcr(page, printed), _FakeHw(handwritten)
+    sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, object(), False
+    sc.mask_neighbours = False
+    monkeypatch.setattr(S.scriptclf, "handwritten_prob", lambda clf, crops: np.ones(len(crops)))
+    r = sc.run(Image.new("RGB", (600, 300), "white"))
+    by = {ln["handwriting_text"]: ln for ln in r["lines"]}
+    dash = by["sentence Valuable"]
+    assert dash["text"] == "------------------" and dash["script"] == "printed" and dash["handwriting_rejected"]
+    dose = by["Ramipril Z.S my"]
+    assert dose["text"] == "Ramipril Z.S my" and dose["printed_text"] == "Ramipril 2.5 mg"
+    assert dose["confirm_numbers"] is True  # the shown text lost its digits; the printed reading has them
+    assert by["call the bank"]["confirm_numbers"] is False and by["call the bank"]["script"] == "handwritten"
+    assert len(sc.hw.crops) == 3
