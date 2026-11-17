@@ -223,7 +223,7 @@ const Documents = (() => {
     };
     const w = Ocr.widget(box, {
       id: "viewer-ocr", heading: "Text",
-      idleHint: "No text has been read from this document yet. Read text finds the printed text so you can copy it and search for it.",
+      idleHint: "No text has been read from this document yet. Read text finds the text so you can copy it and search for it.",
       source: isImage ? async () => blob : null,
       onRead: async (v) => {
         if (!v.text) return;

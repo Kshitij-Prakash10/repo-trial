@@ -575,6 +575,14 @@ input[type="search"] { padding-left: 36px; }
 .ocr-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
 .ocr-count { margin-right: auto; font-variant-numeric: tabular-nums; }
 .ocr-done { font-weight: 600; color: var(--ok-ink); }
+.ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+.ocr-option { flex-direction: row; align-items: center; gap: var(--s2); color: var(--text); cursor: pointer; }
+.ocr-option[hidden] { display: none; }
+.ocr-option input { width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; flex: none; accent-color: var(--primary); }
+.notice.ocr-confirm { border-left: 4px solid var(--warn-ink); overflow-wrap: anywhere; }
+.ocr-confirm strong { font-weight: 700; }
+.ocr-confirm q { font-weight: 600; }
+.ocr-pre:empty { display: none; }
 .scan-save-text { margin: 0; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

@@ -202,3 +202,115 @@ def test_image_size_rule():
     assert image_size_problem("PNG", 8000, 6000) is not None
     assert image_size_problem("JPEG", 1, 49_000_000) is not None
     assert image_size_problem("PNG", 2000, 99) is not None
+    small = "image is too small: each side must be at least 16 pixels"
+    for w, h in [(1, 1), (2, 2), (15, 15), (15, 100), (100, 15), (0, 0)]:
+        assert image_size_problem("PNG", w, h) == small
+        assert image_size_problem("JPEG", w, h) == small
+    assert image_size_problem("PNG", 16, 16) is None
+    assert image_size_problem("PNG", 16, 320) is None
+
+
+# ---------------------------------------------------------------- the smallest image
+
+@pytest.mark.parametrize("w, h", [(1, 1), (2, 2), (15, 40)])
+@pytest.mark.parametrize("with_corners", [True, False])
+def test_tiny_images_are_rejected(client, monkeypatch, w, h, with_corners):
+    from scanner import api
+
+    def no_decode(*a, **k):
+        raise AssertionError("the image must be rejected from its header, before it is decoded")
+
+    monkeypatch.setattr(api.ImageOps, "exif_transpose", no_decode)
+    data = {"image": (_flat_png(w, h), "p.png"), "mode": "gray"}
+    if with_corners:
+        data["corners"] = json.dumps([[0, 0], [w, 0], [w, h], [0, h]])
+    r = client.post("/api/scan", data=data, content_type="multipart/form-data")  # detection would raise (fixture)
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "image is too small: each side must be at least 16 pixels"
+
+
+def test_smallest_accepted_image_is_scanned(client):
+    r = client.post("/api/scan", data={"image": (_flat_png(16, 16), "p.png"), "mode": "gray",
+                                       "corners": json.dumps([[0, 0], [16, 0], [16, 16], [0, 16]])},
+                    content_type="multipart/form-data")
+    assert r.status_code == 200, r.get_json()
+
+
+# ---------------------------------------------------------------- image modes (transparency, 16-bit grey)
+
+W, H = 300, 400
+FULL = [[0, 0], [W, 0], [W, H], [0, H]]  # the whole image as the page: no detection, no cropping
+TEXT = (60, 100, 240, 130)  # x0, y0, x1, y1 of the dark "text" bar drawn on each page
+
+
+def _scan_pixels(client, im: Image.Image, mode: str = "color", fmt: str = "PNG", **save_kw):
+    """Upload `im` with the whole image as the page; (paper pixel, text pixel) of the returned page."""
+    buf = io.BytesIO()
+    im.save(buf, fmt, **save_kw)
+    buf.seek(0)
+    r = _post(client, FULL, mode, buf)
+    assert r.status_code == 200, r.get_json()
+    j = r.get_json()
+    out = Image.open(io.BytesIO(base64.b64decode(j["image_png_b64"]))).convert("L")
+    sx, sy = out.size[0] / W, out.size[1] / H
+    paper = out.getpixel((int(20 * sx), int(300 * sy)))
+    text = out.getpixel((int(150 * sx), int(115 * sy)))
+    return paper, text
+
+
+def _assert_dark_text_on_light_paper(paper: int, text: int):
+    assert paper >= 200, f"paper came out dark ({paper})"
+    assert text <= 60, f"text came out light ({text})"
+
+
+@pytest.mark.parametrize("mode", ["color", "gray", "bw"])
+def test_transparent_rgba_png_keeps_dark_text_on_white(client, mode):
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))  # fully transparent "paper"
+    ImageDraw.Draw(im).rectangle(TEXT, fill=(20, 20, 20, 255))
+    _assert_dark_text_on_light_paper(*_scan_pixels(client, im, mode))
+
+
+def test_16_bit_grey_png_keeps_its_contrast(client):
+    import numpy as np
+    a = np.full((H, W), 32768, np.uint16)  # a mid-grey page (half of 65535)
+    a[TEXT[1]:TEXT[3], TEXT[0]:TEXT[2]] = 3000  # dark text
+    im = Image.fromarray(a)
+    assert im.mode.startswith("I;16")
+    _assert_dark_text_on_light_paper(*_scan_pixels(client, im))
+
+
+def test_grey_with_alpha_png(client):
+    im = Image.new("LA", (W, H), (0, 0))
+    ImageDraw.Draw(im).rectangle(TEXT, fill=(20, 255))
+    _assert_dark_text_on_light_paper(*_scan_pixels(client, im))
+
+
+def test_palette_png_with_a_transparent_colour(client):
+    im = Image.new("P", (W, H), 0)
+    im.putpalette([0, 0, 0, 20, 20, 20] + [0] * (254 * 3))  # 0: black (made transparent), 1: dark text
+    ImageDraw.Draw(im).rectangle(TEXT, fill=1)
+    _assert_dark_text_on_light_paper(*_scan_pixels(client, im, transparency=0))
+
+
+def test_transparent_webp(client):
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(im).rectangle(TEXT, fill=(20, 20, 20, 255))
+    _assert_dark_text_on_light_paper(*_scan_pixels(client, im, fmt="WEBP", lossless=True))
+
+
+def test_to_rgb8_values():
+    import numpy as np
+    from scanner.api import to_rgb8
+    rgb = Image.new("RGB", (4, 4), (10, 20, 30))
+    assert to_rgb8(rgb) is rgb  # nothing to do
+    assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 0))).getpixel((0, 0)) == (255, 255, 255)
+    assert to_rgb8(Image.new("RGBA", (4, 4), (200, 0, 0, 255))).getpixel((0, 0)) == (200, 0, 0)
+    assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (127, 127, 127)  # half see-through black
+    assert to_rgb8(Image.new("L", (4, 4), 77)).getpixel((0, 0)) == (77, 77, 77)
+    assert to_rgb8(Image.new("1", (4, 4), 1)).getpixel((0, 0)) == (255, 255, 255)
+    for value, grey in [(0, 0), (65535, 255), (32768, 128), (257, 1)]:
+        assert to_rgb8(Image.fromarray(np.full((4, 4), value, np.uint16))).getpixel((0, 0)) == (grey,) * 3
+    assert to_rgb8(Image.fromarray(np.full((4, 4), 200, np.int32))).getpixel((0, 0)) == (200, 200, 200)  # 8-bit values
+    assert to_rgb8(Image.fromarray(np.full((4, 4), 40000, np.int32))).getpixel((0, 0)) == (156, 156, 156)
+    assert to_rgb8(Image.fromarray(np.full((4, 4), 0.5, np.float32))).getpixel((0, 0)) == (128, 128, 128)
+    assert to_rgb8(Image.new("CMYK", (4, 4), (0, 0, 0, 0))).getpixel((0, 0)) == (255, 255, 255)
