@@ -68,6 +68,56 @@ def test_split_segments_at_wide_gaps():
     assert common.union(boxes[:2]) == [0, 0, 60, 10]
 
 
+def test_group_lines_with_many_small_boxes_between_two_words_of_a_line():
+    """Eight dot-sized boxes (punctuation, specks) sit between two words of one line and come between
+    them in top-to-bottom order; the second word must still join the first word's line."""
+    words = [[0, 100, 40, 110], [300, 101, 340, 111]]
+    small = [[60 + 30 * k, 103, 64 + 30 * k, 108] for k in range(8)]
+    other = [[0, 130, 40, 140]]  # the next line
+    boxes = np.array(words + small + other, float)
+    lines = common.group_lines(boxes)
+    assert lines == [[0, 2, 3, 4, 5, 6, 7, 8, 9, 1], [10]]
+
+
+def _group_lines_reference(boxes):
+    """The rule of group_lines written plainly, comparing every earlier line (no lookback limit)."""
+    boxes = np.asarray(boxes, float).reshape(-1, 4)
+    cy = (boxes[:, 1] + boxes[:, 3]) / 2
+    lines, ext = [], []
+    for i in np.argsort(cy, kind="stable"):
+        h = boxes[i, 3] - boxes[i, 1]
+        for k in range(len(lines) - 1, -1, -1):
+            top, bot = ext[k]
+            if top <= cy[i] <= bot and min(bot, boxes[i, 3]) - max(top, boxes[i, 1]) >= 0.4 * h:
+                lines[k].append(int(i))
+                b = boxes[lines[k]]
+                ext[k] = (float(np.median(b[:, 1])), float(np.median(b[:, 3])))
+                break
+        else:
+            lines.append([int(i)])
+            ext.append((float(boxes[i, 1]), float(boxes[i, 3])))
+    order = np.argsort([np.median(boxes[ln][:, 1] + boxes[ln][:, 3]) / 2 for ln in lines], kind="stable")
+    return [sorted(lines[k], key=lambda j: boxes[j, 0]) for k in order]
+
+
+def test_group_lines_matches_the_unlimited_reference_on_random_layouts():
+    rng = np.random.default_rng(2026)
+    for _ in range(300):
+        n = int(rng.integers(1, 40))
+        h = np.exp(rng.uniform(np.log(2), np.log(200), n))
+        cy, x = rng.uniform(0, 400, n), rng.uniform(0, 400, n)
+        boxes = np.stack([x, cy - h / 2, x + 20, cy + h / 2], 1)
+        assert common.group_lines(boxes) == _group_lines_reference(boxes)
+
+
+def test_group_lines_column_split_is_opt_in():
+    # two columns side by side: a label on the left, a value far to the right
+    boxes = np.array([[0, 0, 30, 10], [34, 0, 60, 10], [300, 1, 330, 11], [0, 20, 30, 30]], float)
+    assert common.group_lines(boxes) == [[0, 1, 2], [3]]  # default: unchanged reading order
+    assert common.group_lines(boxes, split_gap=common.SEGMENT_GAP) == [[0, 1], [2], [3]]
+    assert common.group_lines(np.zeros((0, 4)), split_gap=2.0) == []
+
+
 # ---------------------------------------------------------------- SROIE line -> word boxes
 
 def _line_image(spans: list[tuple[int, int]], h: int = 20, w: int = 200) -> np.ndarray:
@@ -146,6 +196,50 @@ def test_scanner_crop_is_used_only_when_safe():
     assert scanner_decision(page, np.zeros((0, 4)), 1000, 1000)[0] is False
     full = dict(page, corners=[[5, 5], [995, 5], [995, 995], [5, 995]])
     assert scanner_decision(full, inside, 1000, 1000)[0] is False  # nothing to gain from the warp
+
+
+def test_scanner_crop_threshold_is_the_scanners_own():
+    pytest.importorskip("torch")
+    from ocr import pipeline
+    from scanner import infer
+    assert pipeline.SCAN_MIN_CONF == infer.MIN_CONFIDENCE
+    quad = [[100, 100], [700, 100], [700, 900], [100, 900]]
+    page = {"page_found": True, "confidence": infer.MIN_CONFIDENCE - 0.01, "corners": quad}
+    assert pipeline.scanner_decision(page, np.array([[200, 200, 300, 220]], float), 1000, 1000)[0] is False
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["clockwise", "counter-clockwise"])
+def test_inside_quad_is_the_same_for_both_windings(reverse):
+    pytest.importorskip("torch")
+    from ocr.pipeline import _inside
+    quad = np.array([[0, 0], [10, 0], [12, 10], [-2, 10]], float)
+    quad = quad[::-1] if reverse else quad
+    on_edge = np.array([[5, 0], [11, 5], [5, 10], [-1, 5], [0, 0], [12, 10]], float)  # sides and corners
+    assert _inside(on_edge, quad).all()
+    assert _inside(np.array([[5, 5], [0.1, 0.1]], float), quad).all()
+    assert not _inside(np.array([[5, -0.01], [12.6, 5], [5, 10.01], [-20, 5]], float), quad).any()
+
+
+def test_recogniser_loads_offline_from_its_checkpoint(monkeypatch, tmp_path):
+    """With a checkpoint file, nothing is downloaded: the docTR cache is pointed at an empty folder
+    and any download attempt fails the test."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("doctr")
+    from ocr import models
+    import os
+    if not os.path.exists(models.REC_CKPT):
+        pytest.skip("models/ocr recogniser checkpoint not present")
+    import importlib
+    monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path))
+
+    def no_download(*a, **k):
+        raise AssertionError("tried to download pretrained weights")
+    for name in ("doctr.models.utils.pytorch", "doctr.utils.data"):
+        monkeypatch.setattr(importlib.import_module(name), "download_from_url", no_download)
+    model = models.load_rec(ckpt=models.REC_CKPT)
+    ck = torch.load(models.REC_CKPT, map_location="cpu")["model"]
+    sd = model.state_dict()
+    assert list(sd) == list(ck) and all(torch.equal(sd[k], ck[k]) for k in sd)
 
 
 def test_sroie_is_scored_without_case():

@@ -126,6 +126,102 @@ def test_scan_never_raises_on_odd_images(img):
     assert res["method"] in ("ml", "fallback") and isinstance(res["image"], Image.Image)
 
 
+# ---------------------------------------------------------------- no page: blank, noise, tiny
+
+@needs_model
+@pytest.mark.parametrize("img", [Image.new("RGB", (800, 600), "white"), Image.new("RGB", (1, 1), "white"),
+                                 Image.new("RGB", (1, 1), "black"), Image.new("RGB", (31, 400), "white"),
+                                 Image.new("RGB", (20, 20), (120, 120, 120))],
+                         ids=["white-800x600", "white-1x1", "black-1x1", "31x400", "grey-20x20"])
+def test_no_page_on_blank_or_tiny_images(img):
+    res = infer.scan(img, "gray")
+    assert res["page_found"] is False and res["method"] == "fallback"
+
+
+@needs_model
+@pytest.mark.parametrize("seed", [2026, 0, 1, 7, 12345])
+def test_no_page_on_uniform_noise(seed):
+    """Uniform random RGB noise used to give confidence ~0.63 and page_found=True."""
+    img = Image.fromarray(np.random.default_rng(seed).integers(0, 256, (600, 800, 3), dtype=np.uint8))
+    res = infer.scan(img, "gray")
+    assert res["page_found"] is False and res["method"] == "fallback"
+
+
+def test_tiny_image_is_rejected_before_the_quad_fit():
+    prob = np.ones((8, 8))  # the classifier says "page" everywhere
+    for size in ((1, 1), (31, 31), (31, 500)):
+        res = infer.detect_from_prob(Image.new("RGB", size, "white"), prob, refine=False)
+        assert res["page_found"] is False and res["confidence"] == 0.0
+
+
+def test_noise_guard_keeps_a_real_page_and_rejects_noise(sample):
+    """The guard needs inside == outside in colour AND texture AND no coherent step along the sides."""
+    c = infer.coherence(sample.image, sample.corners)
+    assert c["dprime"] > 0.2 and c["step_z"] > 5 and not infer.looks_like_noise(c)
+    noise = Image.fromarray(np.random.default_rng(2026).integers(0, 256, (600, 800, 3), dtype=np.uint8))
+    q = np.array([[200, 150], [600, 150], [600, 450], [200, 450]], float)
+    c = infer.coherence(noise, q)
+    assert c["dprime"] < infer.NOISE_MAX_DPRIME and infer.looks_like_noise(c)
+    # a white page on the same noise: inside and outside differ, so it is kept
+    a = np.asarray(noise).copy()
+    a[150:450, 200:600] = 245
+    assert not infer.looks_like_noise(infer.coherence(Image.fromarray(a), q))
+    # a quad that fills the photo cannot be judged: never rejected
+    full = np.array([[0, 0], [800, 0], [800, 600], [0, 600]], float)
+    assert not infer.looks_like_noise(infer.coherence(noise, full))
+
+
+# ---------------------------------------------------------------- image modes (scanner.convert)
+
+def test_to_rgb_composites_transparency_on_white():
+    from scanner.convert import to_rgb
+    im = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
+    im.putpixel((1, 1), (10, 20, 30, 255))
+    out = to_rgb(im)
+    assert out.mode == "RGB" and out.getpixel((0, 0)) == (255, 255, 255) and out.getpixel((1, 1)) == (10, 20, 30)
+    la = Image.new("LA", (2, 2), (0, 0))
+    assert to_rgb(la).getpixel((0, 0)) == (255, 255, 255)
+    p = Image.new("P", (2, 2), 0)
+    p.info["transparency"] = 0
+    assert to_rgb(p).getpixel((0, 0)) == (255, 255, 255)
+
+
+def test_to_rgb_scales_16_bit_and_keeps_negative_floats():
+    from scanner.convert import to_rgb
+    a16 = np.tile(np.linspace(0, 65535, 256).astype(np.uint16), (4, 1))
+    im16 = Image.fromarray(a16)
+    assert im16.mode.startswith("I;16")
+    out = np.asarray(to_rgb(im16))[0, :, 0]
+    assert out[0] == 0 and out[-1] == 255 and 120 <= out[128] <= 135 and np.all(np.diff(out.astype(int)) >= 0)
+    f = Image.fromarray(np.tile(np.linspace(-1, 1, 201).astype(np.float32), (4, 1)))
+    assert f.mode == "F"
+    out = np.asarray(to_rgb(f))[0, :, 0]
+    assert out[0] == 0 and out[-1] == 255 and 126 <= out[100] <= 129  # -1 black, 0 mid grey, 1 white
+    assert len(np.unique(out[:100])) > 50  # the negative half is not cut off at black
+    f01 = Image.fromarray(np.full((2, 2), 0.5, np.float32))
+    assert to_rgb(f01).getpixel((0, 0)) == (128, 128, 128)  # values up to 1.0 read as 0..1
+    i8 = Image.fromarray(np.full((2, 2), 200, np.int32))
+    assert i8.mode == "I" and to_rgb(i8).getpixel((0, 0)) == (200, 200, 200)
+    rgb = Image.new("RGB", (2, 2), (1, 2, 3))
+    assert to_rgb(rgb) is rgb and to_rgb(Image.new("L", (2, 2), 7)).getpixel((0, 0)) == (7, 7, 7)
+
+
+@needs_model
+def test_scan_keeps_transparent_and_16_bit_images_visible():
+    rgba = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    for mode in ("color", "gray", "bw"):  # used to come out black
+        assert np.asarray(infer.scan(rgba, mode)["image"]).min() == 255
+    ramp = Image.fromarray(np.tile(np.linspace(0, 65535, 300).astype(np.uint16), (200, 1)))
+    out = np.asarray(infer.scan(ramp, "gray")["image"])
+    assert out.mean() > 100  # used to be all black (I;16 clamped by convert("RGB"))
+
+
+def test_colour_enhance_leaves_a_blank_page_white():
+    from scanner import enhance
+    for mode in enhance.MODES:  # "color" used to turn a flat white image black
+        assert np.asarray(enhance.enhance(Image.new("RGB", (60, 40), "white"), mode)).min() == 255
+
+
 # ---------------------------------------------------------------- HTTP API
 
 @pytest.fixture()

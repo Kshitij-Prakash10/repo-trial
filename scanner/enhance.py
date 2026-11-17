@@ -39,8 +39,10 @@ def enhance(img: Image.Image, mode: str = "gray") -> Image.Image:
         chans = [_flatten(c) for c in img.split()]
         lum = 0.299 * chans[0] + 0.587 * chans[1] + 0.114 * chans[2]
         lo, hi = np.percentile(lum, 1.0), np.percentile(lum, 95.0)
-        sc = max(hi - lo, 1e-3)
-        out = np.stack([np.clip((c - lo) / sc, 0, 1) for c in chans], -1)
+        if hi - lo < 1e-3:  # a flat image (e.g. blank paper): nothing to stretch; as _stretch does for grey
+            out = np.stack([np.clip(c, 0, 1) for c in chans], -1)
+        else:
+            out = np.stack([np.clip((c - lo) / (hi - lo), 0, 1) for c in chans], -1)
         return Image.fromarray((out * 255 + 0.5).astype(np.uint8), "RGB")
     g = _stretch(_flatten(img.convert("L")))
     if mode == "gray":
