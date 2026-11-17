@@ -159,6 +159,51 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
   on the ood set, photos above it succeeded 59 percent of the time and the one below it failed.
 - Thin, faint strokes can break up in `bw` mode.
 
+## Guards and image modes (scanner/infer.py, scanner/convert.py)
+
+- **Image modes.** `scan` converts its input with `scanner.convert.to_rgb` (also used by the OCR
+  pipeline as `ocr.pipeline.to_rgb`): transparent areas become white, 16-bit grey (`I;16`) is scaled from
+  0..65535 to 0..255, float and 32-bit grey are scaled by their largest value, and negative floats are
+  shifted so the lowest value is black. A plain `convert("RGB")` made transparent images black and
+  16-bit scans white. `enhance(..., "color")` no longer turns a blank (flat) image black.
+- **Tiny images.** A photo whose shorter side is under 32 px (`MIN_SIDE`) is never a page.
+- **Noise guard.** Uniform random RGB noise used to reach confidence ~0.63 and `page_found=True`. A quad
+  that passes the confidence test is now rejected when the photo inside and outside it is
+  indistinguishable on all three counts (`coherence`, `looks_like_noise`): mean colour d' < 0.05, mean
+  gradient (texture) ratio within 10 %, and no side with a coherent colour step (step z < 4). On 220
+  noise photos (uniform and Gaussian, 5 sizes, 22 seeds) the found ones had d' <= 0.023, texture ratio
+  within 1.5 % and step z <= 2.7; on all 700 stored synthetic photos (train, val, test, ood) with a quad,
+  d' >= 0.068. Check on the stored synthetic test (200) and ood (80) photos, before and after the guard,
+  measured with `models/scanner_real.joblib`: identical photo for photo (test: 189/200 found, mean IoU
+  0.887; ood: 46/80 found, mean IoU 0.673). Its effect on real photos without a document (DocCorner
+  negatives) has not been measured, because those photos are not in the repository; the guard can only
+  turn "found" into "not found".
+
+## Recall at MIN_CONFIDENCE 0.60, and corner bloat: what the stored results allow
+
+`python reports/scanner_recall/study.py` (output in `reports/scanner_recall/study.txt`) uses only the
+committed per-photo results of the shipped model; the photos are not in the repository.
+
+- **Quad geometry does not recover the lost recall.** Accepting confidence 0.35 to 0.60 when the
+  predicted quad looks like a page (angles within 10 degrees of 90, opposite sides within 20 %, no
+  corner outside the photo), chosen on validation, gives validation found 0.944 -> 0.951 with false
+  alarms 0.042 -> 0.050; test (read once) found 0.786 -> 0.794, false alarms 0.067 -> 0.075. That is
+  one point of recall bought with one point of false alarms, so it is not used.
+- **Corner bloat on SmartDoc background01.** True quads are not stored. Against the synthetic-only
+  baseline's quad on frames where the baseline is very accurate (iou_doc >= 0.95, 382 frames), the
+  shipped model's quad is more than 10 % larger in 24.6 % of them (their iou_doc 0.824 vs 0.935 overall),
+  and their confidence is still high (median 0.83), so no confidence threshold separates them. Nothing
+  was changed.
+- **Plan (needs the DocCorner val/test and SmartDoc photos, `scanner/finetune/download.py`):** for every
+  photo, store per-side edge support (`geometry._support` on the grid boundary points, and the
+  refined-edge gradient strength from `refine_edges`), the noise guard's d' / texture ratio / step z,
+  and interior fine-texture density; fit a small logistic model of "IoU >= 0.9" vs "negative or IoU <
+  0.5" on validation only; pick the operating point that keeps validation false alarms <= 4.2 % and
+  report test once. For bloat, add a per-side check that the refined side lies on a step between page
+  colour and background colour (step z per side, already computed by `coherence`) and pull a side
+  inward to the strongest such step when the outer one has low support; validate on SmartDoc
+  background01/04 and DocCorner val before changing any default.
+
 ## Retrain
 
 ```bash
