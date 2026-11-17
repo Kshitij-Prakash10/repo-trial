@@ -94,7 +94,24 @@ const App = (() => {
     if (v && typeof v === "object" && "html" in v) return v.html;
     return esc(v || "");
   }
-  function save() { Storage.saveUser(user); }
+  /** Save the open user. Returns false (after telling the user) when the browser could not store it. */
+  function save() {
+    try {
+      Storage.saveUser(user);
+      return true;
+    } catch (err) {
+      console.warn("Could not save:", err);
+      toast(saveError(err), "error");
+      return false;
+    }
+  }
+  function saveError(err) {
+    if (Storage.damaged()) return "Not saved: the saved diary data cannot be read. Go to Switch user to see what you can do.";
+    if (err && (err.name === "QuotaExceededError" || err.code === 22)) {
+      return "Not saved: this browser's storage for the diary is full. Delete some entries you no longer need and try again.";
+    }
+    return "Not saved: the browser could not store the change.";
+  }
   const recordCount = (u) => LISTS.reduce((s, k) => s + (Array.isArray(u[k]) ? u[k].length : 0), 0);
   // Tolerate older or hand-edited saved users with a missing list (in memory only; adds, never changes).
   function normalise(u) {
@@ -106,6 +123,17 @@ const App = (() => {
   /* ---------- Auth / user selection ---------- */
   function renderUserList() {
     const list = $("#user-list");
+    if (Storage.damaged()) {
+      list.innerHTML = `<li class="empty storage-damaged" role="alert">
+        <strong>The saved diary data in this browser cannot be read.</strong>
+        <span>It may be damaged. Nothing has been deleted, and nothing can be saved until this is sorted out.
+        Download a copy first. Documents and voice notes are stored separately and are not affected.</span>
+        <span class="damaged-actions">
+          <button type="button" class="btn" id="damaged-download">Download the saved data</button>
+          <button type="button" class="btn danger" id="damaged-reset">Start with no users</button>
+        </span></li>`;
+      return;
+    }
     const users = Storage.listUsers();
     list.innerHTML = users.length
       ? users.map((u) => `
@@ -130,6 +158,7 @@ const App = (() => {
     if (!u) return showAuth();
     user = normalise(u);
     Storage.setCurrentUserId(id);
+    resetForms();
     $("#auth-screen").classList.add("hidden");
     $("#app").classList.remove("hidden");
     renderAll();
@@ -140,6 +169,7 @@ const App = (() => {
   function showAuth() {
     if (user) emit("user:close");
     user = null;
+    resetForms();
     Storage.setCurrentUserId(null);
     closeMenu();
     $("#app").classList.add("hidden");
@@ -211,7 +241,7 @@ const App = (() => {
       <div class="card${value ? "" : " card-empty"}">
         <div class="label">${label}</div>
         <div class="value">${esc(value || "—")}</div>
-        <div class="sub">${date ? "as of " + fmtDate(date) : value ? "&nbsp;" : "Not recorded yet"}</div>
+        <div class="sub">${date ? "as of " + esc(fmtDate(date)) : value ? "&nbsp;" : "Not recorded yet"}</div>
       </div>`).join("");
 
     const active = user.conditions.filter((c) => c.status !== "Resolved");
@@ -233,7 +263,7 @@ const App = (() => {
     ].sort(byDateDesc("date")).slice(0, 10);
 
     $("#timeline").innerHTML = events.length
-      ? events.map((e) => `<li><div class="date">${fmtDate(e.date)}</div>${esc(e.text)}</li>`).join("")
+      ? events.map((e) => `<li><div class="date">${esc(fmtDate(e.date))}</div>${esc(e.text)}</li>`).join("")
       : `<li class="muted">No records yet. Start by adding your vitals.</li>`;
 
     renderDashDocuments();
@@ -278,7 +308,18 @@ const App = (() => {
 
   function renderProfileForm() {
     const f = $("#profile-form");
+    f.reset(); // fields this user has no value for must not keep the previous user's
     Object.entries(user.profile).forEach(([k, v]) => { if (f.elements[k]) f.elements[k].value = v || ""; });
+  }
+
+  /** Empty the record and profile forms, so that nothing typed for one user is left for the next. */
+  function resetForms() {
+    $$("[data-form]").forEach((form) => {
+      form.reset();
+      const dateInput = form.querySelector('input[name="date"]');
+      if (dateInput) dateInput.value = today();
+    });
+    $("#profile-form").reset();
   }
 
   let storageSeq = 0;
@@ -318,7 +359,15 @@ const App = (() => {
       const data = formData(e.target);
       data.name = String(data.name || "").trim();
       if (!data.name) { e.target.elements.name.focus(); return; }
-      const u = Storage.createUser(data);
+      let u;
+      try {
+        u = Storage.createUser(data);
+      } catch (err) {
+        console.warn("Could not create the user:", err);
+        toast(saveError(err), "error");
+        renderUserList();
+        return;
+      }
       e.target.reset();
       if (location.hash) history.replaceState(null, "", location.pathname + location.search);
       openUser(u.id);
@@ -326,6 +375,17 @@ const App = (() => {
     });
 
     $("#user-list").addEventListener("click", (e) => {
+      if (e.target.closest("#damaged-download")) {
+        const raw = Storage.damagedData();
+        if (raw !== null) UI.download(new Blob([raw], { type: "text/plain" }), `health-diary-saved-data-${today()}.txt`);
+        return;
+      }
+      if (e.target.closest("#damaged-reset")) {
+        if (!confirm("Start with no users? The unreadable data is set aside in this browser, but the diary will be empty. Download a copy first if you have not.")) return;
+        Storage.setDamagedAside();
+        renderUserList();
+        return;
+      }
       const btn = e.target.closest("[data-user]");
       if (btn) openUser(btn.dataset.user);
     });
@@ -368,7 +428,7 @@ const App = (() => {
           return;
         }
         user[type].push({ id: Storage.uid(), ...data });
-        save();
+        if (!save()) { user[type].pop(); return; } // what was typed stays in the form
         form.reset();
         if (dateInput) dateInput.value = today();
         renderTable(type);
@@ -384,8 +444,9 @@ const App = (() => {
       if (!btn) return;
       const [type, id] = btn.dataset.delete.split(":");
       if (!confirm("Delete this entry?")) return;
-      user[type] = user[type].filter((r) => r.id !== id);
-      save();
+      const before = user[type];
+      user[type] = before.filter((r) => r.id !== id);
+      if (!save()) { user[type] = before; return; }
       renderTable(type);
       renderDashboard();
       if (type === "visits" || type === "conditions") emit("user:data", user);
@@ -405,8 +466,9 @@ const App = (() => {
       e.preventDefault();
       const data = formData(e.target);
       data.name = String(data.name || "").trim() || user.profile.name;
-      user.profile = { ...user.profile, ...data };
-      save();
+      const before = user.profile;
+      user.profile = { ...before, ...data };
+      if (!save()) { user.profile = before; return; }
       renderHeader();
       renderDashboard();
       renderStorage();
@@ -422,7 +484,13 @@ const App = (() => {
         // No file storage in this browser means there are no files to delete.
         console.warn("Could not delete the user's files:", err);
       }
-      Storage.deleteUser(id);
+      try {
+        Storage.deleteUser(id);
+      } catch (err) {
+        console.warn("Could not delete the user:", err);
+        toast(saveError(err), "error");
+        return;
+      }
       showAuth();
       toast(`Deleted ${name}.`);
     });

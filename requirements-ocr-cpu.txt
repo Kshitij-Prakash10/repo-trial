@@ -1,0 +1,8 @@
+# The OCR packages with the CPU-only build of PyTorch. Use this file instead of requirements-ocr.txt on
+# Linux: there, plain "pip install torch" brings the GPU build with several GB of CUDA libraries that the
+# CPU pipeline never uses. On macOS and Windows the two files install the same thing.
+#   pip install -r requirements-ocr-cpu.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu ; sys_platform == "linux"
+torchvision==0.29.2+cpu ; sys_platform == "linux"
+-r requirements-ocr.txt

@@ -5,6 +5,7 @@ model file, or when no plausible page is found, it returns the whole image enhan
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from functools import lru_cache
@@ -28,27 +29,38 @@ _use_real = os.path.exists(REAL_MODEL_PATH)
 MODEL_PATH = REAL_MODEL_PATH if _use_real else SYNTHETIC_MODEL_PATH
 METRICS_PATH = REAL_METRICS_PATH if _use_real else SYNTHETIC_METRICS_PATH
 REFINE_SIDE = 640  # px, long side of the image used for edge refinement
-MIN_CONFIDENCE = 0.35
+# Chosen on the DocCornerDataset validation photos (models/finetune/eval/ft_real_only__doccorner_val.csv.gz)
+# as the highest value that keeps at least 99.5 % of the well-outlined pages (IoU >= 0.9): there it cuts
+# false alarms on photos without a document from 37 % (at the earlier 0.35) to 4 %. See docs/scanner.md.
+MIN_CONFIDENCE = 0.60
 MIN_AREA_FRAC = 0.05  # of the photo
 WORK_SIDE = 2400  # px, photos are downscaled to at most this long side before warping
 _lock = threading.Lock()
+log = logging.getLogger("healthdiary.scanner")
 
 
 @lru_cache(maxsize=4)
 def _load(path: str, mtime: float) -> dict | None:
     try:
         return joblib.load(path)
-    except Exception:
+    except Exception as err:  # missing, damaged, or written by another scikit-learn version
+        if os.path.exists(path):
+            log.warning("Scanner model %s could not be loaded (%s: %s).", path, type(err).__name__, err)
         return None
 
 
 def load_model(path: str | None = None) -> dict | None:
     """The trained model bundle, cached; None when the file is missing or unreadable."""
-    path = MODEL_PATH if path is None else path
+    default = path is None
+    path = MODEL_PATH if default else path
     if not os.path.exists(path):
         return None
     with _lock:
-        return _load(path, os.path.getmtime(path))
+        model = _load(path, os.path.getmtime(path))
+        # An unreadable fine-tuned model must not switch scanning off: use the synthetic model instead.
+        if model is None and default and path != SYNTHETIC_MODEL_PATH and os.path.exists(SYNTHETIC_MODEL_PATH):
+            model = _load(SYNTHETIC_MODEL_PATH, os.path.getmtime(SYNTHETIC_MODEL_PATH))
+        return model
 
 
 def predict_prob(img: Image.Image, model: dict) -> np.ndarray:

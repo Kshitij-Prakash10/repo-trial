@@ -1,4 +1,9 @@
-"""Optional lexicon post-correction for handwriting lines.
+"""Lexicon post-correction for handwriting lines. NOT USED: kept only so the evaluation can be rerun.
+
+Do not use this on health documents. The word list is general English, so it rewrites medicine names
+and units into other real words: digoxin -> dioxin, coumadin -> coumarin, mmol -> mol (a 1000-fold
+change), statin -> station. The evaluation found no accuracy gain from it either. `Scanner` refuses
+`postcorrect=True`.
 
 Conservative on purpose: only lower-case alphabetic words of four or more letters that are not in the
 English frequency list are changed, and only to a word one edit away. Names, numbers, codes and

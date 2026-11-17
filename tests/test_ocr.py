@@ -160,3 +160,16 @@ def test_transparent_background_becomes_white():
     from ocr.pipeline import to_rgb
     im = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
     assert to_rgb(im).getpixel((0, 0)) == (255, 255, 255)
+
+
+# ---------------------------------------------------------------- numbers and units (safety flag)
+
+@pytest.mark.parametrize("text", ["Ramipril 2.5mg once a day", "take two tabs nocte", "Hb 13.5 g/dL",
+                                  "sats 97%", "5 mmol", "one puff prn", "Digoxin 62.5 mcg"])
+def test_lines_with_numbers_or_units_are_found(text):
+    assert common.has_number_or_unit(text)
+
+
+@pytest.mark.parametrize("text", ["", "Review in clinic", "Dr Meera Lang", "no known allergies", "morning walk"])
+def test_plain_text_lines_are_not_flagged(text):
+    assert not common.has_number_or_unit(text)

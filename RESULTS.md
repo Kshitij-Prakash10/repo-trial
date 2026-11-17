@@ -1,7 +1,10 @@
 # OCR scanner: results
 
-All numbers are from the **official test split** of each dataset, which was never used for training
-or for any choice. Lower is better for CER and WER; higher is better for precision, recall and F1.
+All numbers are from the **official test split** of each dataset, which was never used for training.
+It was not kept fully blind, though: the page-scanner safety check was tightened after a first test run
+had been seen (its threshold was then chosen on validation pages; see "Effect of the page scanner
+stage"), and the later handwriting upgrade scored the printed test sets twice (`reports/final_report.md`).
+Read the numbers as slightly optimistic. Lower is better for CER and WER; higher is better for precision, recall and F1.
 Reproduce with the three `python -m ocr.evaluate --system ...` commands in the README; the summaries
 are in `docs/ocr/eval/`.
 

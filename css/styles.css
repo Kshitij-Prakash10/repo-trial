@@ -237,6 +237,13 @@ input[type="search"] { padding-left: 36px; }
 .user-btn:hover { border-color: var(--primary); background: var(--panel); }
 .user-btn-name { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .user-list .empty { color: var(--muted); font-size: var(--fs-sm); padding: var(--s2) 0; }
+.user-list .storage-damaged {
+  display: flex; flex-direction: column; gap: var(--s2); color: var(--text);
+  padding: var(--s3); border: 1px solid var(--danger); border-radius: var(--radius-sm);
+}
+.damaged-actions { display: flex; gap: var(--s2); flex-wrap: wrap; }
+/* Long words without spaces (a pasted code, a long name) must wrap, not widen the page. */
+.plain-list li > *, .timeline li, .table td, .toast, .card .value { overflow-wrap: anywhere; min-width: 0; }
 
 /* ---------- App layout ---------- */
 .app {

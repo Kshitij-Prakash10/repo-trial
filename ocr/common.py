@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 import numpy as np
 
@@ -147,3 +148,16 @@ def prf(tp: int, n_pred: int, n_true: int) -> dict:
     r = tp / n_true if n_true else 0.0
     return {"precision": round(p, 4), "recall": round(r, 4), "f1": round(2 * p * r / (p + r), 4) if p + r else 0.0,
             "tp": tp, "n_pred": n_pred, "n_true": n_true}
+
+
+# ---------------------------------------------------------------- numbers and units
+
+_UNITS = (r"mcg|µg|ug|mg|g|kg|ml|mL|l|L|dl|dL|mmol|mol|iu|IU|units?|tabs?|tablets?|caps?|capsules?|puffs?|drops?|"
+          r"mmHg|bpm|od|bd|tds|qds|prn|nocte|mane")
+_NUMBER_OR_UNIT = re.compile(rf"\d|%|(?<![A-Za-z])(?:{_UNITS})(?![A-Za-z])")
+
+
+def has_number_or_unit(text: str) -> bool:
+    """True when the text holds a digit, a percent sign or a dose / measurement unit as a word of its own."""
+    return bool(_NUMBER_OR_UNIT.search(text or ""))
+

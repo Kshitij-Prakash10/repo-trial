@@ -926,6 +926,142 @@ async function main() {
     await c3.close();
   });
 
+  await step("switching users: profile fields and half-typed forms are not carried over", async () => {
+    const { ctx: c, page: p } = await newPage();
+    const create = async (name) => {
+      await p.fill('#new-user-form [name="name"]', name);
+      await p.fill('#new-user-form [name="dob"]', "1990-04-12");
+      await p.click('#new-user-form button[type="submit"]');
+      await p.waitForSelector("#app:not(.hidden)");
+    };
+    await p.goto(BASE + "/");
+    await create("Switch One");
+    await p.click('.sidebar [data-view="profile"]');
+    await p.fill('#profile-form [name="emergency"]', "Contact of One, 555 0100");
+    await p.click("#profile-form button.primary");
+    await p.click('.sidebar [data-view="visits"]');
+    await p.fill('[data-form="visits"] [name="notes"]', "draft note of One");
+    await p.click("#logout-btn");
+    await create("Switch Two");
+    await p.click('.sidebar [data-view="profile"]');
+    assert((await p.inputValue('#profile-form [name="emergency"]')) === "", "the other user's emergency contact is shown");
+    await p.click('.sidebar [data-view="visits"]');
+    assert((await p.inputValue('[data-form="visits"] [name="notes"]')) === "", "the other user's draft note is shown");
+    await p.click("#logout-btn");
+    await p.click('.user-btn:has-text("Switch One")');
+    await p.click('.sidebar [data-view="profile"]');
+    assert((await p.inputValue('#profile-form [name="emergency"]')) === "Contact of One, 555 0100", "own contact lost");
+    await c.close();
+  });
+
+  await step("a save that fails (storage full) says so, keeps the form and leaves no ghost entry", async () => {
+    const { ctx: c, page: p } = await newPage();
+    await p.goto(BASE + "/");
+    await p.fill('#new-user-form [name="name"]', "Full Storage");
+    await p.fill('#new-user-form [name="dob"]', "1990-04-12");
+    await p.click('#new-user-form button[type="submit"]');
+    await p.waitForSelector("#app:not(.hidden)");
+    await p.evaluate(() => {
+      const proto = Object.getPrototypeOf(window.localStorage), orig = proto.setItem;
+      proto.setItem = function (k, v) {
+        if (window.__full && k === "healthDiary.users") throw new DOMException("full", "QuotaExceededError");
+        return orig.call(this, k, v);
+      };
+      window.__full = true;
+    });
+    await p.click('.sidebar [data-view="allergies"]');
+    await p.fill('[data-form="allergies"] [name="name"]', "Peanuts");
+    await p.click('[data-form="allergies"] button.primary');
+    await p.waitForSelector(".toast.error");
+    assert(/full/i.test(await p.textContent(".toast.error")), "no 'storage is full' message");
+    assert((await p.inputValue('[data-form="allergies"] [name="name"]')) === "Peanuts", "the typed value was cleared");
+    assert((await p.evaluate(() => App.user().allergies.length)) === 0, "the entry stayed in memory although it was not saved");
+    await p.evaluate(() => { window.__full = false; });
+    await p.click('[data-form="allergies"] button.primary');
+    await p.waitForSelector('[data-table="allergies"] tbody tr');
+    await c.close();
+  });
+
+  await step("saved data that cannot be read is not overwritten; it can be downloaded or set aside", async () => {
+    const { ctx: c, page: p } = await newPage();
+    const damaged = '{"abc":{"id":"abc","profile":{"name":"Al';
+    await p.goto(BASE + "/");
+    await p.evaluate((d) => localStorage.setItem("healthDiary.users", d), damaged);
+    await p.reload();
+    await p.waitForSelector("#user-list .storage-damaged");
+    await p.fill('#new-user-form [name="name"]', "After Damage");
+    await p.fill('#new-user-form [name="dob"]', "1990-04-12");
+    await p.click('#new-user-form button[type="submit"]');
+    await p.waitForSelector(".toast.error");
+    assert((await p.evaluate(() => localStorage.getItem("healthDiary.users"))) === damaged, "the unreadable data was overwritten");
+    const [dl] = await Promise.all([p.waitForEvent("download"), p.click("#damaged-download")]);
+    assert(fs.readFileSync(await dl.path(), "utf8") === damaged, "the download is not the saved data");
+    await p.click("#damaged-reset");
+    assert((await p.evaluate(() => localStorage.getItem("healthDiary.users.unreadable"))) === damaged, "no copy was kept aside");
+    await p.click('#new-user-form button[type="submit"]');
+    await p.waitForSelector("#app:not(.hidden)");
+    await c.close();
+  });
+
+  await step("stored values are shown as text: a bad date injects nothing, a user without a name still lists, long words wrap", async () => {
+    const { ctx: c, page: p } = await newPage();
+    await p.goto(BASE + "/");
+    await p.evaluate(() => {
+      const bad = '<img src=x onerror="window.__xss=true">';
+      localStorage.setItem("healthDiary.users", JSON.stringify({
+        u1: { id: "u1", profile: { name: "Odd Data" }, conditions: [{ id: "c1", name: "X".repeat(400), status: "Active", diagnosed: "2020-01-01" }],
+          vitals: [{ id: "v1", date: bad, height: "170", weight: "60" }], visits: [{ id: "s1", date: bad, type: "Consultation" }],
+          medications: [], allergies: [] },
+        u2: { id: "u2", vitals: [] },
+        u3: "not a user",
+      }));
+    });
+    await p.reload();
+    const names = await p.locator(".user-btn-name").allTextContents();
+    assert(names.includes("Unnamed") && names.includes("Odd Data") && names.length === 2, `user list: ${names.join(", ")}`);
+    await p.click('.user-btn:has-text("Odd Data")');
+    await p.waitForSelector("#timeline li");
+    assert(!(await p.evaluate(() => window.__xss)), "a stored date ran as script");
+    assert((await p.locator("#current-cards img, #timeline img").count()) === 0, "a stored date was inserted as HTML");
+    for (const width of [1280, 360]) {
+      await p.setViewportSize({ width, height: 800 });
+      const over = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      assert(over <= 0, `dashboard scrolls sideways by ${over}px at ${width}px with a long word`);
+    }
+    await c.close();
+  });
+
+  await step("closing the viewer lets go of the file", async () => {
+    const { ctx: c, page: p } = await newPage();
+    await p.goto(BASE + "/");
+    await p.fill('#new-user-form [name="name"]', "Viewer Close");
+    await p.fill('#new-user-form [name="dob"]', "1990-04-12");
+    await p.click('#new-user-form button[type="submit"]');
+    await p.waitForSelector("#app:not(.hidden)");
+    await p.click('.sidebar [data-view="documents"]');
+    await p.click("#doc-add-btn");
+    await p.setInputFiles('#doc-upload input[type="file"]', { name: "page.png", mimeType: "image/png", buffer: await pngFromPage(p) });
+    await p.fill('#doc-upload [name="title"]', "To view");
+    await p.click("#doc-upload-save");
+    await p.waitForSelector(".doc-card");
+    await p.click(".doc-card .btn[data-act=\"view\"]");
+    await p.waitForSelector("#viewer[open] img");
+    const url = await p.getAttribute("#viewer-open", "href");
+    assert(url && url.startsWith("blob:"), "the viewer has no file link");
+    await p.click("#viewer-close");
+    // the dialog's close event comes a moment after the click
+    await p.waitForFunction(() => !document.querySelector("#viewer-open").hasAttribute("href"), null, { timeout: 3000 })
+      .catch(() => { throw new Error("the file link is still there after closing"); });
+    const gone = await p.evaluate((u) => new Promise((done) => {
+      const im = new Image();
+      im.onload = () => done(false);
+      im.onerror = () => done(true);
+      im.src = u;
+    }), url);
+    assert(gone, "the file is still held after closing the viewer");
+    await c.close();
+  });
+
   await step("no JavaScript errors on any page", async () => {
     assert(!pageErrors.length, pageErrors.join("\n"));
   });

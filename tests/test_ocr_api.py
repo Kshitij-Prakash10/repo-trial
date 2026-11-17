@@ -244,3 +244,58 @@ def test_end_to_end_on_a_generated_page(client):
         assert set(ln) == {"text", "box", "confidence"}
     assert body["seconds"] > 0
     assert client.get("/api/ocr/status").get_json()["loaded"] is True
+
+
+# ---------------------------------------------------------------- limits added after the review
+
+def test_unavailable_is_answered_before_the_image_is_decoded(client, monkeypatch):
+    monkeypatch.setattr(api, "missing_packages", lambda: ["torch"])
+
+    def no_decode(*a, **k):
+        raise AssertionError("the image must not be decoded when OCR cannot run")
+
+    monkeypatch.setattr(api.ImageOps, "exif_transpose", no_decode)
+    assert post(client, png_bytes()).status_code == 503
+
+
+@pytest.mark.parametrize("size", [(30000, 100), (13000, 1000), (6000, 5000), (4000, 100)])
+def test_oversized_or_extreme_images_are_400(client, monkeypatch, size):
+    monkeypatch.setattr(api, "_pipeline", FakePipeline())
+    buf = io.BytesIO()
+    Image.new("L", size, 255).save(buf, "PNG", compress_level=9)
+    r = post(client, buf.getvalue())
+    assert r.status_code == 400 and ("too many pixels" in r.get_json()["error"] or "too narrow" in r.get_json()["error"])
+
+
+def test_busy_is_503_with_retry_after_when_too_many_wait(client, monkeypatch):
+    monkeypatch.setattr(api, "_pipeline", FakePipeline())
+    monkeypatch.setattr(api, "_slots", threading.BoundedSemaphore(1))
+    assert api._slots.acquire(blocking=False)  # another request is inside
+    r = post(client, png_bytes())
+    assert r.status_code == 503 and r.headers["Retry-After"] and "Try again" in r.get_json()["error"]
+    api._slots.release()
+    assert post(client, png_bytes()).status_code == 200  # and the slot was given back
+
+
+def test_waiting_for_a_turn_times_out_as_busy(client, monkeypatch):
+    monkeypatch.setattr(api, "_pipeline", FakePipeline())
+    monkeypatch.setattr(api, "LOCK_WAIT", 0.05)
+    lock = threading.Lock()
+    monkeypatch.setattr(api, "_lock", lock)
+    lock.acquire()  # a page that never finishes
+    try:
+        r = post(client, png_bytes())
+    finally:
+        lock.release()
+    assert r.status_code == 503 and r.headers["Retry-After"]
+    assert post(client, png_bytes()).status_code == 200
+
+
+def test_a_load_failure_is_retried_after_a_while(client, monkeypatch):
+    monkeypatch.setattr(api, "missing_packages", lambda: [])
+    monkeypatch.setattr(api, "missing_weights", lambda: [])
+    monkeypatch.setitem(sys.modules, "ocr.pipeline", None)
+    assert post(client, png_bytes()).status_code == 503
+    assert client.get("/api/ocr/status").get_json()["available"] is False
+    monkeypatch.setattr(api, "_load_error_at", api.time.monotonic() - api.LOAD_RETRY - 1)  # time passes
+    assert client.get("/api/ocr/status").get_json()["available"] is True  # so the app lets the user try again

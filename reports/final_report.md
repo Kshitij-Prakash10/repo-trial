@@ -25,7 +25,8 @@ after:  image -> orientation (0/90/180/270) -> 180-degree check -> [deskew, off 
 | 180-degree check | no model: the printed recogniser reads the 48 largest word crops as-is and turned 180 degrees; the page is turned if the turned crops read clearly better (margin 0.10) | `ocr/orientation.py` |
 | Deskew | projection-profile search within +/- 15 degrees, off by default (see limits) | `ocr/orientation.py` |
 | Line confidence | per line: mean word confidence (printed) or geometric mean token probability (TrOCR); lines below 0.5 get `low_confidence: true` | `ocr/scan.py` |
-| Lexicon correction | optional (`Scanner(postcorrect=True)`), SymSpell edit distance 1 on lower-case words of 4+ letters | `ocr/postcorrect.py` |
+| Lexicon correction | **switched off after review** (`Scanner(postcorrect=True)` is refused): it rewrote medicine names and units (digoxin to dioxin, mmol to mol) and gave no gain. Was: SymSpell edit distance 1 on lower-case words of 4+ letters | `ocr/postcorrect.py` |
+| Numbers in handwriting | added after review: a line that went to the handwriting reader and holds a digit or a dose unit gets `confirm_numbers: true`, whatever its confidence | `ocr/scan.py` |
 | Entry point | `scan(image_path) -> (text, confidences)` | `ocr/scan.py` |
 
 Approach: Option A (a separate handwriting model plus a router) rather than one mixed model. It left

@@ -3,6 +3,11 @@
 Run:  python server.py            (http://127.0.0.1:8000)
 Env:  HOST (default 127.0.0.1), PORT (default 8000).
 
+It runs on waitress (a production WSGI server with connection limits and timeouts) when that is
+installed, else on Flask's development server. Requests under /api/ that come from another website
+(an Origin header that is not this server) are refused, and when the server listens only on this
+computer, requests addressed to any other host name are refused too (DNS rebinding).
+
 Only the app's own static files are served (index.html, css/, js/); never this file, tests, models or
 data. Errors under /api/ are JSON ({"error": "..."}). The scanner blueprint (scanner/api.py) is optional:
 if it cannot be imported the app still runs and /api/scan answers 404 JSON. The OCR blueprint (ocr/api.py)
@@ -13,7 +18,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Tuple
+from typing import Iterable, Optional, Tuple
+from urllib.parse import urlsplit
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
@@ -22,6 +28,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 MAX_REQUEST_BYTES = 11 * 1024 * 1024  # bytes; the scanner accepts photos up to 10 MB
 STATIC_DIRS = ("css", "js")  # the only folders served, besides index.html
 STATIC_SUFFIXES = (".css", ".js", ".svg", ".png", ".ico", ".webp", ".woff2")
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")  # HOST values that mean "this computer only"
+SERVER_THREADS = 8  # waitress worker threads
+CHANNEL_TIMEOUT = 60  # seconds an idle or half-sent connection is kept
 
 log = logging.getLogger("healthdiary.server")
 
@@ -75,12 +84,39 @@ def register_ocr(app: Flask) -> bool:
         return False
 
 
-def create_app(with_scanner: bool = True, with_ocr: bool = True) -> Flask:
-    """Build the Flask app. `with_scanner` / `with_ocr` False skip those blueprints (for tests)."""
+def _hostname(netloc: str) -> str:
+    """Host name of a Host header or URL authority, lower case, without port or IPv6 brackets."""
+    try:
+        return (urlsplit("//" + netloc).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def create_app(with_scanner: bool = True, with_ocr: bool = True,
+               allowed_hosts: Optional[Iterable[str]] = None) -> Flask:
+    """Build the Flask app. `with_scanner` / `with_ocr` False skip those blueprints (for tests).
+
+    `allowed_hosts`: host names (without port) requests may be addressed to; None accepts any.
+    """
+    hosts = None if allowed_hosts is None else {h.lower() for h in allowed_hosts}
     app = Flask(__name__, static_folder=None)
     app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES
     app.config["SCANNER_REGISTERED"] = register_scanner(app) if with_scanner else False
     app.config["OCR_REGISTERED"] = register_ocr(app) if with_ocr else False
+
+    @app.before_request
+    def same_site_only():
+        # A page on another website can make the browser send requests here. It cannot read the answers,
+        # but it could keep the scanner and the text reader busy, so such requests are refused.
+        if hosts is not None and _hostname(request.host) not in hosts:
+            return Response("This server only answers requests addressed to this computer.",
+                            status=421, mimetype="text/plain")
+        origin = request.headers.get("Origin")
+        if origin and request.path.startswith("/api/"):
+            o = urlsplit(origin)
+            if o.scheme not in ("http", "https") or o.netloc.lower() != request.host.lower():
+                return jsonify({"error": "Requests from other websites are not accepted."}), 403
+        return None
 
     @app.get("/")
     @app.get("/index.html")
@@ -144,13 +180,28 @@ def main() -> None:
     """Start the server on HOST:PORT."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     host, port = bind_address()
-    app = create_app()
+    local_only = host in LOOPBACK_HOSTS
+    app = create_app(allowed_hosts=LOOPBACK_HOSTS if local_only else None)
     shown = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    ocr = "not installed"
+    if app.config["OCR_REGISTERED"]:
+        from ocr.api import availability
+        ok, reason = availability()
+        ocr = "ready" if ok else f"not available: {reason}"
     print(f"Health Diary: http://{shown}:{port}  (scanner {'ready' if app.config['SCANNER_REGISTERED'] else 'not installed'})")
+    print(f"Reading text: {ocr}")
     if host not in ("127.0.0.1", "localhost", "::1"):
         print("Note: the server is reachable from other devices on the network. Recording audio in the browser "
               "needs http://127.0.0.1, http://localhost or https.")
-    app.run(host=host, port=port, debug=False, threaded=True)
+    try:
+        from waitress import serve
+    except ImportError:
+        print("Note: waitress is not installed (pip install -r requirements.txt), so Flask's development "
+              "server is used. It has no connection limits or timeouts.")
+        app.run(host=host, port=port, debug=False, threaded=True)
+        return
+    serve(app, host=host, port=port, threads=SERVER_THREADS, channel_timeout=CHANNEL_TIMEOUT,
+          max_request_body_size=MAX_REQUEST_BYTES, ident=None)
 
 
 if __name__ == "__main__":

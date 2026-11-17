@@ -4,8 +4,9 @@
     text, confidences = scan("photo.jpg")
 
 `scan` returns the page text and one confidence (0 to 1) per text line. `Scanner.run` returns the
-full result: every line with its box, script (printed or handwritten), confidence and a
-low-confidence flag, plus what the orientation and deskew steps did.
+full result: every line with its box, script (printed or handwritten), confidence, a
+low-confidence flag and a confirm-numbers flag (handwriting with a number or unit in it: always to be
+checked by a person), plus what the orientation and deskew steps did.
 
 Printed lines are read word by word by the frozen printed recogniser (ocr.pipeline, unchanged).
 Lines whose words look handwritten are cut out as straightened rectangles and read by the
@@ -23,6 +24,7 @@ from PIL import Image, ImageOps
 
 from ocr import orientation as O
 from ocr import scriptclf
+from ocr.common import has_number_or_unit
 from ocr.handwriting import HandwritingReader
 from ocr.hwdata import rect_crop
 from ocr.pipeline import OcrPipeline, to_rgb
@@ -39,6 +41,10 @@ class Scanner:
     def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
                  flip_check: bool = True):
+        if postcorrect:
+            # Withdrawn: on medical text it rewrites drug names and units (digoxin -> dioxin,
+            # mmol -> mol), and the evaluation found no gain from it (reports/final_report.md).
+            raise ValueError("Lexicon post-correction is switched off: it changes medicine names and units.")
         self.ocr = OcrPipeline.load(weights, use_scanner=page_scanner)
         self.orient = O.load_orient() if orientation else None
         self.do_deskew = deskew
@@ -90,15 +96,16 @@ class Scanner:
             lines.append(entry)
         if hw_crops:
             for i, (text, conf) in zip(hw_idx, self.hw.read(hw_crops)):
-                if self.postcorrect:
-                    from ocr.postcorrect import correct_line
-                    text = correct_line(text)
                 lines[i].update(handwriting_text=text, handwriting_confidence=round(conf, 4))
                 if conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
                     lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
                                     text=text, confidence=round(conf, 4), script="handwritten")
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
+            # Handwritten numbers are misread with high confidence (2.5 mg read as 25 mg), so a line that
+            # went to the handwriting reader and holds a number or a unit must be confirmed by a person,
+            # whatever its confidence.
+            ln["confirm_numbers"] = bool("handwriting_text" in ln and has_number_or_unit(ln["text"]))
         lines = [ln for ln in lines if ln["text"].strip()]
         return {"text": "\n".join(ln["text"] for ln in lines), "confidences": [ln["confidence"] for ln in lines],
                 "lines": lines, "words": words, "preprocessing": pre, "page": base["page"], "source": base["source"],
