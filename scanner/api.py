@@ -30,6 +30,8 @@ MAX_PIXELS = 50_000_000  # decoded size limit for JPEG, pixels (48 MP phone phot
 MAX_PIXELS_OTHER = 25_000_000  # the same for PNG and WebP, which are always decoded at full size
 MAX_SIDE = 12_000  # px, the longest side accepted
 MAX_ASPECT = 20  # long side / short side; beyond this it is not a photo of a page
+MIN_SIDE = 16  # px, the shortest side accepted: below this there is no page to find or read
+TOO_SMALL = f"image is too small: each side must be at least {MIN_SIDE} pixels"
 MAX_CORNERS_CHARS = 400  # characters of the corners field (4 points need far fewer)
 WORK_SIDE = 2400  # px, the long side the photo is reduced to before scanning
 FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO: JPEG variant some phones write
@@ -77,11 +79,41 @@ def image_size_problem(fmt: str, w: int, h: int):
     narrow image that takes more than a gigabyte to decode.
     """
     limit = MAX_PIXELS if fmt in ("JPEG", "MPO") else MAX_PIXELS_OTHER
-    if w < 1 or h < 1 or w * h > limit or max(w, h) > MAX_SIDE:
+    if min(w, h) < MIN_SIDE:
+        return TOO_SMALL
+    if w * h > limit or max(w, h) > MAX_SIDE:
         return "image has too many pixels"
     if max(w, h) > MAX_ASPECT * min(w, h):
         return "image is too narrow to be a photo of a page"
     return None
+
+
+def to_rgb8(im: Image.Image) -> Image.Image:
+    """8-bit RGB copy of any PIL image, keeping what a person would see.
+
+    A plain convert("RGB") drops the alpha channel, so a transparent page turns black and dark text
+    on it disappears; and it clamps 16-bit grey values instead of scaling them, so the page turns one
+    flat colour. Here transparent areas become white paper and deep greys are scaled to 0..255.
+    """
+    mode = im.mode
+    if mode == "RGB" and "transparency" not in im.info:
+        return im
+    if mode in ("RGBA", "LA", "PA", "RGBa", "La") or "transparency" in im.info:
+        rgba = im.convert("RGBA")
+        white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        return Image.alpha_composite(white, rgba).convert("RGB")
+    if mode.startswith("I;16") or mode in ("I", "F"):
+        a = np.asarray(im, dtype=np.float64)
+        top = float(a.max()) if a.size else 0.0
+        if mode.startswith("I;16"):
+            full = 65535.0
+        elif mode == "I":  # 32-bit integers: 8-bit, 16-bit or wider values, judged by the largest one
+            full = 255.0 if top <= 255 else 65535.0 if top <= 65535 else top
+        else:  # float: 0..1 or 0..255 by convention, anything else by its own maximum
+            full = 1.0 if top <= 1.0 else 255.0 if top <= 255 else top
+        grey = np.clip(np.nan_to_num(a) / full * 255.0 + 0.5, 0, 255).astype(np.uint8)
+        return Image.fromarray(grey).convert("RGB")
+    return im.convert("RGB")
 
 
 def _err(msg: str, code: int):
@@ -151,7 +183,7 @@ def scan_route():
             if im.format in ("JPEG", "MPO"):
                 im.draft("RGB", (WORK_SIDE, WORK_SIDE))  # fast JPEG downscale while decoding
             im = ImageOps.exif_transpose(im)
-            im = im.convert("RGB")
+            im = to_rgb8(im)
     except (UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning):
         return _err("file is not a readable image", 400)
     except Exception:  # truncated or malformed files, broken EXIF
