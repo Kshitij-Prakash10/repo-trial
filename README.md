@@ -23,11 +23,20 @@ A basic web app that works as a personal health diary. Each user keeps their
   up to 20 MB) per user, with title, category, date, tags, notes and an
   optional link to a visit or condition. Search, filter, view, download, edit,
   delete. The latest documents show on the Dashboard.
-- **Read text**: get the printed text of a scanned page or a stored image (JPEG,
+- **Read text**: get the text of a scanned page or a stored image (JPEG,
   PNG, WebP; not PDFs) with the local OCR model. The text can be corrected,
   copied, and is saved with the document; documents with text show a "Text"
   mark, View shows the text next to the page, and search also looks in it.
-  English printed text; needs the optional OCR packages (see below).
+  English text; needs the optional OCR packages (see below). With only those,
+  it reads printed text on an upright page. With the handwriting models as
+  well ("Handwriting and rotated pages" below) it also reads handwriting, turns
+  pages that lie on their side or upside down upright (and says so), and offers
+  "Straighten tilted text". Handwritten numbers and doses are misread easily,
+  so every handwritten line with a number or a unit gets a "Check the numbers"
+  warning that lists those lines, whatever the confidence. The warning is saved
+  with the document and shown again in View; after the text is corrected by hand
+  it becomes a shorter reminder, and it goes only when the page is read again
+  without such lines.
 - **Scan**: its own view (sidebar, Dashboard quick action, or Documents) in three
   steps, Photo, Check and Save. Take or choose a photo (or drop one); the local
   scanner finds the page with a trained machine-learning model, straightens it
@@ -141,9 +150,9 @@ outside it); otherwise the whole image is read. Design notes and the reasons for
    sudo apt-get install -y tesseract-ocr
    ```
 
-Limits of `ocr_scan.py` and the app's Read text action: pages turned by 90 or 180 degrees are not
-corrected and handwriting is read poorly. Both are handled by `ocr.scan` (next section), which the
-app does not use yet.
+Limits of `ocr_scan.py`, and of the app's Read text action when only this setup is done: pages
+turned by 90 or 180 degrees are not corrected and handwriting is read poorly. Both are handled by
+`ocr.scan` (next section); the server uses it for Read text as soon as its setup is done.
 
 ### Run inference
 
@@ -155,12 +164,23 @@ This writes `result.json` and `result.txt` (the plain text). Options: `--weights
 weights without fine-tuning), `--no-scanner` (skip the page scanner stage), `--overlay boxes.png`
 (the page with the word boxes drawn).
 
-The local server offers the same pipeline to the app (`ocr/api.py`): `GET /api/ocr/status` answers
-`{"available", "reason" or "models"}` without loading the models, and `POST /api/ocr` (form field
-`image`: JPEG, PNG or WebP up to 10 MB; optional `scanner=1` to run the page-scanner stage, off by
-default because the app sends an already flattened page) answers `{"text", "lines", "words", "page",
-"seconds", "models"}`. The models load on the first request and one page is read at a time. It answers
-503 with a reason when the packages or weights are missing; it never downloads anything.
+The local server offers the same pipeline to the app (`ocr/api.py`). It uses `ocr.scan.Scanner`
+("v2": orientation, handwriting, number checks; next section) when `transformers` is installed and the
+three v2 checkpoints are in `checkpoints/`, and this printed-only pipeline ("v1") otherwise, or when v2
+fails to load. `GET /api/ocr/status` answers without loading the models:
+`{"available", "reason" or "models" and "loaded", "pipeline": "v2" | "v1", "capabilities":
+{"handwriting", "orientation", "deskew"}, "pipeline_reason" (why not v2)}`. `POST /api/ocr` (form
+field `image`: JPEG, PNG or WebP, 16 px to 12,000 px a side, up to 10 MB; optional `scanner=1` to run
+the page-scanner stage, off by default because the app sends an already flattened page; optional
+`deskew=1` to straighten tilted text, v2 only, accepted and ignored by v1) answers `{"text", "lines",
+"words", "page", "seconds", "models", "pipeline", "preprocessing"}`. Each line has `text`, `box`,
+`confidence`, `low_confidence` (below 0.5), `confirm_numbers` (handwriting with a number or a unit:
+always to be checked by a person) and `script` (`printed` or `handwritten`; always `printed` with v1);
+`preprocessing` holds `quarter_turns`, `orientation_confidence`, `deskew_degrees`, `flip_check`,
+`deskew_requested` and `deskew_applied`. The models load on the first request (v2 takes about 1.3 GB
+of memory) and one page is read at a time. It answers 503 with a reason when the packages or weights
+are missing; it never downloads anything. Transparent PNG / WebP pages are put on white and 16-bit
+grey PNGs are scaled to 8 bits before reading (the same in `/api/scan`).
 
 `result.json` holds: `text`; `lines` (`text`, `box`, `confidence`, `words` as indices); `words`
 (`text`, `confidence`, `detection_score`, `box` on the processed page, `source_quad` in the pixels of
@@ -253,13 +273,20 @@ sources and licences are in `data/DATASETS.md`.
 
 ### Setup
 
-After the OCR setup above (CPU-only):
+After the OCR setup above (CPU-only), as a separate, second command: `requirements-handwriting.txt`
+pins `huggingface_hub` lower than `requirements-ocr.txt` does (transformers 4.57 needs
+`huggingface_hub` < 1.0), so it must be installed after that file, not together with it:
 
 ```bash
-pip install -r requirements-handwriting.txt
+pip install -r requirements-ocr.txt            # first (OCR setup above)
+pip install -r requirements-handwriting.txt    # then this; it replaces the huggingface_hub pin
 ```
 
-The fine-tuned weights are in the repository. The evaluation's pretrained comparison also loads
+The fine-tuned weights are in the repository (`checkpoints/orientation_v1/orientation.pt`,
+`checkpoints/scriptclf_v1/scriptclf.pt`, `checkpoints/handwriting_v1/`). With them and `transformers`
+installed, the app's Read text uses this pipeline (restart `python server.py` after installing);
+without them Read text reads printed text only, and `GET /api/ocr/status` says why in
+`pipeline_reason`. The evaluation's pretrained comparison also loads
 `microsoft/trocr-small-handwritten` from Hugging Face once (cached afterwards); `scan()` itself never
 downloads anything.
 

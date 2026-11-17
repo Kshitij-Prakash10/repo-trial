@@ -13,7 +13,10 @@
  * manual corners) when the server reports it available; reading text against a mocked /api/ocr (Read text
  * after a scan, progress, the text panel, word count, Copy, low-confidence / no-text notes, inline error,
  * edited text saved with the document, the Text indicator, search and the viewer in Documents, an older
- * record without text, no Read text for a PDF, the actions disabled when /api/ocr/status says unavailable)
+ * record without text, no Read text for a PDF, the actions disabled when /api/ocr/status says unavailable;
+ * with a mocked "v2" server: the handwritten-numbers warning even at high confidence and next to the
+ * low-confidence note, escaped, kept with the saved document and shown again in the viewer (shorter after
+ * a correction by hand), the "turned upright" note, and the Straighten tilted text option sending deskew=1)
  * and once against the real OCR when the server reports it available; scanner missing and file:// (save the photo without
  * scanning); storage shown, deleting a user deletes their files, no horizontal scroll at 360 px, keyboard
  * menu on mobile, no page errors.
@@ -511,17 +514,34 @@ async function main() {
 
   /* ---------- reading text (OCR): mocked /api/ocr ---------- */
   const OCR_TEXT = "SYNTHETIC LAB REPORT\nHaemoglobin 13.5 g/dL";
-  let ocrMode = "ok"; // ok | low | empty | error
+  // A synthetic prescription read by the "v2" pipeline: [text, confirm_numbers]
+  const V2_LINES = [["SYNTHETIC CLINIC", false], ["Amoxicillin 25 mg", true], ["1 tab twice daily", true],
+    ["<img src=x id=xss-probe> 5 ml", true], ["Review in 10 days", true], ["Dr Example", false]];
+  const V2_CAPS = { handwriting: true, orientation: true, deskew: true };
+  let ocrMode = "ok"; // ok | low | empty | error | v2 | v2low
   let ocrRequests = [];
   let ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
   const mockOcr = async (p) => {
     await p.route("**/api/ocr/status", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ocrStatus) }));
     await p.route("**/api/ocr", async (r) => {
       const body = r.request().postDataBuffer() || Buffer.alloc(0);
-      ocrRequests.push({ hasImage: body.includes('name="image"'), scanner: formField(body, "scanner"), bytes: body.length });
+      ocrRequests.push({ hasImage: body.includes('name="image"'), scanner: formField(body, "scanner"),
+        deskew: formField(body, "deskew"), bytes: body.length });
       await new Promise((res) => setTimeout(res, 250)); // long enough to see the progress state
       if (ocrMode === "error") {
         return r.fulfill({ status: 503, contentType: "application/json", body: '{"error":"The text-reading models could not be loaded (mock)."}' });
+      }
+      if (ocrMode === "v2" || ocrMode === "v2low") {
+        const conf = ocrMode === "v2low" ? 0.42 : 0.95;
+        const lines = V2_LINES.map(([t, flag], i) => ({ text: t, box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf,
+          low_confidence: conf < 0.5, confirm_numbers: flag, script: flag ? "handwritten" : "printed" }));
+        const words = lines.flatMap((ln, i) => ln.text.split(/\s+/).map((t) => ({ text: t, confidence: conf, box: [10, 10, 50, 30], line: i })));
+        const deskew = formField(r.request().postDataBuffer() || Buffer.alloc(0), "deskew") === "1";
+        return r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+          text: lines.map((ln) => ln.text).join("\n"), lines, words, page: { width: 600, height: 800 }, seconds: 0.4,
+          models: { ...ocrStatus.models, handwriting: "checkpoints/handwriting_v1" }, pipeline: "v2",
+          preprocessing: { quarter_turns: 1, orientation_confidence: 0.97, deskew_degrees: deskew ? -2.5 : 0,
+            flip_check: { margin: 0.3, crops: 9, flipped: false }, deskew_requested: deskew, deskew_applied: deskew } }) });
       }
       const text = ocrMode === "empty" ? "" : OCR_TEXT;
       const conf = ocrMode === "low" ? 0.41 : 0.93;
@@ -712,6 +732,119 @@ async function main() {
     assert((await page.inputValue("#viewer-ocr-text")) === OCR_TEXT);
     await page.keyboard.press("Escape");
     await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
+    await unmockOcr(page);
+    await unmockScanner(page);
+  });
+
+  await step("read text (mocked v2): handwritten numbers warning, turned-upright note, Straighten tilted text sends deskew=1", async () => {
+    await mockScanner(page);
+    await mockOcr(page);
+    // A printed-only (v1) server: no Straighten option, and the hint says so.
+    await page.click('a[data-view="dashboard"]');
+    await page.click('a[data-view="scan"]');
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await scanIdle(page);
+    await readEnabled(page, "#scan-ocr-read");
+    assert(await page.isHidden("#scan-ocr-deskew"), "no Straighten option without the v2 models");
+    assert(/Printed text only/.test(await page.textContent("#scan-ocr-hint")), await page.textContent("#scan-ocr-hint"));
+    await page.click("#scan-retake");
+    // A v2 server.
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" }, pipeline: "v2", capabilities: V2_CAPS };
+    await page.click('a[data-view="dashboard"]');
+    await page.click('a[data-view="scan"]');
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await scanIdle(page);
+    await readEnabled(page, "#scan-ocr-read");
+    assert(await page.isVisible("#scan-ocr-deskew") && !(await page.isChecked("#scan-ocr-deskew")), "Straighten option shown, off");
+    assert(await page.evaluate(() => document.querySelector("#scan-ocr-deskew").closest("label") !== null), "the option has a label");
+    assert(/Handwriting is read too/.test(await page.textContent("#scan-ocr-hint")), await page.textContent("#scan-ocr-hint"));
+    ocrMode = "v2";
+    await page.check("#scan-ocr-deskew");
+    let before = ocrRequests.length;
+    await page.click("#scan-ocr-read");
+    await textShown(page, "#scan-ocr");
+    assert(ocrRequests.length === before + 1 && ocrRequests.at(-1).deskew === "1", "deskew=1 sent: " + JSON.stringify(ocrRequests.at(-1)));
+    const warn = await page.textContent("#scan-ocr-confirm");
+    assert(await page.isVisible("#scan-ocr-confirm"), "the numbers warning is shown at 95% confidence");
+    assert(/Handwritten numbers or doses were read/.test(warn) && /Always check numbers and units against the page/.test(warn), warn);
+    assert(warn.includes("Amoxicillin 25 mg") && warn.includes("1 tab twice daily") && warn.includes("<img src=x id=xss-probe> 5 ml"), warn);
+    assert(!warn.includes("Review in 10 days") && /and 1 more/.test(warn), "first 3 lines, then a count: " + warn);
+    assert(await page.locator("#xss-probe").count() === 0, "line text is escaped");
+    assert(await page.evaluate(() => document.querySelector("#scan-ocr-confirm").classList.contains("warn")), "warning style");
+    assert(await page.isHidden("#scan-ocr-note"), "no low-confidence note at 95%");
+    const pre = await page.textContent("#scan-ocr-pre");
+    assert(/turned upright automatically/.test(pre) && /on its side/.test(pre) && /straightened by 2\.5 degrees/.test(pre), pre);
+    assert(/check them against the page/.test(await page.textContent('#scan-ocr [data-ocr="live"]')), "the warning is announced");
+    if (SHOTS) {
+      await clearToasts(page);
+      await page.locator("#scan-ocr").screenshot({ path: path.join(SHOTS, "ocr-confirm-1280-light.png") });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.locator("#scan-ocr").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(SHOTS, "ocr-confirm-375-light.png") });
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert(over <= 0, `scan view scrolls sideways by ${over}px at 375px with the warning`);
+      await page.setViewportSize({ width: 1280, height: 900 });
+    }
+    // Low confidence and handwritten numbers: both notes; and the option is per read.
+    ocrMode = "v2low";
+    await page.uncheck("#scan-ocr-deskew");
+    before = ocrRequests.length;
+    await page.click("#scan-ocr-read");
+    await page.waitForFunction(() => !document.querySelector("#scan-ocr-note").hidden);
+    assert(ocrRequests.length === before + 1 && ocrRequests.at(-1).deskew === null, "no deskew field when unticked");
+    assert(/hard to read/.test(await page.textContent("#scan-ocr-note")) && await page.isVisible("#scan-ocr-confirm"), "both notes shown");
+    assert(!/straightened/.test(await page.textContent("#scan-ocr-pre")), "not straightened this time");
+    ocrMode = "v2";
+    await page.click("#scan-ocr-read");
+    await page.waitForFunction(() => document.querySelector("#scan-ocr-note").hidden && !document.querySelector("#scan-ocr-confirm").hidden);
+    // Save: the Save step says flagged numbers are being saved.
+    await page.click("#scan-next");
+    await page.waitForSelector("#scan-save:not([hidden])");
+    const saveText = await page.textContent("#scan-save-text");
+    assert(/handwritten numbers or doses \(4 lines\)/.test(saveText) && /check against the page/.test(saveText), saveText);
+    assert(await page.evaluate(() => document.querySelector("#scan-save-text").classList.contains("warn")), "save note styled as a warning");
+    await page.fill("#scan-title", "Handwritten prescription");
+    await page.click("#scan-save-btn");
+    await page.waitForSelector("#scan-done:not([hidden])");
+    await page.click("#scan-view-docs");
+    await page.waitForSelector('.doc-card .doc-title:text("Handwritten prescription")');
+    const rec = await page.evaluate(() => Documents.list().find((d) => d.title === "Handwritten prescription"));
+    assert(rec.ocr.confirmNumbers && rec.ocr.confirmNumbers.count === 4 && rec.ocr.confirmNumbers.lines.length === 4
+      && rec.ocr.confirmNumbers.lines[0] === "Amoxicillin 25 mg", JSON.stringify(rec.ocr));
+    assert(rec.ocr.pipeline === "v2" && rec.ocr.preprocessing.quarterTurns === 1 && rec.ocr.edited === false, JSON.stringify(rec.ocr));
+    // The viewer shows the warning again.
+    const card = page.locator(".doc-card", { hasText: "Handwritten prescription" });
+    await card.locator('.card-actions [data-act="view"]').click();
+    await page.waitForSelector("#viewer[open] #viewer-ocr-text");
+    await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+    const vw = await page.textContent("#viewer-ocr-confirm");
+    assert(/Handwritten numbers or doses were read/.test(vw) && vw.includes("Amoxicillin 25 mg") && /and 1 more/.test(vw), vw);
+    assert(await page.locator("#xss-probe").count() === 0, "escaped in the viewer");
+    assert(/turned upright/.test(await page.textContent("#viewer-ocr-pre")), "turn note in the viewer");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "viewer-confirm-1280-light.png") });
+    // Corrected by hand: a shorter reminder, kept after saving.
+    await page.fill("#viewer-ocr-text", (await page.inputValue("#viewer-ocr-text")).replace("25 mg", "2.5 mg"));
+    await page.waitForFunction(() => /corrected by hand/.test(document.querySelector("#viewer-ocr-confirm").textContent));
+    await page.click("#viewer-ocr-save");
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('#viewer-extra [data-ocr="done"]').textContent));
+    const saved = await page.evaluate(() => Documents.list().find((d) => d.title === "Handwritten prescription"));
+    assert(saved.text.includes("2.5 mg") && saved.ocr.edited === true && saved.ocr.confirmNumbers.count === 4, JSON.stringify(saved.ocr));
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    await page.locator(".doc-card", { hasText: "Handwritten prescription" }).locator('.card-actions [data-act="view"]').click();
+    await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+    const soft = await page.textContent("#viewer-ocr-confirm");
+    assert(/corrected by hand/.test(soft) && /4 lines/.test(soft) && !soft.includes("Amoxicillin"), soft);
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    // A record saved before this feature (ocr without confirmNumbers) shows no warning.
+    await page.locator(".doc-card", { hasText: "Uploaded image" }).locator('.card-actions [data-act="view"]').click();
+    await page.waitForSelector("#viewer[open] #viewer-ocr-text");
+    assert(await page.isHidden("#viewer-ocr-confirm") && await page.isHidden("#viewer-ocr-pre"), "no warning for an older record");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    ocrMode = "ok";
     ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
     await unmockOcr(page);
     await unmockScanner(page);

@@ -374,8 +374,14 @@ const Scan = (() => {
     const t = ocr ? ocr.value() : null;
     const note = $("#scan-save-text");
     note.hidden = !(t && t.text);
+    const flagged = t && t.text ? Ocr.confirmOf(t.ocr) : null;
     note.textContent = t && t.text
-      ? `The text you read from the page (${Ocr.wordsText(t.ocr.words)}) will be saved with the document. Go Back to change it.` : "";
+      ? `The text you read from the page (${Ocr.wordsText(t.ocr.words)}) will be saved with the document. Go Back to change it.`
+        + (flagged ? ` It includes handwritten numbers or doses (${flagged.count} ${flagged.count === 1 ? "line" : "lines"}) `
+          + "that you must check against the page; the reminder is saved with it." : "") : "";
+    note.classList.toggle("notice", Boolean(flagged));
+    note.classList.toggle("warn", Boolean(flagged));
+    note.classList.toggle("muted", !flagged);
     setStep("save");
   }
 
@@ -523,7 +529,7 @@ const Scan = (() => {
     if (typeof Ocr !== "undefined") {
       ocr = Ocr.widget($("#scan-ocr"), {
         id: "scan-ocr", heading: "Text on this page",
-        idleHint: "Read the printed text on the page so you can copy it and find this document later by its words. It is read on this computer and saved with the document.",
+        idleHint: "Read the text on the page so you can copy it and find this document later by its words. It is read on this computer and saved with the document.",
         source: async () => (st.result ? UI.b64ToBlob(st.result.image_png_b64, "image/png") : null),
         onBusy: lockNext,
       });

@@ -1,37 +1,93 @@
 /*
  * Health Diary: reading the text on a page (OCR) with the local server.
  *
- *   GET  api/ocr/status  -> { available, reason? }
- *   POST api/ocr (image) -> { text, words: [{ text, confidence, ... }], ... }
+ *   GET  api/ocr/status  -> { available, reason?, pipeline: "v2" | "v1", capabilities: { handwriting, orientation, deskew } }
+ *   POST api/ocr (image, deskew?) -> { text, words: [{ text, confidence, ... }],
+ *                                      lines: [{ text, confidence, confirm_numbers, script, ... }], preprocessing, ... }
  *
  * Ocr.widget(root, options) builds the "Text" box used in the Scan view and in the document viewer:
  * a Read text button, a progress line, and after reading an editable textarea with a word count, a Copy
  * button and a note when the text was hard to read. When the server cannot read text the button is
- * disabled and a one-line hint says why. Uses UI. English printed text only; nothing leaves this computer.
+ * disabled and a one-line hint says why. Uses UI. Nothing leaves this computer.
+ *
+ * With the "v2" models on the server, handwriting is read too and turned pages are put upright. A
+ * handwritten line with a number or a dose unit comes back with confirm_numbers: such numbers are
+ * misread with high confidence (2.5 mg read as 25 mg), so the box always shows a warning listing those
+ * lines, whatever the mean confidence. The warning is stored with the text (ocr.confirmNumbers). Once the
+ * user has corrected the text by hand it turns into a shorter reminder; it goes away only when the page
+ * is read again without such lines.
  */
 const Ocr = (() => {
   const { $, esc, icon, fmtBytes } = UI;
   const MAX_BYTES = 10 * 1024 * 1024; // bytes, the server's limit for one image
   const MAX_CHARS = 200000; // characters kept with a document
   const LOW_CONFIDENCE = 0.6; // mean word confidence (0..1) below which the text gets a "check it" note
+  const CONFIRM_SHOWN = 3; // flagged lines quoted in the warning; the rest are counted
+  const CONFIRM_KEPT = 20; // flagged lines stored with the document
+  const CONFIRM_LINE_CHARS = 120; // characters kept of each flagged line
+  const NO_CAPS = { handwriting: false, orientation: false, deskew: false };
   const SERVER_HINT = "Start the local server with `python server.py` and open http://127.0.0.1:8000.";
 
-  /** Whether the server can read text: { available: bool, reason: string }. Never rejects. */
+  /**
+   * Whether the server can read text: { available: bool, reason: string, capabilities: { handwriting,
+   * orientation, deskew } }. Older servers send no capabilities: everything false. Never rejects.
+   */
   async function status() {
     if (location.protocol === "file:") {
-      return { available: false, reason: `It needs the local server: this page was opened as a file. ${SERVER_HINT}` };
+      return { available: false, reason: `It needs the local server: this page was opened as a file. ${SERVER_HINT}`, capabilities: NO_CAPS };
     }
     let r;
     try {
       r = await fetch("api/ocr/status", { headers: { Accept: "application/json" }, cache: "no-store" });
     } catch (err) {
-      return { available: false, reason: `The local server did not answer. ${SERVER_HINT}` };
+      return { available: false, reason: `The local server did not answer. ${SERVER_HINT}`, capabilities: NO_CAPS };
     }
     const s = r.ok ? await r.json().catch(() => null) : null;
-    if (s && s.available) return { available: true, reason: "" };
-    if (s) return { available: false, reason: s.reason || "The server cannot read text." };
+    const c = (s && s.capabilities) || {};
+    const capabilities = { handwriting: c.handwriting === true, orientation: c.orientation === true, deskew: c.deskew === true };
+    if (s && s.available) return { available: true, reason: "", capabilities };
+    if (s) return { available: false, reason: s.reason || "The server cannot read text.", capabilities };
     return { available: false, reason: r.status === 404
-      ? "It is not installed on this server." : `The server answered ${r.status}.` };
+      ? "It is not installed on this server." : `The server answered ${r.status}.`, capabilities: NO_CAPS };
+  }
+
+  /** The texts of the lines the server flagged with confirm_numbers (at most CONFIRM_KEPT, each shortened). */
+  function flaggedLines(lines) {
+    return (Array.isArray(lines) ? lines : [])
+      .filter((ln) => ln && ln.confirm_numbers === true)
+      .map((ln) => String(ln.text || "").trim().slice(0, CONFIRM_LINE_CHARS));
+  }
+
+  /** { count, lines } from a stored ocr info, or null when nothing was flagged (also for older records). */
+  function confirmOf(info) {
+    const c = info && info.confirmNumbers;
+    if (!c || typeof c !== "object") return null;
+    const lines = Array.isArray(c.lines) ? c.lines.filter((t) => typeof t === "string") : [];
+    const count = Number.isFinite(c.count) ? Math.max(c.count, lines.length) : lines.length;
+    return count > 0 ? { count, lines } : null;
+  }
+
+  /** "“a”, “b”, “c” and 2 more" (escaped HTML) for the flagged lines. */
+  function confirmExamples(c) {
+    const shown = c.lines.filter(Boolean).slice(0, CONFIRM_SHOWN);
+    const more = c.count - shown.length;
+    const quoted = shown.map((t) => `<q>${esc(t)}</q>`).join(", ");
+    if (!quoted) return "";
+    return more > 0 ? `${quoted} and ${more} more` : quoted;
+  }
+
+  /** Short sentence for the page turn / straightening the server did, or "". */
+  function preText(pre) {
+    if (!pre) return "";
+    const out = [];
+    const k = pre.quarterTurns;
+    if (k === 1 || k === 2 || k === 3) {
+      out.push(`The page was turned upright automatically (it was ${k === 2 ? "upside down" : "on its side"}).`);
+    }
+    if (typeof pre.deskewDegrees === "number" && Math.abs(pre.deskewDegrees) >= 0.1) {
+      out.push(`Tilted text was straightened by ${Math.abs(pre.deskewDegrees).toFixed(1)} degrees.`);
+    }
+    return out.join(" ");
   }
 
   /** Words in a text (runs of non-space characters). */
@@ -39,14 +95,17 @@ const Ocr = (() => {
   const wordsText = (n) => `${n} ${n === 1 ? "word" : "words"}`;
 
   /**
-   * Read the text on an image (Blob: JPEG, PNG or WebP, at most 10 MB). Resolves to
-   * { text, words (count), confidence (mean word confidence 0..1, or null without words), seconds, models }.
+   * Read the text on an image (Blob: JPEG, PNG or WebP, at most 10 MB). options.deskew asks the server
+   * to straighten tilted text first. Resolves to { text, words (count), confidence (mean word confidence
+   * 0..1, or null without words), seconds, models, pipeline, confirmNumbers ({ count, lines } or null),
+   * preprocessing ({ quarterTurns, deskewDegrees } or null) }.
    * Rejects with an Error whose message can be shown to the user.
    */
-  async function read(blob, signal) {
+  async function read(blob, signal, { deskew = false } = {}) {
     if (blob.size > MAX_BYTES) throw new Error(`this image is ${fmtBytes(blob.size)}; text can be read from images up to 10 MB.`);
     const form = new FormData();
     form.append("image", blob, "page");
+    if (deskew) form.append("deskew", "1");
     let r;
     try {
       r = await fetch("api/ocr", { method: "POST", body: form, headers: { Accept: "application/json" }, signal });
@@ -61,12 +120,18 @@ const Ocr = (() => {
       throw new Error((data && data.error) || `the server answered ${r.status}.`);
     }
     const conf = (data.words || []).map((w) => w.confidence).filter((c) => typeof c === "number");
+    const flagged = flaggedLines(data.lines);
+    const pre = data.preprocessing && typeof data.preprocessing === "object" ? data.preprocessing : null;
     return {
       text: data.text.slice(0, MAX_CHARS),
       words: conf.length || wordCount(data.text),
       confidence: conf.length ? conf.reduce((a, b) => a + b, 0) / conf.length : null,
       seconds: typeof data.seconds === "number" ? data.seconds : null,
       models: data.models || null,
+      pipeline: data.pipeline === "v2" ? "v2" : "v1",
+      confirmNumbers: flagged.length ? { count: flagged.length, lines: flagged.slice(0, CONFIRM_KEPT) } : null,
+      preprocessing: pre ? { quarterTurns: Number(pre.quarter_turns) || 0,
+        deskewDegrees: typeof pre.deskew_degrees === "number" ? pre.deskew_degrees : 0 } : null,
     };
   }
 
@@ -91,7 +156,7 @@ const Ocr = (() => {
    * Build a text box inside `root`. Options:
    *   id        prefix for element ids (unique on the page)
    *   heading   title of the box
-   *   idleHint  one line shown before any text was read
+   *   idleHint  one line shown before any text was read (a sentence on what the server can read is added)
    *   source    async () => Blob of the page image, or null when there is nothing to read; leave out when
    *             the document cannot be read (the Read text button is then not shown)
    *   onRead    ({ text, ocr }) after a successful read
@@ -103,7 +168,10 @@ const Ocr = (() => {
     root.innerHTML = `<section class="ocr-box" aria-labelledby="${id}-h">
       <div class="ocr-head">
         <h4 class="h4" id="${id}-h">${esc(heading)}</h4>
-        <button type="button" class="btn" data-ocr="read" id="${id}-read" aria-describedby="${id}-hint"${source ? "" : " hidden"}>${icon("text")}<span>Read text</span></button>
+        <div class="ocr-actions">
+          <label class="ocr-option" hidden><input type="checkbox" data-ocr="deskew" id="${id}-deskew" />Straighten tilted text</label>
+          <button type="button" class="btn" data-ocr="read" id="${id}-read" aria-describedby="${id}-hint"${source ? "" : " hidden"}>${icon("text")}<span>Read text</span></button>
+        </div>
       </div>
       <p class="muted small ocr-hint" id="${id}-hint"></p>
       <p class="ocr-busy" hidden><span class="spinner small" aria-hidden="true"></span><span>Reading text... The first time can take 10 to 20 seconds.</span></p>
@@ -111,7 +179,9 @@ const Ocr = (() => {
       <p class="notice warn ocr-error" role="alert" id="${id}-error" hidden></p>
       <div class="ocr-panel" hidden>
         <label for="${id}-text">Text read from the page (you can correct it)
-          <textarea id="${id}-text" class="ocr-text" rows="8" maxlength="${MAX_CHARS}" spellcheck="false" autocapitalize="off"></textarea></label>
+          <textarea id="${id}-text" class="ocr-text" rows="8" maxlength="${MAX_CHARS}" spellcheck="false" autocapitalize="off" aria-describedby="${id}-confirm"></textarea></label>
+        <p class="notice warn ocr-confirm" id="${id}-confirm" hidden></p>
+        <p class="muted small ocr-pre" id="${id}-pre" hidden></p>
         <p class="notice ocr-note" id="${id}-note" hidden></p>
         <div class="ocr-foot">
           <span class="muted small ocr-count" id="${id}-count"></span>
@@ -126,12 +196,14 @@ const Ocr = (() => {
       live: $('[data-ocr="live"]', root), error: $(".ocr-error", root), panel: $(".ocr-panel", root),
       text: $(".ocr-text", root), note: $(".ocr-note", root), count: $(".ocr-count", root),
       done: $('[data-ocr="done"]', root), save: $('[data-ocr="save"]', root), copy: $('[data-ocr="copy"]', root),
+      confirm: $(".ocr-confirm", root), pre: $(".ocr-pre", root), option: $(".ocr-option", root),
+      deskew: $('[data-ocr="deskew"]', root),
     };
     const s = {
-      available: null, reason: "", enabled: true, busy: false, seq: 0, ctl: null,
+      available: null, reason: "", enabled: true, busy: false, seq: 0, ctl: null, caps: NO_CAPS,
       has: false, // the panel is shown (text was read or loaded)
       stale: false, // the page changed after the text was read
-      info: null, // { confidence, words, readAt, models } of the last read, or what was stored
+      info: null, // { confidence, words, readAt, models, confirmNumbers, ... } of the last read, or what was stored
       readText: "", // the text as it was read or last saved, to tell whether the user edited it
       doneTimer: null,
     };
@@ -142,8 +214,10 @@ const Ocr = (() => {
       let hint = "";
       if (source && s.available === false) hint = `Reading text is not available. ${s.reason}`;
       else if (s.stale) hint = "The page has changed since this text was read. Choose Read again to update it.";
-      else if (!s.has && !s.busy) hint = idleHint;
+      else if (!s.has && !s.busy) hint = idleHint && `${idleHint} ${capsText()}`.trim();
       el.hint.textContent = hint;
+      el.option.hidden = !(source && s.available === true && s.caps.deskew);
+      el.deskew.disabled = el.read.disabled;
       el.busy.hidden = !s.busy;
       el.panel.hidden = !s.has;
       const n = wordCount(el.text.value);
@@ -161,6 +235,31 @@ const Ocr = (() => {
       el.note.textContent = note;
       el.note.hidden = !note;
       el.note.classList.toggle("warn", warn);
+      // Handwritten numbers: shown next to (never instead of) the other notes, whatever the confidence.
+      const flagged = s.has ? confirmOf(s.info) : null;
+      const edited = Boolean(s.info && s.info.edited) || el.text.value.trim() !== s.readText;
+      let confirm = "";
+      if (flagged && !edited) {
+        const ex = confirmExamples(flagged);
+        confirm = `<strong>Check the numbers.</strong> Handwritten numbers or doses were read${ex ? ` (for example: ${ex})` : ""}. `
+          + "Always check numbers and units against the page.";
+      } else if (flagged) {
+        confirm = `<strong>Check the numbers.</strong> This text was corrected by hand, but it came from handwriting with numbers or doses in it `
+          + `(${flagged.count} ${flagged.count === 1 ? "line" : "lines"}). Make sure every number and unit matches the page.`;
+      }
+      el.confirm.innerHTML = confirm;
+      el.confirm.hidden = !confirm;
+      const pre = s.has && s.info ? preText(s.info.preprocessing) : "";
+      el.pre.textContent = pre;
+      el.pre.hidden = !pre;
+    }
+
+    /** One sentence on what this server reads, once its status is known. */
+    function capsText() {
+      if (s.available !== true) return "";
+      return s.caps.handwriting
+        ? "Handwriting is read too, and pages on their side or upside down are turned upright."
+        : "Printed text only: handwriting is not read, and the page must be upright.";
     }
 
     function showError(msg) {
@@ -191,10 +290,16 @@ const Ocr = (() => {
         edited: Boolean(info.edited) || text !== s.readText,
         readAt: info.readAt || null,
         models: info.models || null,
+        pipeline: info.pipeline || null,
+        confirmNumbers: confirmOf(info),
+        preprocessing: info.preprocessing || null,
       } };
     }
 
-    /** Show `text` in the panel. `info`: the stored { confidence, words, edited, readAt, models }, if any. */
+    /**
+     * Show `text` in the panel. `info`: the stored { confidence, words, edited, readAt, models, pipeline,
+     * confirmNumbers, preprocessing }, if any (older records have only the first five, or nothing).
+     */
     function setText(text, info = null) {
       el.text.value = text || "";
       s.readText = el.text.value.trim();
@@ -215,11 +320,14 @@ const Ocr = (() => {
       try {
         const blob = await source();
         if (!blob) throw new Error("there is no page to read.");
-        const res = await read(blob, s.ctl.signal);
+        const res = await read(blob, s.ctl.signal, { deskew: !el.option.hidden && el.deskew.checked });
         if (mine !== s.seq) return;
         setText(res.text, { confidence: res.confidence, words: res.words, edited: false,
-          readAt: new Date().toISOString(), models: res.models });
-        el.live.textContent = res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.";
+          readAt: new Date().toISOString(), models: res.models, pipeline: res.pipeline,
+          confirmNumbers: res.confirmNumbers, preprocessing: res.preprocessing });
+        el.live.textContent = (res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.")
+          + (res.confirmNumbers ? " Handwritten numbers or doses were read: check them against the page." : "")
+          + (preText(res.preprocessing) ? ` ${preText(res.preprocessing)}` : "");
         if (onRead) await onRead(value());
       } catch (err) {
         if (mine !== s.seq || (err && err.name === "AbortError")) return;
@@ -260,6 +368,7 @@ const Ocr = (() => {
       const r = await status();
       s.available = r.available;
       s.reason = r.reason;
+      s.caps = r.capabilities || NO_CAPS;
       update();
       return r.available;
     }
@@ -292,5 +401,5 @@ const Ocr = (() => {
       isBusy: () => s.busy, flash, showError };
   }
 
-  return { MAX_BYTES, LOW_CONFIDENCE, status, read, copy, wordCount, wordsText, widget };
+  return { MAX_BYTES, LOW_CONFIDENCE, status, read, copy, wordCount, wordsText, confirmOf, widget };
 })();
