@@ -171,6 +171,35 @@ def test_noise_guard_keeps_a_real_page_and_rejects_noise(sample):
     assert not infer.looks_like_noise(infer.coherence(noise, full))
 
 
+def _paper_gradient(seed=2026):
+    """Plain paper-coloured photo with a lighting gradient and mild sensor noise (no page edge)."""
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:600, 0:800].astype(np.float32)
+    light = 0.75 + 0.25 * (xx + yy) / (800 + 600)
+    im = np.array([245.0, 235, 210])[None, None] * light[..., None] + rng.normal(0, 2, (600, 800, 1))
+    return np.clip(im, 0, 255).astype(np.uint8)
+
+
+def test_blank_guard_rejects_a_plain_surface_and_keeps_real_edges(sample):
+    q = np.array([[200, 150], [600, 150], [600, 450], [200, 450]], float)
+    c = infer.coherence(Image.fromarray(_paper_gradient()), q)
+    assert c["step"] < infer.BLANK_MAX_STEP and infer.looks_blank(c)  # the gradient alone is no edge
+    a = _paper_gradient()
+    a[:150], a[450:], a[:, :200], a[:, 600:] = 90, 90, 90, 90  # a blank page on a darker desk: kept
+    assert not infer.looks_blank(infer.coherence(Image.fromarray(a), q))
+    assert not infer.looks_blank(infer.coherence(sample.image, sample.corners))  # a real page with text
+    full = np.array([[0, 0], [800, 0], [800, 600], [0, 600]], float)
+    assert not infer.looks_blank(infer.coherence(Image.fromarray(_paper_gradient()), full))  # cannot be judged
+
+
+def test_blank_paper_photo_is_not_reported_as_a_page():
+    """Even when the classifier is sure of a page, a quad on a plain surface is rejected."""
+    prob = np.zeros((30, 40))
+    prob[7:23, 10:30] = 1.0  # a classifier that is sure of a page in the middle
+    res = infer.detect_from_prob(Image.fromarray(_paper_gradient()), prob, refine=False)
+    assert res["page_found"] is False and "plain surface" in res.get("rejected", "")
+
+
 # ---------------------------------------------------------------- image modes (scanner.convert)
 
 def test_to_rgb_composites_transparency_on_white():
