@@ -185,8 +185,9 @@ clients ignore it);
 `preprocessing` holds `quarter_turns`, `orientation_confidence`, `deskew_degrees`, `flip_check`,
 `deskew_requested` and `deskew_applied`. The models load on the first request (v2 takes about 1.3 GB
 of memory) and one page is read at a time. It answers 503 with a reason when the packages or weights
-are missing; it never downloads anything. Transparent PNG / WebP pages are put on white and 16-bit
-grey PNGs are scaled to 8 bits before reading (the same in `/api/scan`).
+are missing; it never downloads anything. Fully transparent parts of PNG / WebP pages are put on
+white (partly transparent ones keep their colour) and 16-bit grey PNGs are scaled to 8 bits before
+reading (the same in `/api/scan`).
 
 `result.json` holds: `text`; `lines` (`text`, `box`, `confidence`, `words` as indices); `words`
 (`text`, `confidence`, `detection_score`, `box` on the processed page, `source_quad` in the pixels of
@@ -358,6 +359,34 @@ report exact transcription counts for references containing a digit, including c
 misses every digit. Training validation reports the same metric. Full-page summaries distinguish
 lines sent to the handwriting reader from lines where its prediction was selected. In the older
 committed summaries, `lines_routed_to_handwriting` counted selections.
+
+## Measured on synthetic data only
+
+The fixes below were measured on invented text and on the synthetic photos in `data/synthetic/`, not on
+real pages or photos (the real datasets and the docTR detector weights could not be downloaded where
+this was done). Before = commit `4bd35c0`, after = this version; app scanner model
+`models/scanner_real.joblib`.
+
+| What (n) | Before | After |
+|---|---|---|
+| Invented printed lab report, v2: lines with "Check the numbers" (30) | 22 (73 %) | 0 |
+| Invented prescription, v2: lines with "Check the numbers" (20) | 12 (60 %) | 1 (the handwritten dose) |
+| Same two pages: printed lines with only the quieter `has_numbers` note | - | 21 and 11 |
+| Invented lines with a number flagged by either flag (39) | 37 | 37 |
+| Unit-like words without a number ("Dr L Example", "BD Diagnostics") flagged (15) | 15 | 0 |
+| v1 lab report / prescription, "Check the numbers" (30 / 20) | 22 / 12 | 21 / 12 |
+| Opt-in `flag_misread_digits`: invented misread dose lines found (200) | - | 179 (precision 0.95 on 238 invented lines without numbers) |
+| Synthetic test photos: found, mean IoU, IoU >= 0.9 (200) | 189, 0.887, 0.755 | identical, photo for photo |
+| Synthetic ood photos: found, mean IoU, IoU >= 0.9 (80) | 46, 0.673, 0.375 | identical, photo for photo |
+| Test photos, alpha 128 outside the page: found, mean IoU, IoU >= 0.9 (20) | 0.90, 0.856, 0.40 | 0.95, 0.907, 0.75 |
+| Same photos as fully transparent cut-outs / 16-bit grey: mean IoU, IoU >= 0.9 (20 each) | 0.953, 0.95 / 0.751, 0.50 | unchanged |
+| Paper-coloured blank photos with a lighting gradient reported as a page (12) | 6 | 0 |
+| The same, held-out seed (12) | 6 | 0 |
+| White, grey, dark blanks; random noise; tiny images (38; 50; 12) | 0; 0; 0 | 0; 0; 0 |
+| Synthetic desk backgrounds without a page reported as a page (50) | 4 | 3 |
+
+The measuring scripts are not part of the repository. The effect on real photos (DocCorner, SmartDoc) and on real text is not
+known.
 
 ## Tests
 

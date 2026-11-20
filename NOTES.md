@@ -197,6 +197,12 @@ This was found after the first recognition run (Step 4). Consequences:
 | SROIE (no case) | 0.1269 | 0.1194 |
 | CORD | 0.0151 | 0.0127 |
 
+- **Unit case.** The shipped recogniser changes the case of some units and drops the caret: on 300
+  synthetic word crops (seed 2026, 32 fonts) "mL" was read as "ML" in 2 of 4 crops and "x10^9/L" as
+  "x10/9/L" in 3 of 3 (all other unit crops, 22, exact; all 177 numeric crops exact). The number flag
+  (`ocr.common.has_number_or_unit`) therefore accepts any case of a unit next to a number ("5 ML",
+  "S ML"), and only the usual spelling ("mL", "mg") of a unit on its own.
+
 ### Detector (`ocr/train_det.py`, `configs/ocr/det.json`): not fine-tuned
 
 The overfit test (the gate before any long run) did not pass, so no long detector run was started and
