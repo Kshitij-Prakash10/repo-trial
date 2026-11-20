@@ -269,6 +269,42 @@ def test_plain_text_lines_are_not_flagged(text):
     assert not common.has_number_or_unit(text)
 
 
+# Names, initials and headings that hold a unit-like word but no number (invented).
+COLLISIONS = ["Mehta OD Clinic, Station Road", "Dr L Example", "G Sample, Pharmacist", "Department of Mol Biology",
+              "Tab Pharmacy, High Street", "Caps and gowns must be worn", "IU Health partner clinic",
+              "Prn as directed by the doctor", "BD Diagnostics Ltd", "Mane Street Surgery", "Name: L Sample",
+              "ML Sample", "Dl Sample", "Initials: A G", "TDS Medical Group", "Test Result Units Reference range"]
+
+
+@pytest.mark.parametrize("text", COLLISIONS)
+def test_unit_like_words_without_a_number_are_not_flagged(text):
+    assert not common.has_number_or_unit(text)
+    assert not common.number_lost(text) and not common.has_misread_number(text)
+
+
+@pytest.mark.parametrize("text", [
+    "1 tab od", "l tab od",  # a unit after a number, or after another unit that counted
+    "InSulin O Units", "Insulin glargine IZ Units", "lnsulin lO Units",  # digits read as look-alike letters
+    "Morphine S ML", "5 ML", "ten units", "Omeprazole mg", "Dose in mL", "Hb in g/dL", "Na in mmol/L",
+])
+def test_units_next_to_a_number_or_in_their_usual_case_are_flagged(text):
+    assert common.has_number_or_unit(text)
+
+
+def test_a_unit_without_its_number_is_a_lost_number():
+    assert common.number_lost("Omeprazole mg") and common.number_lost("InSulin O Units")
+    assert not common.number_lost("Omeprazole 20 mg") and not common.number_lost("Review in clinic")
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Metformin SOO my twice daily", True), ("Atorvastatin ZO mg at night", True), ("Ramipril Z.S my", True),
+    ("Metformin 500 mg", False),  # real digits: not a misreading
+    ("So my doctor said to continue", False), ("Mehta OD Clinic", False), ("Dr L Example", False),
+])
+def test_digits_misread_as_letters_before_a_unit(text, flag):
+    assert common.has_misread_number(text) is flag
+
+
 def test_limited_evaluation_preserves_full_results(tmp_path, monkeypatch):
     import json
     pytest.importorskip("cv2")

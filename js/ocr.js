@@ -3,7 +3,7 @@
  *
  *   GET  api/ocr/status  -> { available, reason?, pipeline: "v2" | "v1", capabilities: { handwriting, orientation, deskew } }
  *   POST api/ocr (image, deskew?) -> { text, words: [{ text, confidence, ... }],
- *                                      lines: [{ text, confidence, confirm_numbers, script, ... }], preprocessing, ... }
+ *                                      lines: [{ text, confidence, confirm_numbers, has_numbers, script, ... }], preprocessing, ... }
  *
  * Ocr.widget(root, options) builds the "Text" box used in the Scan view and in the document viewer:
  * a Read text button, a progress line, and after reading an editable textarea with a word count, a Copy
@@ -11,11 +11,13 @@
  * disabled and a one-line hint says why. Uses UI. Nothing leaves this computer.
  *
  * With the "v2" models on the server, handwriting is read too and turned pages are put upright. A
- * line with a number or a dose unit comes back with confirm_numbers: such numbers are
+ * handwritten line with a number or a dose unit (or a unit that lost its number, or any number when the
+ * server cannot tell print from handwriting) comes back with confirm_numbers: such numbers are
  * misread with high confidence (2.5 mg read as 25 mg), so the box always shows a warning listing those
  * lines, whatever the mean confidence. The warning is stored with the text (ocr.confirmNumbers). Once the
  * user has corrected the text by hand it turns into a shorter reminder; it goes away only when the page
- * is read again without such lines.
+ * is read again without such lines. Printed lines with numbers come back with has_numbers only: they get a
+ * quieter one-line note (ocr.printedNumbers, a count) instead of the warning.
  */
 const Ocr = (() => {
   const { $, esc, icon, fmtBytes } = UI;
@@ -59,6 +61,11 @@ const Ocr = (() => {
       .map((ln) => String(ln.text || "").trim().slice(0, CONFIRM_LINE_CHARS));
   }
 
+  /** How many lines hold numbers the server did not flag with confirm_numbers (printed numbers). */
+  function printedNumberCount(lines) {
+    return (Array.isArray(lines) ? lines : []).filter((ln) => ln && ln.has_numbers === true && ln.confirm_numbers !== true).length;
+  }
+
   /** { count, lines } from a stored ocr info, or null when nothing was flagged (also for older records). */
   function confirmOf(info) {
     const c = info && info.confirmNumbers;
@@ -67,6 +74,9 @@ const Ocr = (() => {
     const count = Number.isFinite(c.count) ? Math.max(c.count, lines.length) : lines.length;
     return count > 0 ? { count, lines } : null;
   }
+
+  /** The stored count of lines with printed numbers (0 for older records). */
+  const printedOf = (info) => (info && Number.isInteger(info.printedNumbers) && info.printedNumbers > 0 ? info.printedNumbers : 0);
 
   /** "“a”, “b”, “c” and 2 more" (escaped HTML) for the flagged lines. */
   function confirmExamples(c) {
@@ -99,7 +109,7 @@ const Ocr = (() => {
    * Read the text on an image (Blob: JPEG, PNG or WebP, at most 10 MB). options.deskew asks the server
    * to straighten tilted text first. Resolves to { text, words (count), confidence (mean word confidence
    * 0..1, or null without words), seconds, models, pipeline, confirmNumbers ({ count, lines } or null),
-   * preprocessing ({ quarterTurns, deskewDegrees } or null) }.
+   * printedNumbers (count of lines with printed numbers), preprocessing ({ quarterTurns, deskewDegrees } or null) }.
    * Rejects with an Error whose message can be shown to the user.
    */
   async function read(blob, signal, { deskew = false } = {}) {
@@ -131,6 +141,7 @@ const Ocr = (() => {
       models: data.models || null,
       pipeline: data.pipeline === "v2" ? "v2" : "v1",
       confirmNumbers: flagged.length ? { count: flagged.length, lines: flagged.slice(0, CONFIRM_KEPT) } : null,
+      printedNumbers: printedNumberCount(data.lines),
       preprocessing: pre ? { quarterTurns: Number(pre.quarter_turns) || 0,
         deskewDegrees: typeof pre.deskew_degrees === "number" ? pre.deskew_degrees : 0 } : null,
     };
@@ -181,8 +192,9 @@ const Ocr = (() => {
       <p class="notice warn ocr-error" role="alert" id="${id}-error" hidden></p>
       <div class="ocr-panel" hidden>
         <label for="${id}-text">Text read from the page (you can correct it)
-          <textarea id="${id}-text" class="ocr-text" rows="8" maxlength="${MAX_CHARS}" spellcheck="false" autocapitalize="off" aria-describedby="${id}-confirm"></textarea></label>
+          <textarea id="${id}-text" class="ocr-text" rows="8" maxlength="${MAX_CHARS}" spellcheck="false" autocapitalize="off" aria-describedby="${id}-confirm ${id}-numbers"></textarea></label>
         <p class="notice warn ocr-confirm" id="${id}-confirm" hidden></p>
+        <p class="muted small ocr-numbers" id="${id}-numbers" hidden></p>
         <p class="muted small ocr-pre" id="${id}-pre" hidden></p>
         <p class="notice ocr-note" id="${id}-note" hidden></p>
         <div class="ocr-foot">
@@ -198,7 +210,7 @@ const Ocr = (() => {
       live: $('[data-ocr="live"]', root), error: $(".ocr-error", root), panel: $(".ocr-panel", root),
       text: $(".ocr-text", root), note: $(".ocr-note", root), count: $(".ocr-count", root),
       done: $('[data-ocr="done"]', root), save: $('[data-ocr="save"]', root), copy: $('[data-ocr="copy"]', root),
-      confirm: $(".ocr-confirm", root), pre: $(".ocr-pre", root), option: $(".ocr-option", root),
+      confirm: $(".ocr-confirm", root), numbers: $(".ocr-numbers", root), pre: $(".ocr-pre", root), option: $(".ocr-option", root),
       deskew: $('[data-ocr="deskew"]', root),
     };
     const s = {
@@ -252,6 +264,11 @@ const Ocr = (() => {
       if (prescription && s.has) confirm += (confirm ? " " : "") + PRESCRIPTION_CHECK;
       el.confirm.innerHTML = confirm;
       el.confirm.hidden = !confirm;
+      // Printed numbers: a quieter note, only when the warning above does not already ask for a check.
+      const printed = s.has && !flagged && s.info ? printedOf(s.info) : 0;
+      el.numbers.textContent = printed
+        ? `Numbers were read on ${printed} printed ${printed === 1 ? "line" : "lines"}. Compare important values with the page.` : "";
+      el.numbers.hidden = !printed;
       const pre = s.has && s.info ? preText(s.info.preprocessing) : "";
       el.pre.textContent = pre;
       el.pre.hidden = !pre;
@@ -295,6 +312,7 @@ const Ocr = (() => {
         models: info.models || null,
         pipeline: info.pipeline || null,
         confirmNumbers: confirmOf(info),
+        printedNumbers: printedOf(info),
         preprocessing: info.preprocessing || null,
       } };
     }
@@ -327,7 +345,7 @@ const Ocr = (() => {
         if (mine !== s.seq) return;
         setText(res.text, { confidence: res.confidence, words: res.words, edited: false,
           readAt: new Date().toISOString(), models: res.models, pipeline: res.pipeline,
-          confirmNumbers: res.confirmNumbers, preprocessing: res.preprocessing });
+          confirmNumbers: res.confirmNumbers, printedNumbers: res.printedNumbers, preprocessing: res.preprocessing });
         el.live.textContent = (res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.")
           + (res.confirmNumbers ? " Numbers or doses were read: check them against the page." : "")
           + (preText(res.preprocessing) ? ` ${preText(res.preprocessing)}` : "");

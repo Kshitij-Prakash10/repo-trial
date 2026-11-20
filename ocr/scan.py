@@ -5,8 +5,10 @@
 
 `scan` returns the page text and one confidence (0 to 1) per text line. `Scanner.run` returns the
 full result: every line with its box, script (printed or handwritten), confidence, a
-low-confidence flag and a confirm-numbers flag (a number or unit in any reading: always to be
-checked by a person), plus what the orientation and deskew steps did.
+low-confidence flag, a confirm-numbers flag (a number or unit in a line that went to the
+handwriting reader, or a unit whose number was lost: always to be checked by a person), a
+has-numbers flag (the shown text holds a number or unit; quieter, for printed lines), plus what the
+orientation and deskew steps did.
 
 Printed lines are read word by word by the frozen printed recogniser (ocr.pipeline, unchanged).
 Lines whose words look handwritten are cut out as straightened rectangles and read by the
@@ -25,7 +27,7 @@ from PIL import Image, ImageOps
 
 from ocr import orientation as O
 from ocr import scriptclf
-from ocr.common import has_number_or_unit
+from ocr.common import has_misread_number, has_number_or_unit, number_lost
 from ocr.handwriting import HandwritingReader
 from ocr.hwdata import rect_crop
 from ocr.pipeline import OcrPipeline, to_rgb
@@ -44,7 +46,7 @@ class Scanner:
 
     def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
-                 flip_check: bool = True, mask_neighbours: bool = False):
+                 flip_check: bool = True, mask_neighbours: bool = False, flag_misread_digits: bool = False):
         if postcorrect:
             # Withdrawn: on medical text it rewrites drug names and units (digoxin -> dioxin,
             # mmol -> mol), and the evaluation found no gain from it (reports/final_report.md).
@@ -59,6 +61,9 @@ class Scanner:
         # Paint out words of neighbouring lines inside a handwriting line's crop (ocr.hwdata.rect_crop).
         # Off by default: its effect on real handwriting (GNHK) has not been measured yet.
         self.mask_neighbours = mask_neighbours
+        # Also flag printed lines whose digits look misread as letters ("Metformin SOO my"). Off by default:
+        # measured only on invented lines, not on real pages (README, "Measured on synthetic data only").
+        self.flag_misread_digits = flag_misread_digits
 
     def run(self, image: Image.Image) -> dict:
         t0 = time.perf_counter()
@@ -111,9 +116,12 @@ class Scanner:
                 elif conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
                     lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
                                     text=text, confidence=round(conf, 4), script="handwritten")
+        routed = self.clf is not None and self.hw is not None  # else "printed" only means "not checked"
+        misread = getattr(self, "flag_misread_digits", False)
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
-            ln["confirm_numbers"] = confirm_numbers(ln)
+            ln["confirm_numbers"] = confirm_numbers(ln, script_known=routed, misread_digits=misread)
+            ln["has_numbers"] = has_number_or_unit(ln["text"])
         lines = [ln for ln in lines if ln["text"].strip()]
         return {"text": "\n".join(ln["text"] for ln in lines), "confidences": [ln["confidence"] for ln in lines],
                 "lines": lines, "words": words, "preprocessing": pre, "page": base["page"], "source": base["source"],
@@ -122,9 +130,23 @@ class Scanner:
                 "seconds": round(time.perf_counter() - t0, 3)}
 
 
-def confirm_numbers(ln: dict) -> bool:
-    """Inspect every reading because either the router or a reader can miss a handwritten dose."""
-    return any(has_number_or_unit(ln.get(k) or "") for k in ("text", "handwriting_text", "printed_text"))
+def confirm_numbers(ln: dict, script_known: bool | None = None, misread_digits: bool = False) -> bool:
+    """Must a person check this line's numbers against the page, whatever its confidence?
+
+    Yes when the line went to the handwriting reader (or is handwritten) and any of its readings holds a
+    number or unit: handwritten doses are misread with high confidence (2.5 mg read as 25 mg), and either
+    reader can be the one that kept the digits. Yes also when the script is unknown (no printed /
+    handwritten routing ran, script_known False; None: known when the line has a "script"), since the
+    line may be handwriting. A printed line that never went to the handwriting reader is flagged only
+    when a unit stands without its number ("Omeprazole mg"), or, with misread_digits, when letters look
+    like misread digits before a unit ("Metformin SOO my"); its numbers get the quieter has_numbers flag.
+    """
+    if script_known is None:
+        script_known = "script" in ln
+    if not script_known or "handwriting_text" in ln or ln.get("script") == "handwritten":
+        return any(has_number_or_unit(ln.get(k) or "") for k in ("text", "handwriting_text", "printed_text"))
+    text = ln.get("text") or ""
+    return number_lost(text) or (misread_digits and has_misread_number(text))
 
 
 def looks_like_rule(crop: np.ndarray) -> bool:

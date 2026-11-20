@@ -6,14 +6,18 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                       deskew   straighten slightly tilted text before reading (off by default; only the
                                "v2" pipeline can do it, with "v1" the flag is accepted and ignored)
                       -> {"text",
-                          "lines": [{"text", "box", "confidence", "low_confidence", "confirm_numbers", "script"}],
+                          "lines": [{"text", "box", "confidence", "low_confidence", "confirm_numbers", "script",
+                                     "has_numbers"}],
                           "words": [{"text", "confidence", "box", "line"}],
                           "page": {"width", "height"}, "seconds", "models", "pipeline": "v2" | "v1",
                           "preprocessing": {"quarter_turns", "orientation_confidence", "deskew_degrees",
                                             "flip_check", "deskew_requested", "deskew_applied"}}
                       Boxes are [x0, y0, x1, y1] in pixels of the page; confidences are 0..1.
-                      confirm_numbers: a reading of the line holds a number or a dose unit,
-                      so a person must check it against the page whatever its confidence.
+                      confirm_numbers: a person must check the line's numbers against the page whatever
+                      its confidence: it went to the handwriting reader and a reading holds a number or
+                      dose unit, or a unit lost its number, or (v1, which cannot tell print from
+                      handwriting) the text holds a number or unit.
+                      has_numbers: the shown text holds a number or unit (quieter; also printed lines).
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",
                        "capabilities": {"handwriting", "orientation", "deskew"}, "pipeline_reason"?: str}
@@ -396,14 +400,16 @@ def _read_upload():
 
 
 def _line(ln: dict) -> dict:
-    """Preserve alternative-reader warnings and check the displayed text, including v1 results."""
+    """The line as the API returns it. v2 lines carry their own confirm_numbers (ocr.scan.confirm_numbers);
+    v1 lines, whose script nobody checked, are flagged whenever the text holds a number or unit."""
     from ocr.common import has_number_or_unit
     conf = ln["confidence"]
     low = ln.get("low_confidence")
+    numbers = has_number_or_unit(ln["text"])
     return {"text": ln["text"], "box": ln["box"], "confidence": conf,
             "low_confidence": bool(conf < LOW_CONFIDENCE) if low is None else bool(low),
-            "confirm_numbers": bool(ln.get("confirm_numbers")) or has_number_or_unit(ln["text"]),
-            "script": ln.get("script") or "printed"}
+            "confirm_numbers": bool(ln["confirm_numbers"]) if "confirm_numbers" in ln else numbers,
+            "script": ln.get("script") or "printed", "has_numbers": numbers}
 
 
 def _preprocessing(pre: dict) -> dict:

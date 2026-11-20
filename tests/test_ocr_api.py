@@ -273,7 +273,7 @@ def test_response_shape_and_scanner_flag(client, monkeypatch):
     assert body["text"] == "Total 9.00"
     # the three keys of the first version, plus the flags (v1 defaults: nothing flagged, all printed)
     assert body["lines"] == [{"text": "Total 9.00", "box": [1.0, 2.0, 60.0, 12.0], "confidence": 0.8,
-                              "low_confidence": False, "confirm_numbers": True, "script": "printed"}]
+                              "low_confidence": False, "confirm_numbers": True, "script": "printed", "has_numbers": True}]
     assert body["words"][0] == {"text": "Total", "confidence": 0.9, "box": [1.0, 2.0, 30.0, 12.0], "line": 0}
     assert body["page"] == {"width": 120, "height": 90}
     assert body["seconds"] == 0.01
@@ -339,7 +339,7 @@ def test_end_to_end_on_a_generated_page(client):
         assert 0.0 <= w["confidence"] <= 1.0 and len(w["box"]) == 4
         assert 0 <= w["line"] < len(body["lines"])
     for ln in body["lines"]:
-        assert set(ln) == {"text", "box", "confidence", "low_confidence", "confirm_numbers", "script"}
+        assert set(ln) == {"text", "box", "confidence", "low_confidence", "confirm_numbers", "script", "has_numbers"}
     assert body["seconds"] > 0
     assert client.get("/api/ocr/status").get_json()["loaded"] is True
 
@@ -412,11 +412,11 @@ def test_v2_flags_and_preprocessing_reach_the_response(client, monkeypatch):
     assert body["text"] == "Total 9.00\nAmoxicillin 25 mg\nsee overleaf"
     assert body["lines"] == [
         {"text": "Total 9.00", "box": [1.0, 2.0, 60.0, 12.0], "confidence": 0.8,
-         "low_confidence": False, "confirm_numbers": True, "script": "printed"},
+         "low_confidence": False, "confirm_numbers": True, "script": "printed", "has_numbers": True},
         {"text": "Amoxicillin 25 mg", "box": [1.0, 20.0, 70.0, 34.0], "confidence": 0.97,
-         "low_confidence": False, "confirm_numbers": True, "script": "handwritten"},  # sure of itself, still flagged
+         "low_confidence": False, "confirm_numbers": True, "script": "handwritten", "has_numbers": True},  # sure of itself, still flagged
         {"text": "see overleaf", "box": [1.0, 40.0, 50.0, 52.0], "confidence": 0.31,
-         "low_confidence": True, "confirm_numbers": False, "script": "handwritten"}]
+         "low_confidence": True, "confirm_numbers": False, "script": "handwritten", "has_numbers": False}]
     assert body["preprocessing"] == {"quarter_turns": 3, "orientation_confidence": 0.9876, "deskew_degrees": 0.0,
                                      "flip_check": {"margin": 0.31, "crops": 2, "flipped": False},
                                      "deskew_requested": False, "deskew_applied": False}
