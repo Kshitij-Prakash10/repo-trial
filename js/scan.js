@@ -371,18 +371,24 @@ const Scan = (() => {
     $("#scan-save-preview").src = pageSrc(st.result);
     $("#scan-save-cap").textContent = `Corrected page, ${MODE_TEXT[st.result.mode] || st.result.mode}, saved as PNG.`;
     $("#scan-save-status").textContent = "";
+    updateSaveText();
+    setStep("save");
+  }
+
+  function updateSaveText() {
     const t = ocr ? ocr.value() : null;
     const note = $("#scan-save-text");
     note.hidden = !(t && t.text);
     const flagged = t && t.text ? Ocr.confirmOf(t.ocr) : null;
+    const prescription = t && t.text && $("#scan-category").value === "prescription";
     note.textContent = t && t.text
       ? `The text you read from the page (${Ocr.wordsText(t.ocr.words)}) will be saved with the document. Go Back to change it.`
-        + (flagged ? ` It includes handwritten numbers or doses (${flagged.count} ${flagged.count === 1 ? "line" : "lines"}) `
-          + "that you must check against the page; the reminder is saved with it." : "") : "";
-    note.classList.toggle("notice", Boolean(flagged));
-    note.classList.toggle("warn", Boolean(flagged));
-    note.classList.toggle("muted", !flagged);
-    setStep("save");
+        + (flagged ? ` It includes numbers or doses (${flagged.count} ${flagged.count === 1 ? "line" : "lines"}) `
+          + "to check against the page." : "")
+        + (prescription ? " " + Ocr.PRESCRIPTION_CHECK : "") : "";
+    note.classList.toggle("notice", Boolean(flagged || prescription));
+    note.classList.toggle("warn", Boolean(flagged || prescription));
+    note.classList.toggle("muted", !flagged && !prescription);
   }
 
   /** Step 3 with the photo as it is (no scanner, or the user chose not to scan). */
@@ -521,6 +527,9 @@ const Scan = (() => {
       setStep("check");
     });
     $("#scan-discard").addEventListener("click", () => { reset(true); setPhotoStatus("Discarded. Take or choose another photo."); });
+    $("#scan-save").addEventListener("change", (event) => {
+      if (event.target.id === "scan-category" && !st.raw) updateSaveText();
+    });
     $("#scan-save").addEventListener("submit", save);
     $("#scan-another").addEventListener("click", () => reset(true));
     $("#scan-view-docs").addEventListener("click", () => reset(false));

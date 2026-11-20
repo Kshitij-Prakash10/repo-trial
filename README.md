@@ -32,7 +32,7 @@ A basic web app that works as a personal health diary. Each user keeps their
   well ("Handwriting and rotated pages" below) it also reads handwriting, turns
   pages that lie on their side or upside down upright (and says so), and offers
   "Straighten tilted text". Handwritten numbers and doses are misread easily,
-  so every handwritten line with a number or a unit gets a "Check the numbers"
+  so every line with a detected number or unit gets a "Check the numbers"
   warning that lists those lines, whatever the confidence. The warning is saved
   with the document and shown again in View; after the text is corrected by hand
   it becomes a shorter reminder, and it goes only when the page is read again
@@ -165,7 +165,7 @@ weights without fine-tuning), `--no-scanner` (skip the page scanner stage), `--o
 (the page with the word boxes drawn).
 
 The local server offers the same pipeline to the app (`ocr/api.py`). It uses `ocr.scan.Scanner`
-("v2": orientation, handwriting, number checks; next section) when `transformers` is installed and the
+("v2": orientation and handwriting; next section) when `transformers` is installed and the
 three v2 checkpoints are in `checkpoints/`, and this printed-only pipeline ("v1") otherwise, or when v2
 fails to load. `GET /api/ocr/status` answers without loading the models:
 `{"available", "reason" or "models" and "loaded", "pipeline": "v2" | "v1", "capabilities":
@@ -174,7 +174,7 @@ field `image`: JPEG, PNG or WebP, 16 px to 12,000 px a side, up to 10 MB; option
 the page-scanner stage, off by default because the app sends an already flattened page; optional
 `deskew=1` to straighten tilted text, v2 only, accepted and ignored by v1) answers `{"text", "lines",
 "words", "page", "seconds", "models", "pipeline", "preprocessing"}`. Each line has `text`, `box`,
-`confidence`, `low_confidence` (below 0.5), `confirm_numbers` (handwriting with a number or a unit:
+`confidence`, `low_confidence` (below 0.5), `confirm_numbers` (a number or unit in any reading:
 always to be checked by a person) and `script` (`printed` or `handwritten`; always `printed` with v1);
 `preprocessing` holds `quarter_turns`, `orientation_confidence`, `deskew_degrees`, `flip_check`,
 `deskew_requested` and `deskew_applied`. The models load on the first request (v2 takes about 1.3 GB
@@ -254,8 +254,10 @@ text, confidences = scan("page.jpg")      # one confidence (0..1) per output lin
 result = Scanner().run(pil_image)         # lines with box, script, confidence, low_confidence, confirm_numbers
 ```
 
-`confirm_numbers` is true for every line that went to the handwriting reader and holds a digit or a
-dose unit. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
+`confirm_numbers` is true when any reading of the line contains a digit, percentage or recognized unit,
+including a printed-only reading. Documents categorized as prescriptions also show a reminder to
+compare every medicine, dose and unit against the image and check for missing lines, even if OCR
+missed every numeric cue. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
 must be checked by a person whatever its confidence. The lexicon correction (`ocr/postcorrect.py`) is
 switched off: it rewrote medicine names and units (digoxin to dioxin, mmol to mol).
 
@@ -335,6 +337,12 @@ The tasks are `printed`, `iam`, `gnhk`, `orientation` and `rotated`; run one wit
 `--split val` to score on validation, or `--limit N` for a smoke test. Summaries go to
 `reports/eval_v2/<task>.json` and per-item rows to `runs/eval_v2/`. All tasks together take about
 2.5 hours on 4 CPU cores. `printed` compares against `reports/baseline.json`.
+
+Limited runs add `_firstN` to the summary and per-item filenames. IAM and GNHK line evaluations
+report exact transcription counts for references containing a digit, including cases where OCR
+misses every digit. Training validation reports the same metric. Full-page summaries distinguish
+lines sent to the handwriting reader from lines where its prediction was selected. In the older
+committed summaries, `lines_routed_to_handwriting` counted selections.
 
 ## Tests
 

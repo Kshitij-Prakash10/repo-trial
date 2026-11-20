@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from ocr import augment, hwdata, synth_hw
-from ocr.common import ROOT, error_counts, rates
+from ocr.common import ROOT, error_counts, numeric_line_accuracy, rates
 from ocr.handwriting import HW_NAME, MAX_TOKENS, HandwritingReader, prep_line
 
 SYSTEM_FONTS = ("/usr/share/fonts/truetype/dejavu/*.ttf", "/usr/share/fonts/truetype/liberation/*.ttf")
@@ -84,6 +84,7 @@ def evaluate(reader: HandwritingReader, sets: dict[str, list[tuple[np.ndarray, s
     for name, items in sets.items():
         preds = reader.read([np.repeat(g[..., None], 3, 2) for g, _ in items], prep=False)
         res[name] = rates([error_counts(p[0], t) for p, (_, t) in zip(preds, items)])
+        res[name]["numeric_lines"] = numeric_line_accuracy((p[0], t) for p, (_, t) in zip(preds, items))
     res["mean_cer"] = round(float(np.mean([res[k]["cer"] for k in sets])), 4)
     return res
 
@@ -111,10 +112,18 @@ def main(cfg: dict, overfit: int = 0, resume: bool = False) -> dict:
         val = {"overfit": fixed}
     else:
         v = load_real("val")
-        pick = np.random.default_rng(cfg["seed"]).permutation(len(v["iam"]))[:cfg["val_iam_lines"]]
-        val = {"iam": [v["iam"][i] for i in pick], "gnhk": v["gnhk"][:cfg["val_gnhk_lines"]]}
+        val_rng = np.random.default_rng(cfg["seed"])
+        val = {}
+        for source in ("iam", "gnhk"):
+            count = cfg[f"val_{source}_lines"]
+            # Keep historical validation sets comparable when resuming their training logs.
+            if source == "gnhk" and log is not None and "validation_sampling" not in log:
+                val[source] = v[source][:count]
+            else:
+                indices = val_rng.permutation(len(v[source]))[:count]
+                val[source] = [v[source][i] for i in indices]
     if log is None:
-        log = {"config": cfg, "overfit": overfit, "train_lines": {k: len(v) for k, v in train.items()},
+        log = {"config": cfg, "overfit": overfit, "validation_sampling": "fixed" if overfit else "seeded_lines", "train_lines": {k: len(v) for k, v in train.items()},
                "val_lines": {k: len(v) for k, v in val.items()}, "fonts": {"handwriting": len(hw_fonts), "printed": len(pr_fonts)},
                "evals": []}
         log["start"] = evaluate(reader, val)

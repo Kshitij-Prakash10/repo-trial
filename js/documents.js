@@ -222,7 +222,7 @@ const Documents = (() => {
       await refresh();
     };
     const w = Ocr.widget(box, {
-      id: "viewer-ocr", heading: "Text",
+      id: "viewer-ocr", heading: "Text", prescription: d.category === "prescription",
       idleHint: "No text has been read from this document yet. Read text finds the text so you can copy it and search for it.",
       source: isImage ? async () => blob : null,
       onRead: async (v) => {

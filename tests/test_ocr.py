@@ -267,3 +267,39 @@ def test_lines_with_numbers_or_units_are_found(text):
 @pytest.mark.parametrize("text", ["", "Review in clinic", "Dr Meera Lang", "no known allergies", "morning walk"])
 def test_plain_text_lines_are_not_flagged(text):
     assert not common.has_number_or_unit(text)
+
+
+def test_limited_evaluation_preserves_full_results(tmp_path, monkeypatch):
+    import json
+    pytest.importorskip("cv2")
+    from ocr import evaluate, evaluate_v2
+
+    monkeypatch.setattr(evaluate_v2, "RUNS", str(tmp_path / "runs"))
+    monkeypatch.setattr(evaluate_v2, "REPORTS", str(tmp_path / "reports"))
+    for limit, page in ((None, "full"), (1, "sample")):
+        evaluate_v2._save("gnhk", "test", {"page": page}, {"pages": [{"id": page}]}, limit)
+    for suffix, page in (("", "full"), ("_first1", "sample")):
+        assert json.loads((tmp_path / "reports" / f"gnhk{suffix}.json").read_text())["page"] == page
+        assert json.loads((tmp_path / "runs" / "gnhk" / f"pages_test{suffix}.jsonl").read_text())["id"] == page
+    assert evaluate._run_name("finetuned", "val", 1) != evaluate._run_name("finetuned", "val", None)
+
+
+def test_evaluation_counts_handwriting_attempts_and_selections():
+    pytest.importorskip("cv2")
+    from ocr.evaluate_v2 import _scripts
+
+    counts = _scripts({"lines": [
+        {"script": "printed", "low_confidence": False},
+        {"script": "printed", "handwriting_text": "", "low_confidence": True},
+        {"script": "handwritten", "handwriting_text": "read", "low_confidence": False},
+    ]})
+    assert counts["lines_sent_to_handwriting"] == 2
+    assert counts["handwritten_lines"] == 1
+
+
+def test_numeric_line_accuracy_uses_reference_to_include_lost_doses():
+    assert common.numeric_line_accuracy([
+        ("Insulin O Units", "Insulin 10 units"), ("25 mg", "2.5 mg"),
+        ("0.5   mL", "0.5 mL"), ("10", "no number"),
+    ]) == {"exact": 1, "total": 3, "accuracy": 0.3333}
+    assert common.numeric_line_accuracy([])["accuracy"] is None

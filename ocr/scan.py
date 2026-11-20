@@ -5,7 +5,7 @@
 
 `scan` returns the page text and one confidence (0 to 1) per text line. `Scanner.run` returns the
 full result: every line with its box, script (printed or handwritten), confidence, a
-low-confidence flag and a confirm-numbers flag (handwriting with a number or unit in it: always to be
+low-confidence flag and a confirm-numbers flag (a number or unit in any reading: always to be
 checked by a person), plus what the orientation and deskew steps did.
 
 Printed lines are read word by word by the frozen printed recogniser (ocr.pipeline, unchanged).
@@ -113,9 +113,6 @@ class Scanner:
                                     text=text, confidence=round(conf, 4), script="handwritten")
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
-            # Handwritten numbers are misread with high confidence (2.5 mg read as 25 mg), so a line that
-            # went to the handwriting reader and holds a number or a unit must be confirmed by a person,
-            # whatever its confidence.
             ln["confirm_numbers"] = confirm_numbers(ln)
         lines = [ln for ln in lines if ln["text"].strip()]
         return {"text": "\n".join(ln["text"] for ln in lines), "confidences": [ln["confidence"] for ln in lines],
@@ -126,11 +123,7 @@ class Scanner:
 
 
 def confirm_numbers(ln: dict) -> bool:
-    """A line that went to the handwriting reader must be checked by a person when ANY reading of it
-    (the one shown, the handwriting reader's or the printed reader's) holds a number or a unit: one
-    reader can turn the digits of a dose into letters while the other still sees them."""
-    if "handwriting_text" not in ln:
-        return False
+    """Inspect every reading because either the router or a reader can miss a handwritten dose."""
     return any(has_number_or_unit(ln.get(k) or "") for k in ("text", "handwriting_text", "printed_text"))
 
 
