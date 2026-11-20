@@ -283,6 +283,24 @@ def test_confirm_numbers_looks_at_every_reading(line, flag):
     assert confirm_numbers(line) is flag
 
 
+@pytest.mark.parametrize("text,flag,misread", [
+    ("Haemoglobin 13.2 g/dL 12.0-15.5", False, False),  # printed numbers: the quieter has_numbers only
+    ("1. Tab Amlodipine 5 mg OD x 30 days", False, False),
+    ("Omeprazole mg", True, True),  # a unit whose number was lost
+    ("Insulin glargine IZ Units", True, True),
+    ("Metformin SOO my twice daily", False, True),  # misread digits: flagged only when asked for
+    ("Mehta OD Clinic, Station Road", False, False),
+])
+def test_printed_lines_are_flagged_only_when_a_number_looks_lost(text, flag, misread):
+    from ocr.common import has_number_or_unit
+    from ocr.scan import confirm_numbers
+    line = {"text": text, "script": "printed"}
+    assert confirm_numbers(line) is flag
+    assert confirm_numbers(line, misread_digits=True) is misread
+    # without printed / handwritten routing the line may be handwriting: any number or unit counts
+    assert confirm_numbers(line, script_known=False) is has_number_or_unit(text)
+
+
 class _FakeOcr:
     """Stands in for OcrPipeline: one page with given printed lines (one word per line)."""
 
@@ -335,3 +353,24 @@ def test_scanner_keeps_dashes_and_flags_lost_digits(monkeypatch):
     assert dose["confirm_numbers"] is True  # the shown text lost its digits; the printed reading has them
     assert by["call the bank"]["confirm_numbers"] is False and by["call the bank"]["script"] == "handwritten"
     assert len(sc.hw.crops) == 3
+
+
+@pytest.mark.parametrize("routing", [True, False])
+def test_scanner_gives_printed_numbers_the_quieter_flag(monkeypatch, routing):
+    """Printed lines (never sent to the handwriting reader) with numbers get has_numbers, not
+    confirm_numbers; without routing nobody checked the script, so they get both."""
+    from PIL import Image
+    from ocr import scan as S
+    page = np.full((300, 600, 3), 235, np.uint8)
+    printed = [("Haemoglobin 13.2 g/dL", 0.9, [20, 30, 580, 55]), ("Omeprazole mg", 0.9, [20, 100, 400, 140]),
+               ("Dr L Example", 0.9, [20, 200, 400, 240])]
+    sc = object.__new__(S.Scanner)
+    sc.ocr, sc.hw = _FakeOcr(page, printed), (_FakeHw([]) if routing else None)
+    sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, (object() if routing else None), False
+    sc.mask_neighbours = False
+    monkeypatch.setattr(S.scriptclf, "handwritten_prob", lambda clf, crops: np.zeros(len(crops)))
+    r = sc.run(Image.new("RGB", (600, 300), "white"))
+    flags = [(ln["has_numbers"], ln["confirm_numbers"]) for ln in r["lines"]]
+    assert all(ln["script"] == "printed" for ln in r["lines"])
+    assert flags == ([(True, False), (True, True), (False, False)] if routing
+                     else [(True, True), (True, True), (False, False)])

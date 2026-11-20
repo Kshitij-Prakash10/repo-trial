@@ -298,6 +298,20 @@ def test_transparent_webp(client):
     _assert_dark_text_on_light_paper(*_scan_pixels(client, im, fmt="WEBP", lossless=True))
 
 
+def test_partly_transparent_surroundings_keep_their_colour(client):
+    """The upload path makes the same choice as scanner.convert.to_rgb: a half see-through dark border
+    around an opaque page stays dark (it is not lightened towards white), transparent pixels turn white."""
+    import numpy as np
+    from scanner.api import to_rgb8
+    a = np.zeros((H, W, 4), np.uint8)
+    a[..., :3], a[..., 3] = 20, 128
+    a[50:350, 50:250] = (245, 245, 240, 255)
+    a[0, 0] = (0, 0, 0, 0)
+    out = to_rgb8(Image.fromarray(a, "RGBA"))
+    assert out.getpixel((10, 10)) == (20, 20, 20) and out.getpixel((100, 100)) == (245, 245, 240)
+    assert out.getpixel((0, 0)) == (255, 255, 255)
+
+
 def test_to_rgb8_values():
     import numpy as np
     from scanner.api import to_rgb8

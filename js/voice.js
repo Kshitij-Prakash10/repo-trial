@@ -184,8 +184,7 @@ const Voice = (() => {
     const docs = Documents.list();
     const want = preselect || sel.value;
     const keep = docs.some((d) => d.id === want) ? want : "";
-    sel.innerHTML = '<option value="">No document</option>' + docs.map((d) =>
-      `<option value="${esc(d.id)}"${d.id === keep ? " selected" : ""}>${esc(d.title)}</option>`).join("");
+    sel.innerHTML = docOptions(keep);
     if (keep) preselect = "";
   }
 

@@ -46,6 +46,13 @@ NOISE_MAX_DPRIME = 0.05
 NOISE_MAX_LOG_TEXTURE_RATIO = 0.1
 NOISE_MAX_STEP_Z = 4.0
 COHERENCE_SIDE = 320  # px, long side of the image the noise guard looks at
+# Blank guard (see looks_blank()): a quad is rejected when no side has a real colour / brightness step
+# against the outside AND the inside is nearly flat. On plain paper-coloured photos with a lighting
+# gradient the found quads had a largest step <= 0.010 and inside texture <= 0.013; every synthetic
+# photo with a quad (train, val, test, ood: 625) has a largest step >= 0.013 and inside texture
+# >= 0.046 (docs/scanner.md). Both must hold, so a blank page on a plain desk with a real edge stays.
+BLANK_MAX_STEP = 0.03  # mean RGB step (0..1) across the strongest side
+BLANK_MAX_TEXTURE = 0.03  # mean gradient magnitude inside the quad (luminance 0..1, at COHERENCE_SIDE)
 _lock = threading.Lock()
 log = logging.getLogger("healthdiary.scanner")
 
@@ -111,8 +118,9 @@ def coherence(img: Image.Image, q: np.ndarray) -> dict:
     "dprime": distance of mean colour inside vs outside over the pooled standard deviation;
     "texture_ratio": mean gradient magnitude inside over outside; "step_z": the largest, over the
     4 sides, of |mean colour step across the side| over its standard error along the side (a real
-    page edge is a step that holds all along the side). None where it cannot be measured (the quad
-    fills the photo, or its sides lie outside it)."""
+    page edge is a step that holds all along the side); "step": the largest |mean colour step| itself
+    (RGB, 0..1); "texture_inside": mean gradient magnitude inside. None where it cannot be measured
+    (the quad fills the photo, or its sides lie outside it)."""
     W, H = img.size
     s = min(1.0, COHERENCE_SIDE / max(W, H))
     small = img.resize((max(8, round(W * s)), max(8, round(H * s))), Image.BOX, reducing_gap=3.0) if s < 1 else img
@@ -121,7 +129,7 @@ def coherence(img: Image.Image, q: np.ndarray) -> dict:
     qs = np.asarray(q, float) * np.array([small.size[0] / W, small.size[1] / H])
     c0 = qs.mean(0)
     offs = np.arange(1.5, 6.6, 1.0)
-    zs = []
+    zs, steps = [], []
     for i in range(4):
         p0, p1 = qs[i], qs[(i + 1) % 4]
         L = float(np.linalg.norm(p1 - p0))
@@ -145,11 +153,13 @@ def coherence(img: Image.Image, q: np.ndarray) -> dict:
         m = dj.mean(0)
         se = np.sqrt(((dj - m) ** 2).sum(1).mean() / len(dj))
         zs.append(float(np.linalg.norm(m) / (se + 1e-6)))
+        steps.append(float(np.linalg.norm(m)))
     inside = poly_mask(qs, w, h) >= 0.5
-    out = {"dprime": None, "texture_ratio": None, "step_z": max(zs) if zs else None}
+    lum = a.mean(2)
+    tex = np.hypot(ndi.sobel(lum, 0), ndi.sobel(lum, 1))
+    out = {"dprime": None, "texture_ratio": None, "step_z": max(zs) if zs else None,
+           "step": max(steps) if steps else None, "texture_inside": float(tex[inside].mean()) if inside.any() else None}
     if inside.any() and (~inside).mean() > 0.02:
-        lum = a.mean(2)
-        tex = np.hypot(ndi.sobel(lum, 0), ndi.sobel(lum, 1))
         sd = np.sqrt((a[inside].var(0).mean() + a[~inside].var(0).mean()) / 2)
         out["dprime"] = float(np.linalg.norm(a[inside].mean(0) - a[~inside].mean(0)) / (sd + 1e-6))
         out["texture_ratio"] = float(tex[inside].mean() / (tex[~inside].mean() + 1e-6))
@@ -163,6 +173,14 @@ def looks_like_noise(c: dict) -> bool:
     return (c["dprime"] < NOISE_MAX_DPRIME
             and abs(np.log(max(c["texture_ratio"], 1e-6))) < NOISE_MAX_LOG_TEXTURE_RATIO
             and (c["step_z"] is None or c["step_z"] < NOISE_MAX_STEP_Z))
+
+
+def looks_blank(c: dict) -> bool:
+    """True when no side of the quad has a real step against the outside and the inside is nearly
+    flat: a plain surface, such as paper-coloured blank under uneven light (see BLANK_* above)."""
+    if c.get("step") is None or c.get("texture_inside") is None:
+        return False
+    return c["step"] < BLANK_MAX_STEP and c["texture_inside"] < BLANK_MAX_TEXTURE
 
 
 def detect_from_prob(img: Image.Image, prob: np.ndarray, refine: bool = True) -> dict:
@@ -195,6 +213,9 @@ def detect_from_prob(img: Image.Image, prob: np.ndarray, refine: bool = True) ->
         if looks_like_noise(coh):
             found = False
             out["rejected"] = "no coherent page edge: inside and outside look the same (noise)"
+        elif looks_blank(coh):
+            found = False
+            out["rejected"] = "no page edge anywhere: a plain surface without a colour or brightness step"
     out.update(corners=q, confidence=float(np.clip(conf, 0, 1)), page_found=found)
     return out
 
@@ -253,4 +274,4 @@ def scan(image: Image.Image, mode: str = "gray") -> dict:
 
 
 __all__ = ["scan", "detect", "detect_from_prob", "load_model", "otsu_prob", "predict_prob", "coherence",
-           "looks_like_noise"]
+           "looks_like_noise", "looks_blank"]

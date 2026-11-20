@@ -17,6 +17,10 @@ DATASETS = ("funsd", "sroie", "cord")
 # "TOTAL"), so text from these datasets is compared without case. FUNSD and CORD keep case.
 CASE_INSENSITIVE = ("sroie",)
 SEGMENT_GAP = 2.0  # a horizontal gap wider than this many line heights splits a line into segments
+# Fine-tuned weights (ocr/models.py loads them; ocr/api.py checks for them without importing torch).
+MODEL_DIR = os.path.join(ROOT, "models", "ocr")
+DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
+REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 
 
 def load_pages(dataset: str, split: str) -> list[dict]:
@@ -177,12 +181,77 @@ def prf(tp: int, n_pred: int, n_true: int) -> dict:
 
 # ---------------------------------------------------------------- numbers and units
 
-_UNITS = (r"mcg|µg|ug|mg|g|kg|ml|l|dl|mmol|mol|iu|units?|tabs?|tablets?|caps?|capsules?|puffs?|drops?|"
-          r"mmHg|bpm|od|bd|tds|qds|prn|nocte|mane")
-_NUMBER_OR_UNIT = re.compile(rf"\d|%|(?<![A-Za-z])(?:{_UNITS})(?![A-Za-z])", re.IGNORECASE)
+# Dose and measurement units, lower case. Many of them are also words, initials or abbreviations
+# ("Dr L Example", "BD Diagnostics", "Department of Mol Biology", "Tab Pharmacy"), so a unit counts only
+# when it is written next to a number (or next to what a reader makes of one, see _NUMBER_LIKE), or when
+# it is spelt in its usual case (_USUAL_SPELLING; mL and mg, but not ML or MG). The short ones that
+# collide with ordinary words or initials in every case (l, g, mol, iu, unit(s)) count only next to a number.
+_UNIT_WORDS = frozenset((
+    "mcg", "µg", "ug", "mg", "g", "kg", "ml", "l", "dl", "mmol", "mol", "miu", "iu", "unit", "units",
+    "tab", "tabs", "tablet", "tablets", "cap", "caps", "capsule", "capsules", "puff", "puffs", "drop", "drops",
+    "mmhg", "bpm", "od", "bd", "tds", "qds", "prn", "nocte", "mane"))
+_USUAL_SPELLING = frozenset((
+    "mcg", "µg", "ug", "mg", "kg", "ml", "mL", "dl", "dL", "mmol", "mIU", "mmHg", "bpm",
+    "tab", "tabs", "tablet", "tablets", "cap", "caps", "capsule", "capsules", "puff", "puffs", "drop", "drops",
+    "od", "bd", "tds", "qds", "prn", "nocte", "mane"))
+# A number, or a number whose digits a reader turned into look-alike letters (O/o for 0, S for 5, Z for 2,
+# I/l/| for 1, B for 8: "Z.S", "SOO", "lO", "O"), or a number word.
+_NUMBER_LIKE = re.compile(r"[0-9OoSZIlB|]+(?:[.,][0-9OoSZIlB|]+)*")
+_NUMBER_WORDS = frozenset(("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "half"))
+_EDGE_PUNCT = "()[]{}:;,.\"'"
+
+
+def _parts(text: str) -> list[str]:
+    """Whitespace-separated tokens without edge punctuation, compound units split at "/" (mmol/L)."""
+    out = []
+    for chunk in (text or "").split():
+        out.extend(p for p in chunk.strip(_EDGE_PUNCT).split("/") if p)
+    return out
+
+
+def _number_like(part: str) -> bool:
+    return bool(_NUMBER_LIKE.fullmatch(part)) or part.lower() in _NUMBER_WORDS
 
 
 def has_number_or_unit(text: str) -> bool:
-    """True when the text holds a digit, a percent sign or a dose / measurement unit as a word of its own."""
-    return bool(_NUMBER_OR_UNIT.search(text or ""))
+    """True when the text holds a digit, a percent sign or a dose / measurement unit as a word of its own.
+
+    A unit counts when it follows a number-like token or another unit that counts ("2.5 mg", "10 units",
+    "1 tab od", "InSulin O Units", "S ML") or when it is spelt in its usual case ("Omeprazole mg",
+    "take two tabs nocte"). Unit-like words on their own do not count: "Dr L Example", "Mehta OD Clinic",
+    "Test Result Units Reference range"."""
+    text = text or ""
+    if any(c.isdigit() for c in text) or "%" in text:
+        return True
+    prev_counts = False  # the previous token is number-like or a unit that counted
+    for part in _parts(text):
+        is_unit = part.isalpha() and part.lower() in _UNIT_WORDS
+        if is_unit and (part in _USUAL_SPELLING or prev_counts):
+            return True
+        prev_counts = _number_like(part)
+    return False
+
+
+def number_lost(text: str) -> bool:
+    """True when a unit counts (see has_number_or_unit) but the text has no digit: the number that went
+    with it was probably lost or misread ("Omeprazole mg", "Insulin glargine IZ Units")."""
+    return has_number_or_unit(text) and not any(c.isdigit() for c in text or "")
+
+
+# Misread units that a printed reader makes of mg, mL and mcg ("Metformin SOO my").
+_MISREAD_UNITS = frozenset(("my", "rng", "mq", "mI", "rnl", "rnL", "rncg", "mcq", "rnmol"))
+_NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words made of look-alike letters only
+
+
+def has_misread_number(text: str) -> bool:
+    """True when a token of look-alike letters, with no real digit or with digits mixed with look-alike
+    letters, stands right before a unit or a misread unit ("Metformin SOO my", "Atorvastatin ZO mg").
+    Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
+    parts = _parts(text)
+    for a, b in zip(parts, parts[1:]):
+        if not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a) or a.lower() in _NOT_A_NUMBER:
+            continue
+        if b in _MISREAD_UNITS or (b.isalpha() and b.lower() in _UNIT_WORDS):
+            return True
+    return False
 

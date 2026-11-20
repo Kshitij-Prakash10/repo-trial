@@ -6,14 +6,18 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                       deskew   straighten slightly tilted text before reading (off by default; only the
                                "v2" pipeline can do it, with "v1" the flag is accepted and ignored)
                       -> {"text",
-                          "lines": [{"text", "box", "confidence", "low_confidence", "confirm_numbers", "script"}],
+                          "lines": [{"text", "box", "confidence", "low_confidence", "confirm_numbers", "script",
+                                     "has_numbers"}],
                           "words": [{"text", "confidence", "box", "line"}],
                           "page": {"width", "height"}, "seconds", "models", "pipeline": "v2" | "v1",
                           "preprocessing": {"quarter_turns", "orientation_confidence", "deskew_degrees",
                                             "flip_check", "deskew_requested", "deskew_applied"}}
                       Boxes are [x0, y0, x1, y1] in pixels of the page; confidences are 0..1.
-                      confirm_numbers: a reading of the line holds a number or a dose unit,
-                      so a person must check it against the page whatever its confidence.
+                      confirm_numbers: a person must check the line's numbers against the page whatever
+                      its confidence: it went to the handwriting reader and a reading holds a number or
+                      dose unit, or a unit lost its number, or (v1, which cannot tell print from
+                      handwriting) the text holds a number or unit.
+                      has_numbers: the shown text holds a number or unit (quieter; also printed lines).
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",
                        "capabilities": {"handwriting", "orientation", "deskew"}, "pipeline_reason"?: str}
@@ -51,9 +55,10 @@ from typing import Any, Optional, Tuple
 from flask import Blueprint, jsonify, request
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit  # torch-free: the status check must not import torch
+
 ocr_bp = Blueprint("ocr", __name__)
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MAX_BYTES = 10 * 1024 * 1024  # upload limit, bytes (same as /api/scan)
 MAX_PIXELS = 50_000_000  # decoded size limit for JPEG, pixels (48 MP phone photos)
 MAX_PIXELS_OTHER = 25_000_000  # the same for PNG and WebP (a small file can declare a huge image)
@@ -70,10 +75,6 @@ FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO: JPEG variant some phones write
 PACKAGES = ("torch", "doctr")  # import names of the optional dependencies
 SETUP_HINT = "pip install -r requirements-ocr.txt"
 
-# The same files ocr/models.py uses; named here so that the status check does not import torch.
-MODEL_DIR = os.path.join(ROOT, "models", "ocr")
-DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
-REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 PRETRAINED = {"detector": "fast_base-*.pt", "recogniser": "crnn_mobilenet_v3_large_pt-*.pt"}  # docTR cache
 
 # What the v2 pipeline (ocr.scan.Scanner) needs on top of v1: the same files that ocr/orientation.py,
@@ -396,14 +397,15 @@ def _read_upload():
 
 
 def _line(ln: dict) -> dict:
-    """Preserve alternative-reader warnings and check the displayed text, including v1 results."""
-    from ocr.common import has_number_or_unit
+    """The line as the API returns it. v2 lines carry their own confirm_numbers (ocr.scan.confirm_numbers);
+    v1 lines, whose script nobody checked, are flagged whenever the text holds a number or unit."""
     conf = ln["confidence"]
     low = ln.get("low_confidence")
+    numbers = has_number_or_unit(ln["text"])
     return {"text": ln["text"], "box": ln["box"], "confidence": conf,
             "low_confidence": bool(conf < LOW_CONFIDENCE) if low is None else bool(low),
-            "confirm_numbers": bool(ln.get("confirm_numbers")) or has_number_or_unit(ln["text"]),
-            "script": ln.get("script") or "printed"}
+            "confirm_numbers": bool(ln["confirm_numbers"]) if "confirm_numbers" in ln else numbers,
+            "script": ln.get("script") or "printed", "has_numbers": numbers}
 
 
 def _preprocessing(pre: dict) -> dict:

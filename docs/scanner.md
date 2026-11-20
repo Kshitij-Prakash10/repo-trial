@@ -162,10 +162,19 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
 ## Guards and image modes (scanner/infer.py, scanner/convert.py)
 
 - **Image modes.** `scan` converts its input with `scanner.convert.to_rgb` (also used by the OCR
-  pipeline as `ocr.pipeline.to_rgb`): transparent areas become white, 16-bit grey (`I;16`) is scaled from
+  pipeline as `ocr.pipeline.to_rgb`): fully transparent areas become white, partly transparent ones
+  keep their own colour (`alpha_to_rgb`; an image with no opaque pixel at all is put on white), 16-bit
+  grey (`I;16`) is scaled from
   0..65535 to 0..255, float and 32-bit grey are scaled by their largest value, and negative floats are
   shifted so the lowest value is black. A plain `convert("RGB")` made transparent images black and
   16-bit scans white. `enhance(..., "color")` no longer turns a blank (flat) image black.
+  Compositing partly transparent pixels on white (as first done) lightened a photo's half see-through
+  surroundings and hid the page edge: on 20 synthetic test photos with alpha 128 outside the page,
+  IoU >= 0.9 0.40 and mean IoU 0.856, against 0.75 and 0.907 when their colour is kept (the same as a
+  plain `convert("RGB")`). Compositing them on the median colour of the opaque border instead gave
+  0.80 / 0.921 there but lost a page (found 1.00 -> 0.90) when the see-through surroundings were black,
+  so the simpler rule was kept. Fully transparent cut-outs and 16-bit grey are unchanged (0.95 / 0.953
+  and 0.50 / 0.751).
 - **Tiny images.** A photo whose shorter side is under 32 px (`MIN_SIDE`) is never a page.
 - **Noise guard.** Uniform random RGB noise used to reach confidence ~0.63 and `page_found=True`. A quad
   that passes the confidence test is now rejected when the photo inside and outside it is
@@ -178,8 +187,28 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
   0.887; ood: 46/80 found, mean IoU 0.673). Its effect on real photos without a document (DocCorner
   negatives) has not been measured, because those photos are not in the repository; the guard can only
   turn "found" into "not found".
+- **Blank guard.** A plain paper-coloured photo with a lighting gradient passed the noise guard: the
+  gradient is a small but coherent step along the quad's sides, and inside and outside differ in mean
+  colour. `looks_blank` rejects a quad when the strongest side's mean colour step is below 0.03
+  (`BLANK_MAX_STEP`, RGB 0..1) and the inside texture is below 0.03 (`BLANK_MAX_TEXTURE`, mean gradient
+  at 320 px). Found quads on paper blanks had a step <= 0.010 and texture <= 0.013; all 625 synthetic
+  photos with a quad (train, val, test, ood) have a step >= 0.013 and texture >= 0.046. Paper-coloured
+  blanks with a lighting gradient reported as a page: 6/12 -> 0/12 (and 6/12 -> 0/12 on a held-out
+  seed); synthetic desk backgrounds without a page: 4/50 -> 3/50 (the three left have a real colour
+  step); white, grey and dark blanks, noise and tiny images: 0 before and after. Synthetic test and
+  ood: identical photo for photo. The effect on DocCorner and SmartDoc cannot be measured here (the
+  photos are not in the repository), and the stored per-photo results cannot show it either, because
+  the guard needs the photo.
 
 ## Recall at MIN_CONFIDENCE 0.60, and corner bloat: what the stored results allow
+
+- **A lower threshold is not recommended yet.** From the stored DocCorner validation results (880
+  pages, 120 photos without a document; the guards above cannot be applied to them), pages found /
+  false alarms: 0.50: 97.8 % / 22.5 %; 0.55: 96.8 % / 12.5 %; 0.60: 94.4 % / 4.2 %. The best lower
+  candidate, 0.55, triples the false alarms on validation, so 0.60 stays. Test, looked at once for
+  0.55: found 87.2 % (78.7 % at 0.60), false alarms 11.3 % (6.7 %); SmartDoc found 95.9 % (90.5 %). At
+  0.60, 99.1 % of the test pages with IoU >= 0.9 are still found: most pages no longer reported had a
+  poor outline. Revisit with the guards' features stored per real photo (plan below).
 
 `python reports/scanner_recall/study.py` (output in `reports/scanner_recall/study.txt`) uses only the
 committed per-photo results of the shipped model; the photos are not in the repository.

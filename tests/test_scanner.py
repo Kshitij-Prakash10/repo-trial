@@ -171,6 +171,35 @@ def test_noise_guard_keeps_a_real_page_and_rejects_noise(sample):
     assert not infer.looks_like_noise(infer.coherence(noise, full))
 
 
+def _paper_gradient(seed=2026):
+    """Plain paper-coloured photo with a lighting gradient and mild sensor noise (no page edge)."""
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:600, 0:800].astype(np.float32)
+    light = 0.75 + 0.25 * (xx + yy) / (800 + 600)
+    im = np.array([245.0, 235, 210])[None, None] * light[..., None] + rng.normal(0, 2, (600, 800, 1))
+    return np.clip(im, 0, 255).astype(np.uint8)
+
+
+def test_blank_guard_rejects_a_plain_surface_and_keeps_real_edges(sample):
+    q = np.array([[200, 150], [600, 150], [600, 450], [200, 450]], float)
+    c = infer.coherence(Image.fromarray(_paper_gradient()), q)
+    assert c["step"] < infer.BLANK_MAX_STEP and infer.looks_blank(c)  # the gradient alone is no edge
+    a = _paper_gradient()
+    a[:150], a[450:], a[:, :200], a[:, 600:] = 90, 90, 90, 90  # a blank page on a darker desk: kept
+    assert not infer.looks_blank(infer.coherence(Image.fromarray(a), q))
+    assert not infer.looks_blank(infer.coherence(sample.image, sample.corners))  # a real page with text
+    full = np.array([[0, 0], [800, 0], [800, 600], [0, 600]], float)
+    assert not infer.looks_blank(infer.coherence(Image.fromarray(_paper_gradient()), full))  # cannot be judged
+
+
+def test_blank_paper_photo_is_not_reported_as_a_page():
+    """Even when the classifier is sure of a page, a quad on a plain surface is rejected."""
+    prob = np.zeros((30, 40))
+    prob[7:23, 10:30] = 1.0  # a classifier that is sure of a page in the middle
+    res = infer.detect_from_prob(Image.fromarray(_paper_gradient()), prob, refine=False)
+    assert res["page_found"] is False and "plain surface" in res.get("rejected", "")
+
+
 # ---------------------------------------------------------------- image modes (scanner.convert)
 
 def test_to_rgb_composites_transparency_on_white():
@@ -184,6 +213,26 @@ def test_to_rgb_composites_transparency_on_white():
     p = Image.new("P", (2, 2), 0)
     p.info["transparency"] = 0
     assert to_rgb(p).getpixel((0, 0)) == (255, 255, 255)
+
+
+def test_to_rgb_keeps_the_colour_of_partly_transparent_pixels():
+    """A photo whose surroundings are partly see-through keeps their colour (compositing them on white
+    hid the page edge: 20 synthetic test photos, IoU >= 0.9 fell from 0.75 to 0.40). Fully transparent
+    pixels still become white, and a layer with no opaque pixel at all is still shown over white."""
+    from scanner.convert import to_rgb
+    a = np.zeros((6, 6, 4), np.uint8)
+    a[..., :3] = (40, 50, 60)  # a dark desk ...
+    a[..., 3] = 128  # ... half see-through
+    a[2:4, 2:4] = (240, 240, 230, 255)  # the opaque page
+    a[0, 0] = (0, 0, 0, 0)  # a fully transparent pixel
+    out = to_rgb(Image.fromarray(a, "RGBA"))
+    assert out.getpixel((5, 5)) == (40, 50, 60) and out.getpixel((2, 2)) == (240, 240, 230)
+    assert out.getpixel((0, 0)) == (255, 255, 255)
+    la = np.zeros((4, 4, 2), np.uint8)
+    la[..., 0], la[..., 1] = 30, 100
+    la[1, 1] = (250, 255)
+    assert to_rgb(Image.fromarray(la, "LA")).getpixel((3, 3)) == (30, 30, 30)
+    assert to_rgb(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (127, 127, 127)  # no opaque pixel
 
 
 def test_to_rgb_scales_16_bit_and_keeps_negative_floats():

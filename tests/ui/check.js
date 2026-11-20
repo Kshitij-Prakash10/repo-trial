@@ -517,8 +517,11 @@ async function main() {
   // A synthetic prescription read by the "v2" pipeline: [text, confirm_numbers]
   const V2_LINES = [["SYNTHETIC CLINIC", false], ["Amoxicillin 25 mg", true], ["1 tab twice daily", true],
     ["<img src=x id=xss-probe> 5 ml", true], ["Review in 10 days", true], ["Dr Example", false]];
+  // A synthetic printed lab report read by "v2": no line went to the handwriting reader.
+  const V2_PRINTED = [["SYNTHETIC LAB REPORT", false], ["Haemoglobin 13.5 g/dL", false], ["Sodium 139 mmol/L", false],
+    ["Dr L Example", false]];
   const V2_CAPS = { handwriting: true, orientation: true, deskew: true };
-  let ocrMode = "ok"; // ok | low | empty | error | v2 | v2low
+  let ocrMode = "ok"; // ok | low | empty | error | v2 | v2low | v2printed
   let ocrRequests = [];
   let ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
   const mockOcr = async (p) => {
@@ -531,10 +534,11 @@ async function main() {
       if (ocrMode === "error") {
         return r.fulfill({ status: 503, contentType: "application/json", body: '{"error":"The text-reading models could not be loaded (mock)."}' });
       }
-      if (ocrMode === "v2" || ocrMode === "v2low") {
+      if (ocrMode === "v2" || ocrMode === "v2low" || ocrMode === "v2printed") {
         const conf = ocrMode === "v2low" ? 0.42 : 0.95;
-        const lines = V2_LINES.map(([t, flag], i) => ({ text: t, box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf,
-          low_confidence: conf < 0.5, confirm_numbers: flag, script: flag ? "handwritten" : "printed" }));
+        const lines = (ocrMode === "v2printed" ? V2_PRINTED : V2_LINES).map(([t, flag], i) => ({ text: t,
+          box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf, low_confidence: conf < 0.5, confirm_numbers: flag,
+          script: flag ? "handwritten" : "printed", has_numbers: flag || /\d/.test(t) }));
         const words = lines.flatMap((ln, i) => ln.text.split(/\s+/).map((t) => ({ text: t, confidence: conf, box: [10, 10, 50, 30], line: i })));
         const deskew = formField(r.request().postDataBuffer() || Buffer.alloc(0), "deskew") === "1";
         return r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
@@ -861,6 +865,82 @@ async function main() {
     ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
     await unmockOcr(page);
     await unmockScanner(page);
+  });
+
+  await step("read text (mocked v2): printed numbers get a quiet note, not the numbers warning", async () => {
+    await mockScanner(page);
+    await mockOcr(page);
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" }, pipeline: "v2", capabilities: V2_CAPS };
+    ocrMode = "v2printed";
+    await page.click('a[data-view="dashboard"]');
+    await page.click('a[data-view="scan"]');
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await scanIdle(page);
+    await readEnabled(page, "#scan-ocr-read");
+    await page.click("#scan-ocr-read");
+    await textShown(page, "#scan-ocr");
+    assert(await page.isHidden("#scan-ocr-confirm"), "no numbers warning for a printed page");
+    const quiet = await page.textContent("#scan-ocr-numbers");
+    assert(await page.isVisible("#scan-ocr-numbers") && /Numbers were read on 2 printed lines/.test(quiet), quiet);
+    assert(!(await page.evaluate(() => document.querySelector("#scan-ocr-numbers").classList.contains("warn"))), "quiet note, not a warning");
+    assert(!/check them against the page/.test(await page.textContent('#scan-ocr [data-ocr="live"]')), "no warning announced");
+    await page.click("#scan-next");
+    await page.waitForSelector("#scan-save:not([hidden])");
+    await page.selectOption("#scan-category", "prescription");
+    const saveNote = await page.textContent("#scan-save-text");
+    assert(saveNote.includes("Check for any missing lines.") && !/numbers or doses/.test(saveNote), saveNote);
+    await page.click("#scan-discard");
+    await page.waitForSelector("#scan-step-photo:not([hidden])");
+    ocrMode = "ok";
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
+    await unmockOcr(page);
+    await unmockScanner(page);
+  });
+
+  await step("save without scanning: the photo carries no text, and the prescription reminder comes with text read later in View", async () => {
+    // No scanner on the server: no text can be read before saving, so there is nothing to remind about yet.
+    await mockOcr(page);
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" }, pipeline: "v2", capabilities: V2_CAPS };
+    ocrMode = "v2printed";
+    await page.route("**/api/scan/status", (r) => r.fulfill({ status: 404, contentType: "application/json", body: '{"error":"The scanner is not installed on this server."}' }));
+    await page.click('a[data-view="dashboard"]');
+    await page.click('a[data-view="scan"]');
+    await page.waitForFunction(() => /not installed/.test(document.querySelector("#scan-avail").textContent));
+    await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+    await page.waitForSelector("#scan-save:not([hidden])");
+    assert(/not scanned/.test(await page.textContent("#scan-save-cap")), "raw path");
+    await page.selectOption("#scan-category", "prescription");
+    assert(await page.isHidden("#scan-save-text") && await page.isHidden("#scan-ocr"), "a photo saved as it is carries no text");
+    await page.fill("#scan-title", "Prescription photo as is");
+    await page.click("#scan-save-btn");
+    await page.waitForSelector("#scan-done:not([hidden])");
+    await page.click("#scan-view-docs");
+    await page.waitForSelector('.doc-card .doc-title:text("Prescription photo as is")');
+    const raw = await page.evaluate(() => Documents.list().find((d) => d.title === "Prescription photo as is"));
+    assert(raw.category === "prescription" && !raw.text && !raw.ocr, JSON.stringify(raw));
+    // Its text is read later in the viewer: the reminder appears with it, and stays after reopening.
+    await page.locator(".doc-card", { hasText: "Prescription photo as is" }).locator('.card-actions [data-act="view"]').click();
+    await readEnabled(page, "#viewer-ocr-read");
+    assert(await page.isHidden("#viewer-ocr-confirm"), "no reminder before any text");
+    await page.click("#viewer-ocr-read");
+    await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+    assert((await page.textContent("#viewer-ocr-confirm")).includes("Check for any missing lines."), "prescription reminder after reading");
+    assert(/2 printed lines/.test(await page.textContent("#viewer-ocr-numbers")), "quiet note in the viewer");
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('#viewer-extra [data-ocr="done"]').textContent));
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    const read = await page.evaluate(() => Documents.list().find((d) => d.title === "Prescription photo as is"));
+    assert(read.text.includes("Sodium 139") && read.ocr.printedNumbers === 2 && read.ocr.confirmNumbers === null, JSON.stringify(read.ocr));
+    await page.locator(".doc-card", { hasText: "Prescription photo as is" }).locator('.card-actions [data-act="view"]').click();
+    await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+    assert((await page.textContent("#viewer-ocr-confirm")).includes("Check for any missing lines.")
+      && /2 printed lines/.test(await page.textContent("#viewer-ocr-numbers")), "reminder and note kept with the document");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    await page.unroute("**/api/scan/status");
+    ocrMode = "ok";
+    ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
+    await unmockOcr(page);
   });
 
   await step("read text with the real OCR (only when the server reports it available)", async () => {

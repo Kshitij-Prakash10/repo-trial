@@ -152,9 +152,12 @@ const UI = (() => {
     return new Blob([bytes], { type });
   }
 
+  /** How to reach the local server (scanner and OCR messages). */
+  const SERVER_HINT = "Start the local server with `python server.py` and open http://127.0.0.1:8000.";
+
   /** Emit an app-wide event on document. */
   const emit = (name, detail) => document.dispatchEvent(new CustomEvent(name, { detail }));
 
   return { $, $$, esc, today, fmtDate, fmtBytes, fmtDuration, icon, toast, thumbnail, download,
-    openViewer, closeViewer, b64ToBlob, emit };
+    openViewer, closeViewer, b64ToBlob, emit, SERVER_HINT };
 })();
