@@ -18,7 +18,6 @@ reading, while still reading most handwriting with the handwriting model.
 """
 from __future__ import annotations
 
-import os
 import re
 import time
 

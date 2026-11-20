@@ -17,6 +17,10 @@ DATASETS = ("funsd", "sroie", "cord")
 # "TOTAL"), so text from these datasets is compared without case. FUNSD and CORD keep case.
 CASE_INSENSITIVE = ("sroie",)
 SEGMENT_GAP = 2.0  # a horizontal gap wider than this many line heights splits a line into segments
+# Fine-tuned weights (ocr/models.py loads them; ocr/api.py checks for them without importing torch).
+MODEL_DIR = os.path.join(ROOT, "models", "ocr")
+DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
+REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 
 
 def load_pages(dataset: str, split: str) -> list[dict]:

@@ -85,7 +85,6 @@ def _poly_crop(img: np.ndarray, poly: list) -> np.ndarray | None:
 
 def load_words(split: str, limit: int | None = None, per_printed: int = 12000, seed: int = 2026) -> dict[str, list]:
     """Prepared crops per source: {"gnhk_hw", "iam_hw", "gnhk_pr", "sroie_pr", "cord_pr"} for train / val / test."""
-    from PIL import Image
     rng = np.random.default_rng(seed)
     out: dict[str, list] = {k: [] for k in ("gnhk_hw", "iam_hw", "gnhk_pr", "sroie_pr", "cord_pr")}
     for page in hwdata.gnhk_pages(split)[:limit]:

@@ -7,9 +7,8 @@
  * Uses UI, FilesDB, Ocr, Documents. Interface: docs/PLAN.md ("Interface: the scanner").
  */
 const Scan = (() => {
-  const { $, $$, fmtBytes, fmtDate, today } = UI;
+  const { $, $$, fmtBytes, fmtDate, today, SERVER_HINT } = UI;
   const MAX_PHOTO = 10 * 1024 * 1024; // bytes, the scanner's limit
-  const SERVER_HINT = "Start the local server with `python server.py` and open http://127.0.0.1:8000.";
   const STEPS = ["photo", "check", "save"];
   const HEADINGS = { photo: "#scan-h-photo", check: "#scan-h-check", save: "#scan-h-save", done: "#scan-h-done" };
   const CORNER_NAMES = ["Top-left", "Top-right", "Bottom-right", "Bottom-left"];

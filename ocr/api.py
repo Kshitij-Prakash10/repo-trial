@@ -55,9 +55,10 @@ from typing import Any, Optional, Tuple
 from flask import Blueprint, jsonify, request
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit  # torch-free: the status check must not import torch
+
 ocr_bp = Blueprint("ocr", __name__)
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MAX_BYTES = 10 * 1024 * 1024  # upload limit, bytes (same as /api/scan)
 MAX_PIXELS = 50_000_000  # decoded size limit for JPEG, pixels (48 MP phone photos)
 MAX_PIXELS_OTHER = 25_000_000  # the same for PNG and WebP (a small file can declare a huge image)
@@ -74,10 +75,6 @@ FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO: JPEG variant some phones write
 PACKAGES = ("torch", "doctr")  # import names of the optional dependencies
 SETUP_HINT = "pip install -r requirements-ocr.txt"
 
-# The same files ocr/models.py uses; named here so that the status check does not import torch.
-MODEL_DIR = os.path.join(ROOT, "models", "ocr")
-DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
-REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 PRETRAINED = {"detector": "fast_base-*.pt", "recogniser": "crnn_mobilenet_v3_large_pt-*.pt"}  # docTR cache
 
 # What the v2 pipeline (ocr.scan.Scanner) needs on top of v1: the same files that ocr/orientation.py,
@@ -402,7 +399,6 @@ def _read_upload():
 def _line(ln: dict) -> dict:
     """The line as the API returns it. v2 lines carry their own confirm_numbers (ocr.scan.confirm_numbers);
     v1 lines, whose script nobody checked, are flagged whenever the text holds a number or unit."""
-    from ocr.common import has_number_or_unit
     conf = ln["confidence"]
     low = ln.get("low_confidence")
     numbers = has_number_or_unit(ln["text"])

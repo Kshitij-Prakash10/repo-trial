@@ -20,7 +20,7 @@
  * quieter one-line note (ocr.printedNumbers, a count) instead of the warning.
  */
 const Ocr = (() => {
-  const { $, esc, icon, fmtBytes } = UI;
+  const { $, esc, icon, fmtBytes, SERVER_HINT } = UI;
   const PRESCRIPTION_CHECK = "Compare every medicine name, dose and unit with the prescription image. Check for any missing lines.";
   const MAX_BYTES = 10 * 1024 * 1024; // bytes, the server's limit for one image
   const MAX_CHARS = 200000; // characters kept with a document
@@ -29,7 +29,6 @@ const Ocr = (() => {
   const CONFIRM_KEPT = 20; // flagged lines stored with the document
   const CONFIRM_LINE_CHARS = 120; // characters kept of each flagged line
   const NO_CAPS = { handwriting: false, orientation: false, deskew: false };
-  const SERVER_HINT = "Start the local server with `python server.py` and open http://127.0.0.1:8000.";
 
   /**
    * Whether the server can read text: { available: bool, reason: string, capabilities: { handwriting,

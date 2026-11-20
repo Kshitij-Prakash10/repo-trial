@@ -5,13 +5,10 @@ import os
 
 import torch
 
-from ocr.common import ROOT
+from ocr.common import DET_CKPT, MODEL_DIR, REC_CKPT  # noqa: F401  (models.DET_CKPT etc. are used elsewhere)
 
-MODEL_DIR = os.path.join(ROOT, "models", "ocr")
 DET_ARCH = "fast_base"  # chosen on validation, see NOTES.md
 REC_ARCH = "crnn_mobilenet_v3_large"
-DET_CKPT = os.path.join(MODEL_DIR, "det_fast_base_ft.pt")
-REC_CKPT = os.path.join(MODEL_DIR, "rec_crnn_mobilenet_v3_large_ft.pt")
 
 
 def _load_checkpoint(model, ckpt: str):
