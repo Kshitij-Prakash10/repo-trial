@@ -11,7 +11,7 @@ Metrics (test split only; --split val exists for development):
   end to end   CER / WER of the full-page text, raw image -> final text (scanner stage included).
                Reference and prediction are both put in reading order by ocr.common.group_lines, so
                the metric scores what was read, not how a layout was linearised.
-Outputs: runs/eval/<system>/<dataset>_<task>.jsonl (per item) and runs/eval/<system>_<split>.json.
+Outputs: runs/eval/<system>_<split>/<dataset>_<task>.jsonl (per item) and runs/eval/<system>_<split>.json.
 """
 from __future__ import annotations
 
@@ -73,6 +73,12 @@ def _tess_page(path: str) -> dict:
     return {"texts": [w[0] for w in words], "boxes": [w[1] for w in words]}
 
 
+def _run_name(system: str, split: str, limit: int | None) -> str:
+    if limit is not None and limit < 1:
+        raise ValueError("limit must be positive")
+    return f"{system}_{split}" + ("" if limit is None else f"_first{limit}")
+
+
 def _write(system: str, name: str, rows: list[dict]) -> None:
     d = os.path.join(EVAL_DIR, system)
     os.makedirs(d, exist_ok=True)
@@ -109,7 +115,7 @@ def eval_recognition(system: str, split: str, limit: int | None, workers: int) -
             preds = [p[0] for p in rec(crops)]
         counts = [error_counts(p, t, ds) for p, t in zip(preds, texts)]
         out[ds] = {**rates(counts), "seconds": round(time.time() - t0)}
-        _write(f"{system}_{split}", f"{ds}_rec", [{"page": i, "index": k, "true": t, "pred": p, **c}
+        _write(_run_name(system, split, limit), f"{ds}_rec", [{"page": i, "index": k, "true": t, "pred": p, **c}
                                                   for k, (i, t, p, c) in enumerate(zip(ids, texts, preds, counts))])
         print(system, "recognition", ds, json.dumps(out[ds]), flush=True)
     return out
@@ -159,8 +165,8 @@ def eval_pages(system: str, split: str, limit: int | None, workers: int) -> tupl
         if pipe is not None:
             e2e_out[ds]["scanner_crop_used_on_pages"] = used
             e2e_out[ds]["without_scanner_stage"] = {k: v for k, v in rates(counts_ns).items() if k in ("cer", "wer")}
-        _write(f"{system}_{split}", f"{ds}_det", rows_det)
-        _write(f"{system}_{split}", f"{ds}_e2e", rows_e2e)
+        _write(_run_name(system, split, limit), f"{ds}_det", rows_det)
+        _write(_run_name(system, split, limit), f"{ds}_e2e", rows_e2e)
         print(system, "detection", ds, json.dumps(det_out[ds]), flush=True)
         print(system, "end_to_end", ds, json.dumps(e2e_out[ds]), flush=True)
     return det_out, e2e_out
@@ -169,11 +175,11 @@ def eval_pages(system: str, split: str, limit: int | None, workers: int) -> tupl
 def main(system: str, split: str = "test", limit: int | None = None, workers: int = 4) -> dict:
     import torch
     torch.set_num_threads(workers)
+    name = _run_name(system, split, limit)
     out = {"system": system, "split": split, "limit_pages": limit}
     out["recognition"] = eval_recognition(system, split, limit, workers)
     out["detection"], out["end_to_end"] = eval_pages(system, split, limit, workers)
     os.makedirs(EVAL_DIR, exist_ok=True)
-    name = f"{system}_{split}" + (f"_first{limit}" if limit else "")
     with open(os.path.join(EVAL_DIR, name + ".json"), "w") as f:
         json.dump(out, f, indent=1)
     return out

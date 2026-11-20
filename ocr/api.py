@@ -12,7 +12,7 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                           "preprocessing": {"quarter_turns", "orientation_confidence", "deskew_degrees",
                                             "flip_check", "deskew_requested", "deskew_applied"}}
                       Boxes are [x0, y0, x1, y1] in pixels of the page; confidences are 0..1.
-                      confirm_numbers: the line was read as handwriting and holds a number or a dose unit,
+                      confirm_numbers: a reading of the line holds a number or a dose unit,
                       so a person must check it against the page whatever its confidence.
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",
@@ -396,12 +396,13 @@ def _read_upload():
 
 
 def _line(ln: dict) -> dict:
-    """One line of the answer. The v1 pipeline sets no flags: everything it reads counts as printed."""
+    """Preserve alternative-reader warnings and check the displayed text, including v1 results."""
+    from ocr.common import has_number_or_unit
     conf = ln["confidence"]
     low = ln.get("low_confidence")
     return {"text": ln["text"], "box": ln["box"], "confidence": conf,
             "low_confidence": bool(conf < LOW_CONFIDENCE) if low is None else bool(low),
-            "confirm_numbers": bool(ln.get("confirm_numbers", False)),
+            "confirm_numbers": bool(ln.get("confirm_numbers")) or has_number_or_unit(ln["text"]),
             "script": ln.get("script") or "printed"}
 
 

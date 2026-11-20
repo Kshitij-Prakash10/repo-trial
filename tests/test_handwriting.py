@@ -274,7 +274,9 @@ def test_rule_line_crop_is_recognised_from_its_ink():
     ({"text": "Ramipril 2.5", "handwriting_text": "Ramipril Z.S my"}, True),  # printed kept, hw lost the digits
     ({"text": "Ramipril Z.S", "handwriting_text": "Ramipril 25 mg"}, True),  # only the hw reader saw them
     ({"text": "call the bank", "handwriting_text": "call the bank"}, False),
-    ({"text": "Ramipril 2.5 mg"}, False),  # a printed line, never sent to the handwriting reader
+    ({"text": "Ramipril 2.5 mo"}, True),  # missed unit and line never routed to handwriting
+    ({"text": "InSulin O Units"}, True),  # missed digits and title-case unit, original regression
+    ({"text": "call the bank"}, False),
 ])
 def test_confirm_numbers_looks_at_every_reading(line, flag):
     from ocr.scan import confirm_numbers

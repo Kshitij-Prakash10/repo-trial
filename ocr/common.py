@@ -127,6 +127,16 @@ def rates(counts: list[dict]) -> dict:
             "chars": cn, "words": wn, "n": len(counts)}
 
 
+def numeric_line_accuracy(pairs) -> dict:
+    """Exact transcription of lines containing a reference digit, after whitespace normalisation."""
+    exact = total = 0
+    for prediction, reference in pairs:
+        if any(char.isdecimal() for char in reference):
+            total += 1
+            exact += normalise(prediction) == normalise(reference)
+    return {"exact": exact, "total": total, "accuracy": round(exact / total, 4) if total else None}
+
+
 def iou_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """IoU of every box in a (N, 4) with every box in b (M, 4)."""
     a, b = np.asarray(a, float).reshape(-1, 4), np.asarray(b, float).reshape(-1, 4)
@@ -167,9 +177,9 @@ def prf(tp: int, n_pred: int, n_true: int) -> dict:
 
 # ---------------------------------------------------------------- numbers and units
 
-_UNITS = (r"mcg|µg|ug|mg|g|kg|ml|mL|l|L|dl|dL|mmol|mol|iu|IU|units?|tabs?|tablets?|caps?|capsules?|puffs?|drops?|"
+_UNITS = (r"mcg|µg|ug|mg|g|kg|ml|l|dl|mmol|mol|iu|units?|tabs?|tablets?|caps?|capsules?|puffs?|drops?|"
           r"mmHg|bpm|od|bd|tds|qds|prn|nocte|mane")
-_NUMBER_OR_UNIT = re.compile(rf"\d|%|(?<![A-Za-z])(?:{_UNITS})(?![A-Za-z])")
+_NUMBER_OR_UNIT = re.compile(rf"\d|%|(?<![A-Za-z])(?:{_UNITS})(?![A-Za-z])", re.IGNORECASE)
 
 
 def has_number_or_unit(text: str) -> bool:

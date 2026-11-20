@@ -767,7 +767,7 @@ async function main() {
     assert(ocrRequests.length === before + 1 && ocrRequests.at(-1).deskew === "1", "deskew=1 sent: " + JSON.stringify(ocrRequests.at(-1)));
     const warn = await page.textContent("#scan-ocr-confirm");
     assert(await page.isVisible("#scan-ocr-confirm"), "the numbers warning is shown at 95% confidence");
-    assert(/Handwritten numbers or doses were read/.test(warn) && /Always check numbers and units against the page/.test(warn), warn);
+    assert(/Numbers or doses were read/.test(warn) && /Always check numbers and units against the page/.test(warn), warn);
     assert(warn.includes("Amoxicillin 25 mg") && warn.includes("1 tab twice daily") && warn.includes("<img src=x id=xss-probe> 5 ml"), warn);
     assert(!warn.includes("Review in 10 days") && /and 1 more/.test(warn), "first 3 lines, then a count: " + warn);
     assert(await page.locator("#xss-probe").count() === 0, "line text is escaped");
@@ -802,8 +802,10 @@ async function main() {
     await page.click("#scan-next");
     await page.waitForSelector("#scan-save:not([hidden])");
     const saveText = await page.textContent("#scan-save-text");
-    assert(/handwritten numbers or doses \(4 lines\)/.test(saveText) && /check against the page/.test(saveText), saveText);
+    assert(/numbers or doses \(4 lines\)/.test(saveText) && /check against the page/.test(saveText), saveText);
     assert(await page.evaluate(() => document.querySelector("#scan-save-text").classList.contains("warn")), "save note styled as a warning");
+    await page.selectOption("#scan-category", "prescription");
+    assert((await page.textContent("#scan-save-text")).includes("Check for any missing lines."), "prescription review on save");
     await page.fill("#scan-title", "Handwritten prescription");
     await page.click("#scan-save-btn");
     await page.waitForSelector("#scan-done:not([hidden])");
@@ -819,7 +821,8 @@ async function main() {
     await page.waitForSelector("#viewer[open] #viewer-ocr-text");
     await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
     const vw = await page.textContent("#viewer-ocr-confirm");
-    assert(/Handwritten numbers or doses were read/.test(vw) && vw.includes("Amoxicillin 25 mg") && /and 1 more/.test(vw), vw);
+    assert(vw.includes("Check for any missing lines."), "prescription review in viewer");
+    assert(/Numbers or doses were read/.test(vw) && vw.includes("Amoxicillin 25 mg") && /and 1 more/.test(vw), vw);
     assert(await page.locator("#xss-probe").count() === 0, "escaped in the viewer");
     assert(/turned upright/.test(await page.textContent("#viewer-ocr-pre")), "turn note in the viewer");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "viewer-confirm-1280-light.png") });
@@ -842,6 +845,16 @@ async function main() {
     await page.locator(".doc-card", { hasText: "Uploaded image" }).locator('.card-actions [data-act="view"]').click();
     await page.waitForSelector("#viewer[open] #viewer-ocr-text");
     assert(await page.isHidden("#viewer-ocr-confirm") && await page.isHidden("#viewer-ocr-pre"), "no warning for an older record");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    // A prescription still needs review when every numeric cue vanished during recognition.
+    await page.evaluate(() => {
+      const doc = Documents.list().find((d) => d.title === "Handwritten prescription");
+      return Documents.view({ ...doc, text: "Take as directed", ocr: null });
+    });
+    await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+    assert((await page.textContent("#viewer-ocr-confirm")).includes("Check for any missing lines."),
+      "prescription without recognized numbers still prompts comparison");
     await page.keyboard.press("Escape");
     await page.waitForSelector("#viewer:not([open])", { state: "attached" });
     ocrMode = "ok";

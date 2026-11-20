@@ -78,7 +78,7 @@ class FakeScanner:
                            "deskew": self.do_deskew})
         base = self.ocr.run(image)
         lines = [{"text": "Total 9.00", "box": [1.0, 2.0, 60.0, 12.0], "confidence": 0.8, "script": "printed",
-                  "handwritten_share": 0.02, "words": [0, 1], "low_confidence": False, "confirm_numbers": False},
+                  "handwritten_share": 0.02, "words": [0, 1], "low_confidence": False, "confirm_numbers": True},
                  {"text": "Amoxicillin 25 mg", "box": [1.0, 20.0, 70.0, 34.0], "confidence": 0.97,
                   "script": "handwritten", "handwritten_share": 0.9, "words": [], "handwriting_text": "Amoxicillin 25 mg",
                   "handwriting_confidence": 0.97, "printed_text": "Amoxicilin Z5 mq", "printed_confidence": 0.41,
@@ -187,10 +187,19 @@ def test_the_repository_recogniser_checkpoint_is_found():
     assert "recogniser" not in api.missing_weights()
 
 
-def test_load_failure_is_503_and_shows_in_status(client, monkeypatch):
-    monkeypatch.setattr(api, "missing_packages", lambda: [])
-    monkeypatch.setattr(api, "missing_weights", lambda: [])
-    monkeypatch.setitem(sys.modules, "ocr.pipeline", None)  # makes "from ocr.pipeline import ..." raise
+@pytest.fixture
+def unavailable_loaders(monkeypatch):
+    v1_ready(monkeypatch)
+    monkeypatch.setattr(api, "v2_problem", lambda: None)
+
+    def broken():
+        raise OSError("unreadable checkpoint")
+
+    monkeypatch.setattr(api, "_load_v2", broken)
+    monkeypatch.setattr(api, "_load_v1", broken)
+
+
+def test_load_failure_is_503_and_shows_in_status(client, unavailable_loaders):
     r = post(client, png_bytes())
     assert r.status_code == 503 and "could not be loaded" in r.get_json()["error"]
     body = client.get("/api/ocr/status").get_json()
@@ -264,7 +273,7 @@ def test_response_shape_and_scanner_flag(client, monkeypatch):
     assert body["text"] == "Total 9.00"
     # the three keys of the first version, plus the flags (v1 defaults: nothing flagged, all printed)
     assert body["lines"] == [{"text": "Total 9.00", "box": [1.0, 2.0, 60.0, 12.0], "confidence": 0.8,
-                              "low_confidence": False, "confirm_numbers": False, "script": "printed"}]
+                              "low_confidence": False, "confirm_numbers": True, "script": "printed"}]
     assert body["words"][0] == {"text": "Total", "confidence": 0.9, "box": [1.0, 2.0, 30.0, 12.0], "line": 0}
     assert body["page"] == {"width": 120, "height": 90}
     assert body["seconds"] == 0.01
@@ -380,14 +389,13 @@ def test_waiting_for_a_turn_times_out_as_busy(client, monkeypatch):
     assert post(client, png_bytes()).status_code == 200
 
 
-def test_a_load_failure_is_retried_after_a_while(client, monkeypatch):
-    monkeypatch.setattr(api, "missing_packages", lambda: [])
-    monkeypatch.setattr(api, "missing_weights", lambda: [])
-    monkeypatch.setitem(sys.modules, "ocr.pipeline", None)
+def test_a_load_failure_is_retried_after_a_while(client, monkeypatch, unavailable_loaders):
     assert post(client, png_bytes()).status_code == 503
     assert client.get("/api/ocr/status").get_json()["available"] is False
     monkeypatch.setattr(api, "_load_error_at", api.time.monotonic() - api.LOAD_RETRY - 1)  # time passes
-    assert client.get("/api/ocr/status").get_json()["available"] is True  # so the app lets the user try again
+    assert client.get("/api/ocr/status").get_json()["available"] is True
+    monkeypatch.setattr(api, "_load_v1", FakePipeline)
+    assert post(client, png_bytes()).status_code == 200
 
 
 # ---------------------------------------------------------------- v2 pipeline (ocr.scan.Scanner) and the v1 fallback
@@ -404,7 +412,7 @@ def test_v2_flags_and_preprocessing_reach_the_response(client, monkeypatch):
     assert body["text"] == "Total 9.00\nAmoxicillin 25 mg\nsee overleaf"
     assert body["lines"] == [
         {"text": "Total 9.00", "box": [1.0, 2.0, 60.0, 12.0], "confidence": 0.8,
-         "low_confidence": False, "confirm_numbers": False, "script": "printed"},
+         "low_confidence": False, "confirm_numbers": True, "script": "printed"},
         {"text": "Amoxicillin 25 mg", "box": [1.0, 20.0, 70.0, 34.0], "confidence": 0.97,
          "low_confidence": False, "confirm_numbers": True, "script": "handwritten"},  # sure of itself, still flagged
         {"text": "see overleaf", "box": [1.0, 40.0, 50.0, 52.0], "confidence": 0.31,
@@ -428,7 +436,7 @@ def test_v1_defaults_for_flags_and_preprocessing(client, monkeypatch):
     body = post(client, png_bytes()).get_json()
     assert body["pipeline"] == "v1"
     assert body["lines"][0]["low_confidence"] is True  # below 0.5
-    assert body["lines"][0]["confirm_numbers"] is False and body["lines"][0]["script"] == "printed"
+    assert body["lines"][0]["confirm_numbers"] is True and body["lines"][0]["script"] == "printed"
     assert body["preprocessing"] == {"quarter_turns": 0, "orientation_confidence": None, "deskew_degrees": 0.0,
                                      "flip_check": None, "deskew_requested": False, "deskew_applied": False}
 
@@ -515,7 +523,7 @@ def test_v1_is_chosen_when_v2_cannot_run(client, monkeypatch, tmp_path, packages
     assert words in status["pipeline_reason"]
     body = post(client, png_bytes()).get_json()
     assert body["pipeline"] == "v1" and loads == ["v1"]  # v2 was not even tried
-    assert all(ln["confirm_numbers"] is False and ln["script"] == "printed" for ln in body["lines"])
+    assert all(ln["confirm_numbers"] is True and ln["script"] == "printed" for ln in body["lines"])
     status = client.get("/api/ocr/status").get_json()
     assert status["loaded"] is True and status["pipeline"] == "v1" and words in status["pipeline_reason"]
 

@@ -11,7 +11,7 @@
  * disabled and a one-line hint says why. Uses UI. Nothing leaves this computer.
  *
  * With the "v2" models on the server, handwriting is read too and turned pages are put upright. A
- * handwritten line with a number or a dose unit comes back with confirm_numbers: such numbers are
+ * line with a number or a dose unit comes back with confirm_numbers: such numbers are
  * misread with high confidence (2.5 mg read as 25 mg), so the box always shows a warning listing those
  * lines, whatever the mean confidence. The warning is stored with the text (ocr.confirmNumbers). Once the
  * user has corrected the text by hand it turns into a shorter reminder; it goes away only when the page
@@ -19,6 +19,7 @@
  */
 const Ocr = (() => {
   const { $, esc, icon, fmtBytes } = UI;
+  const PRESCRIPTION_CHECK = "Compare every medicine name, dose and unit with the prescription image. Check for any missing lines.";
   const MAX_BYTES = 10 * 1024 * 1024; // bytes, the server's limit for one image
   const MAX_CHARS = 200000; // characters kept with a document
   const LOW_CONFIDENCE = 0.6; // mean word confidence (0..1) below which the text gets a "check it" note
@@ -159,12 +160,13 @@ const Ocr = (() => {
    *   idleHint  one line shown before any text was read (a sentence on what the server can read is added)
    *   source    async () => Blob of the page image, or null when there is nothing to read; leave out when
    *             the document cannot be read (the Read text button is then not shown)
+   *   prescription  show a reminder even when all numeric cues are missing from the transcription
    *   onRead    ({ text, ocr }) after a successful read
    *   onSave    async ({ text, ocr }) => {}; when given, a Save text button stores the user's corrections
    *   onBusy    (bool) reading started or ended
    * Returns { checkAvailability, setEnabled, setText, value, reset, pageChanged, isBusy }.
    */
-  function widget(root, { id, heading = "Text", idleHint = "", source = null, onRead, onSave, onBusy }) {
+  function widget(root, { id, heading = "Text", idleHint = "", source = null, prescription = false, onRead, onSave, onBusy }) {
     root.innerHTML = `<section class="ocr-box" aria-labelledby="${id}-h">
       <div class="ocr-head">
         <h4 class="h4" id="${id}-h">${esc(heading)}</h4>
@@ -235,18 +237,19 @@ const Ocr = (() => {
       el.note.textContent = note;
       el.note.hidden = !note;
       el.note.classList.toggle("warn", warn);
-      // Handwritten numbers: shown next to (never instead of) the other notes, whatever the confidence.
+      // Numeric warnings accompany confidence and orientation notes.
       const flagged = s.has ? confirmOf(s.info) : null;
       const edited = Boolean(s.info && s.info.edited) || el.text.value.trim() !== s.readText;
       let confirm = "";
       if (flagged && !edited) {
         const ex = confirmExamples(flagged);
-        confirm = `<strong>Check the numbers.</strong> Handwritten numbers or doses were read${ex ? ` (for example: ${ex})` : ""}. `
+        confirm = `<strong>Check the numbers.</strong> Numbers or doses were read${ex ? ` (for example: ${ex})` : ""}. `
           + "Always check numbers and units against the page.";
       } else if (flagged) {
-        confirm = `<strong>Check the numbers.</strong> This text was corrected by hand, but it came from handwriting with numbers or doses in it `
+        confirm = `<strong>Check the numbers.</strong> This text was corrected by hand. The original reading included numbers or doses `
           + `(${flagged.count} ${flagged.count === 1 ? "line" : "lines"}). Make sure every number and unit matches the page.`;
       }
+      if (prescription && s.has) confirm += (confirm ? " " : "") + PRESCRIPTION_CHECK;
       el.confirm.innerHTML = confirm;
       el.confirm.hidden = !confirm;
       const pre = s.has && s.info ? preText(s.info.preprocessing) : "";
@@ -326,7 +329,7 @@ const Ocr = (() => {
           readAt: new Date().toISOString(), models: res.models, pipeline: res.pipeline,
           confirmNumbers: res.confirmNumbers, preprocessing: res.preprocessing });
         el.live.textContent = (res.words ? `Text read: ${wordsText(wordCount(res.text))}.` : "No text was found on this page.")
-          + (res.confirmNumbers ? " Handwritten numbers or doses were read: check them against the page." : "")
+          + (res.confirmNumbers ? " Numbers or doses were read: check them against the page." : "")
           + (preText(res.preprocessing) ? ` ${preText(res.preprocessing)}` : "");
         if (onRead) await onRead(value());
       } catch (err) {
@@ -401,5 +404,5 @@ const Ocr = (() => {
       isBusy: () => s.busy, flash, showError };
   }
 
-  return { MAX_BYTES, LOW_CONFIDENCE, status, read, copy, wordCount, wordsText, confirmOf, widget };
+  return { MAX_BYTES, LOW_CONFIDENCE, PRESCRIPTION_CHECK, status, read, copy, wordCount, wordsText, confirmOf, widget };
 })();

@@ -11,7 +11,7 @@
  *                text: the text read from the page (OCR, possibly corrected by the user) or "",
  *                ocr: null or { confidence (mean, 0..1 or null), words, edited, readAt, models,
  *                       pipeline ("v2" | "v1" | null), preprocessing ({ quarterTurns, deskewDegrees } or null),
- *                       confirmNumbers (null, or { count, lines: [text] } for handwritten lines with numbers or
+ *                       confirmNumbers (null, or { count, lines: [text] } for OCR lines with numbers or
  *                       doses that must be checked against the page) } (the last three are missing in older records),
  *                (documents stored before text reading existed have no text / ocr fields: read as "" / null)
  *                createdAt, updatedAt (ISO 8601) }
