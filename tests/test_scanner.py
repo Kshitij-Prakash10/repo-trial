@@ -186,6 +186,26 @@ def test_to_rgb_composites_transparency_on_white():
     assert to_rgb(p).getpixel((0, 0)) == (255, 255, 255)
 
 
+def test_to_rgb_keeps_the_colour_of_partly_transparent_pixels():
+    """A photo whose surroundings are partly see-through keeps their colour (compositing them on white
+    hid the page edge: 20 synthetic test photos, IoU >= 0.9 fell from 0.75 to 0.40). Fully transparent
+    pixels still become white, and a layer with no opaque pixel at all is still shown over white."""
+    from scanner.convert import to_rgb
+    a = np.zeros((6, 6, 4), np.uint8)
+    a[..., :3] = (40, 50, 60)  # a dark desk ...
+    a[..., 3] = 128  # ... half see-through
+    a[2:4, 2:4] = (240, 240, 230, 255)  # the opaque page
+    a[0, 0] = (0, 0, 0, 0)  # a fully transparent pixel
+    out = to_rgb(Image.fromarray(a, "RGBA"))
+    assert out.getpixel((5, 5)) == (40, 50, 60) and out.getpixel((2, 2)) == (240, 240, 230)
+    assert out.getpixel((0, 0)) == (255, 255, 255)
+    la = np.zeros((4, 4, 2), np.uint8)
+    la[..., 0], la[..., 1] = 30, 100
+    la[1, 1] = (250, 255)
+    assert to_rgb(Image.fromarray(la, "LA")).getpixel((3, 3)) == (30, 30, 30)
+    assert to_rgb(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (127, 127, 127)  # no opaque pixel
+
+
 def test_to_rgb_scales_16_bit_and_keeps_negative_floats():
     from scanner.convert import to_rgb
     a16 = np.tile(np.linspace(0, 65535, 256).astype(np.uint16), (4, 1))
