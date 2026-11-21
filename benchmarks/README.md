@@ -1,0 +1,83 @@
+# Benchmarks (review 2026-11)
+
+Runners that score one checkout of this repository, so the same runner measures the baseline and later
+commits. Each imports the code under test from `--root` (put first on `sys.path`; the result records the
+commit and whether `ocr/`, `scanner/` or `server.py` had uncommitted edits) and writes `<out>/<name>.json`
+plus a short `<name>.md`. Everything is seeded (2026), outputs are sorted, and the only time stamp is the
+`generated_at` field. `--limit N` makes a smoke run that writes `<name>_firstN.json`, so it never overwrites a
+full result; put smoke runs under `reports/review_2026-11/smoke/`.
+
+All text and images are invented or generated here. No dataset image or text (FUNSD, SROIE, CORD, IAM, GNHK,
+DocCorner, SmartDoc) is copied; the page benchmark reads only the repository's own stored per-photo result
+rows (`models/finetune/eval/*.csv.gz`).
+
+| Runner | Needs | What it measures |
+|---|---|---|
+| `run_warnings.py` | requirements.txt + requirements-ocr.txt (it imports `ocr.scan`); no model is loaded | "Check the numbers" flags (`ocr.scan.confirm_numbers`, `ocr.api._line`) on 295 labelled lines (`warnings/fixtures.jsonl`) |
+| `run_alpha.py` | requirements.txt only | transparent and 16-bit images: paired-image discontinuity, `/api/scan` upload path, 20 partial-alpha photos, synthetic test / OOD |
+| `run_pages.py` | requirements.txt only | false alarms by background kind, recall on stored and generated pages (low contrast, cut corners), crop / rotation / tilt, lost page and text area, stored real-photo threshold trade-off |
+| `run_handwriting.py` | full OCR environment + `transformers` (requirements-handwriting.txt) | handwriting vs printed reader and the selection rule on annotated synthetic handwritten lines; calibration; candidate selector; line detection (BLOCKED without detector weights) |
+
+## Running
+
+```bash
+# baseline checkout at a fixed commit, outside the shared worktree
+git worktree add --detach /tmp/base 0c71106
+python -m benchmarks.run_warnings    --root /tmp/base --out reports/review_2026-11/baseline_0c71106
+python -m benchmarks.run_alpha       --root /tmp/base --out reports/review_2026-11/baseline_0c71106
+python -m benchmarks.run_pages       --root /tmp/base --out reports/review_2026-11/baseline_0c71106
+PYTHONPATH=<dir holding transformers 4.57.1> HF_HUB_OFFLINE=1 \
+python -m benchmarks.run_handwriting --root /tmp/base --out reports/review_2026-11/baseline_0c71106
+
+# a later commit, compared photo by photo with the baseline
+python -m benchmarks.run_alpha --root . --out reports/review_2026-11/<sha> \
+    --baseline reports/review_2026-11/baseline_0c71106/alpha.json
+
+# two runs are identical apart from generated_at and latency fields:
+python -m benchmarks.common A.json B.json
+```
+
+Run from the repository root (the runners import `benchmarks.*` from the current directory and the code
+under test from `--root`). The synthetic page photos (`data/synthetic/{test,ood}`) are not in git;
+`run_alpha` and `run_pages` look in `--data`, then `<root>/data/synthetic`, then the main checkout. Limit
+threads on a shared machine: the scanner runners set one thread (its OpenMP predictor is faster that way under
+load), the others two.
+
+## Medication-warning fixtures
+
+`warnings/fixtures.jsonl` is written by `python -m benchmarks.warnings.build_fixtures` (a test checks that the
+committed file matches). Each record has `id`, `set`, `category`, `path`, `routing`, `source_script`,
+`ground_truth`, `displayed_text`, `handwriting_text` / `printed_text` (as the v2 Scanner stores them),
+`has_numeric_content`, `dose_incorrect_or_lost`, `warning_warranted`, `expected_fields` and `origin`; the
+builder's docstring defines each label.
+
+`set: "original_39"` is exactly the 39 lines with a digit in the reference of the earlier evaluation's case
+list (the "flagged by either flag: 37/39" figure), in the same order and routing; at 0c71106 the runner
+recomputes 37/39. The rest (`set: "extended"`) are that list's lines without numbers, its two one-page lists
+on v2 and v1, and new cases: a unit that lost its number next to a list index, a duration or another
+medicine's dose; "Metformin SOO my" under every routing with the misread reading shown or kept as the
+alternate; "InSulin O Units"; a dose kept only by the alternate reader; unit-word collisions; decimals;
+missing quantities; mcg / mL / IU / mmol/L / g/dL; od / bd / tds / prn / nocte / twice daily; numbered lists;
+printed values and dates; plain-text controls; v1 and v2.
+
+Metrics, each with numerator / denominator and the list of misses, split by set and path, with the opt-in
+misread-digit option off (default) and on: (a) numeric content detected by either flag; (b) precision and
+recall of the prominent warning (`confirm_numbers`) against `dose_incorrect_or_lost` and against
+`warning_warranted`; (c) prominent warnings on correctly read printed lines; (d) exact drug / value / unit
+agreement (`fields.py`, whose docstring lists its limits) and silent dose errors; (e) the original target:
+recall of "either flag" on the original 39, `>= 0.95`, PASS / FAIL without rounding.
+
+The v2 line flags are set by a small adapter that does what `Scanner.run` does with routing on
+(`confirm_numbers(ln, script_known=True[, misread_digits=True])`, then `has_numbers`); the result records the
+function signatures it found and whether `Scanner.run` still makes that call, so an interface change is
+visible.
+
+## Handwriting data
+
+Pages are rendered here, word by word, with the repository's OFL handwriting fonts (`data/raw/fonts`), so every
+word and line has a known quad and text. Validation pages: seeds 0..19 (used only to choose the candidate
+selector's margin); test pages: seeds 1000..1029 (evaluated once). The handwriting reader was fine-tuned on
+lines rendered with the same fonts, so these numbers are optimistic. Real held-out pages (GNHK, IAM) need
+huggingface.co and are not measured. Automatic line detection needs docTR's `fast_base` weights
+(`models/ocr/det_fast_base_ft.pt` or `~/.cache/doctr/models/fast_base-*.pt`); `match_lines` (missed, extra,
+split, merged, misordered) is tested with a fake detector in `tests/test_benchmarks.py`.
