@@ -296,6 +296,71 @@ def test_a_unit_without_its_number_is_a_lost_number():
     assert not common.number_lost("Omeprazole 20 mg") and not common.number_lost("Review in clinic")
 
 
+# Each unit needs its own quantity right before it (invented lines). A list number, a duration or another
+# medicine's dose on the same line does not stand in for it.
+LOCAL_DOSES = [
+    ("Omeprazole mg", True), ("1. Omeprazole mg", True), ("Omeprazole mg for 7 days", True),
+    ("Omeprazole mg x 30 days", True), ("Amlodipine 5 mg and Omeprazole mg", True),
+    ("Omeprazole mg, Amlodipine 5 mg", True), ("2) Omeprazole mg", True), ("InSulin O Units", True),
+    ("Insulin lO Units at 8 pm", True),  # look-alike letters are no quantity, whatever else is on the line
+    ("1. Omeprazole 20 mg", False), ("Omeprazole 20 mg for 7 days", False), ("Ramipril 2.5 mg", False),
+    ("Ramipril .5 mg", False), ("Ramipril 0.5 mg", False), ("Ramipril 2.5mg once a day", False),
+    ("Paracetamol 1-2 tabs", False), ("1 tab od", False), ("Sodium 139 mmol/L", False),
+    ("Haemoglobin 13.2 g/dL 12.0-15.5", False), ("1. Tab Amlodipine 5 mg OD x 30 days", False),
+    ("Syrup 125 mg/5 ml", False), ("Paracetamol 500 mg as needed prn", False), ("BP 120/80 mmHg", False),
+]
+
+
+@pytest.mark.parametrize("text,lost", LOCAL_DOSES)
+def test_each_unit_needs_its_own_quantity(text, lost):
+    assert common.has_number_or_unit(text)
+    assert common.number_lost(text) is lost
+
+
+@pytest.mark.parametrize("text,lost", LOCAL_DOSES)
+def test_printed_line_warning_follows_its_own_quantity(text, lost):
+    """A v2 printed-only line: the prominent confirm_numbers warning for a unit without its number, the
+    quieter has_numbers note otherwise; the same through the API's _line, which keeps the text as read."""
+    from ocr.api import _line
+    ln = {"text": text, "box": [0, 0, 10, 10], "confidence": 0.95, "script": "printed"}
+    ln["confirm_numbers"] = common.line_confirm_numbers(ln, script_known=True)
+    ln["has_numbers"] = common.has_number_or_unit(text)
+    out = _line(ln)
+    assert out["confirm_numbers"] is lost and out["has_numbers"] is True and out["text"] == text
+
+
+M = "Metformin SOO my"
+ROUTINGS = {  # (a) printed only, (b) handwriting reading shown, (c) printed reading kept after handwriting
+    "a": [{"text": M, "script": "printed"}],
+    "b": [{"text": M, "script": "handwritten", "handwriting_text": M, "printed_text": "Metformin twice daily"},
+          {"text": "Metformin twice daily", "script": "handwritten", "handwriting_text": "Metformin twice daily",
+           "printed_text": M}],
+    "c": [{"text": M, "script": "printed", "handwriting_text": "Metformin twice daily"},
+          {"text": "Metformin twice daily", "script": "printed", "handwriting_text": M}],
+}
+
+
+@pytest.mark.parametrize("routing,k", [(r, k) for r, lines in ROUTINGS.items() for k in range(len(lines))])
+def test_misread_digits_are_looked_for_in_every_reading_when_asked(routing, k):
+    ln = ROUTINGS[routing][k]
+    assert common.line_confirm_numbers(ln, script_known=True, flag_misread_digits=True) is True
+    assert common.line_confirm_numbers(ln, script_known=True) is False  # off: as before
+
+
+@pytest.mark.parametrize("ln,flag", [
+    ({"text": "InSulin O Units", "script": "printed"}, True),
+    ({"text": "Ramipril Z.S my", "script": "handwritten", "handwriting_text": "Ramipril Z.S my",
+      "printed_text": "Ramipril 2.5 mg"}, True),  # the dose is only in the other reading
+    ({"text": "Dr L Example", "script": "printed"}, False), ({"text": "Mehta OD Clinic", "script": "printed"}, False),
+    ({"text": "Test Result Units Reference range", "script": "printed"}, False),
+])
+def test_confirm_numbers_coverage(ln, flag):
+    for misread in (False, True):
+        assert common.line_confirm_numbers(ln, script_known=True, flag_misread_digits=misread) is flag
+    if not flag:
+        assert not common.has_number_or_unit(ln["text"])
+
+
 @pytest.mark.parametrize("text,flag", [
     ("Metformin SOO my twice daily", True), ("Atorvastatin ZO mg at night", True), ("Ramipril Z.S my", True),
     ("Metformin 500 mg", False),  # real digits: not a misreading

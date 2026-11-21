@@ -374,3 +374,42 @@ def test_scanner_gives_printed_numbers_the_quieter_flag(monkeypatch, routing):
     assert all(ln["script"] == "printed" for ln in r["lines"])
     assert flags == ([(True, False), (True, True), (False, False)] if routing
                      else [(True, True), (True, True), (False, False)])
+
+
+def test_confirm_numbers_keeps_its_old_call_and_takes_the_option_by_name():
+    from ocr.scan import confirm_numbers
+    ln = {"text": "Metformin twice daily", "script": "printed", "handwriting_text": "Metformin SOO my"}
+    assert confirm_numbers(ln) is False and confirm_numbers(ln, True, False) is False
+    assert confirm_numbers(ln, misread_digits=True) is True  # the older keyword
+    assert confirm_numbers(ln, script_known=True, flag_misread_digits=True) is True
+    assert confirm_numbers(ln, script_known=True, flag_misread_digits=False) is False
+    assert confirm_numbers({"text": "1. Omeprazole mg", "script": "printed"}, script_known=True) is True
+    assert confirm_numbers({"text": "1. Omeprazole 20 mg", "script": "printed"}, script_known=True) is False
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_scanner_looks_for_misread_digits_in_every_reading_when_asked(monkeypatch, flag):
+    """Scanner.run with fake readers, "Metformin SOO my" in each position: (a) printed only, (b) the
+    handwriting reading shown (misread in the shown text or in printed_text), (c) the printed reading
+    kept after handwriting (misread shown or in handwriting_text). The shown text stays as read."""
+    from PIL import Image
+    from ocr import scan as S
+    M, P = "Metformin SOO my", "Metformin twice daily"
+    page = np.full((500, 600, 3), 235, np.uint8)
+    printed = [(M, 0.9, [20, 20, 400, 60]),  # (a): not routed
+               (P, 0.30, [20, 100, 400, 140]),  # (b) hw reading M is surer: shown
+               (M, 0.30, [20, 180, 400, 220]),  # (b) hw reading P is surer: M goes to printed_text
+               (M, 0.90, [20, 260, 400, 300]),  # (c) printed M kept, hw P in handwriting_text
+               (P, 0.90, [20, 340, 400, 380])]  # (c) printed P kept, hw M in handwriting_text
+    hw = [(M, 0.8), (P, 0.8), (P, 0.5), (M, 0.5)]
+    sc = object.__new__(S.Scanner)
+    sc.ocr, sc.hw = _FakeOcr(page, printed), _FakeHw(hw)
+    sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, object(), False
+    sc.mask_neighbours, sc.flag_misread_digits = False, flag
+    monkeypatch.setattr(S.scriptclf, "handwritten_prob",
+                        lambda clf, crops: np.array([0.0] + [1.0] * (len(crops) - 1)))
+    r = sc.run(Image.new("RGB", (600, 500), "white"))
+    got = [(ln["text"], ln["script"], ln.get("handwriting_text"), ln.get("printed_text"), ln["confirm_numbers"])
+           for ln in r["lines"]]
+    assert got == [(M, "printed", None, None, flag), (M, "handwritten", M, P, flag),
+                   (P, "handwritten", P, M, flag), (M, "printed", P, None, flag), (P, "printed", M, None, flag)]

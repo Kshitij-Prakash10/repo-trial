@@ -638,3 +638,51 @@ def test_smallest_accepted_image(client, monkeypatch):
     monkeypatch.setattr(api, "_pipeline", fake)
     assert post(client, png_bytes((16, 16))).status_code == 200
     assert fake.calls[-1]["size"] == (16, 16)
+
+
+# ---------------------------------------------------------------- the numbers warning of printed lines
+
+def _confirm_numbers():
+    """The per-line decision Scanner.run uses (ocr.scan.confirm_numbers; torch-free in ocr.common)."""
+    try:
+        from ocr.scan import confirm_numbers
+    except ImportError:  # no torch / docTR here
+        from ocr.common import line_confirm_numbers as confirm_numbers
+    return confirm_numbers
+
+
+class DoseScanner(FakeScanner):
+    """A v2 scanner whose printed-only lines get their flags the way Scanner.run sets them."""
+
+    TEXTS = ["Omeprazole mg", "1. Omeprazole mg", "Omeprazole mg for 7 days", "1. Omeprazole 20 mg",
+             "Amlodipine 5 mg and Omeprazole mg", "Omeprazole mg, Amlodipine 5 mg", "InSulin O Units",
+             "Dr L Example", "Mehta OD Clinic", "Test Result Units Reference range"]
+
+    def run(self, image):
+        res = super().run(image)
+        from ocr.common import has_number_or_unit
+        confirm = _confirm_numbers()
+        lines = []
+        for i, t in enumerate(self.TEXTS):
+            ln = {"text": t, "box": [1.0, 10.0 * i, 90.0, 10.0 * i + 8], "confidence": 0.96, "script": "printed",
+                  "handwritten_share": 0.0, "words": [], "low_confidence": False}
+            ln["confirm_numbers"] = confirm(ln, script_known=True)
+            ln["has_numbers"] = has_number_or_unit(t)
+            lines.append(ln)
+        res.update(lines=lines, text="\n".join(self.TEXTS), confidences=[0.96] * len(lines))
+        return res
+
+
+def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypatch):
+    """/api/ocr: a list number, a duration or another medicine's dose does not stand in for a unit's
+    number; "1. Omeprazole 20 mg" gets only the quiet has_numbers; the text is returned as read."""
+    monkeypatch.setattr(api, "_pipeline", DoseScanner())
+    body = post(client, png_bytes((120, 90))).get_json()
+    assert body["pipeline"] == "v2" and body["text"] == "\n".join(DoseScanner.TEXTS)
+    got = {ln["text"]: (ln["confirm_numbers"], ln["has_numbers"]) for ln in body["lines"]}
+    assert [ln["text"] for ln in body["lines"]] == DoseScanner.TEXTS
+    assert got == {"Omeprazole mg": (True, True), "1. Omeprazole mg": (True, True),
+                   "Omeprazole mg for 7 days": (True, True), "1. Omeprazole 20 mg": (False, True),
+                   "Amlodipine 5 mg and Omeprazole mg": (True, True), "Omeprazole mg, Amlodipine 5 mg": (True, True),
+                   "InSulin O Units": (True, True), "Dr L Example": (False, False), "Mehta OD Clinic": (False, False),
+                   "Test Result Units Reference range": (False, False)}

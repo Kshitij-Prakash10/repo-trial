@@ -15,8 +15,10 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                       Boxes are [x0, y0, x1, y1] in pixels of the page; confidences are 0..1.
                       confirm_numbers: a person must check the line's numbers against the page whatever
                       its confidence: it went to the handwriting reader and a reading holds a number or
-                      dose unit, or a unit lost its number, or (v1, which cannot tell print from
-                      handwriting) the text holds a number or unit.
+                      dose unit, or a unit has no number of its own right before it ("Omeprazole mg",
+                      also "1. Omeprazole mg" or "Amlodipine 5 mg and Omeprazole mg": a list number, a
+                      duration or another medicine's dose does not count), or (v1, which cannot tell
+                      print from handwriting) the text holds a number or unit.
                       has_numbers: the shown text holds a number or unit (quieter; also printed lines).
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",

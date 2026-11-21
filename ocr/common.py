@@ -232,10 +232,59 @@ def has_number_or_unit(text: str) -> bool:
     return False
 
 
+# Frequency words carry no amount, so they need no quantity of their own ("Paracetamol 500 mg as needed prn").
+_FREQUENCY_WORDS = frozenset(("od", "bd", "tds", "qds", "prn", "nocte", "mane"))
+# A quantity: a number ("20", "2.5", "0,5"; ".5" once _parts strips the leading dot) or a range ("1-2",
+# "2.5–5"). It must hold at least one real digit (see _is_quantity): look-alike letters mixed with digits
+# ("5OO", which has_misread_number flags) count, as they did under the old whole-line rule, but a token of
+# look-alike letters or a number word alone ("O", "SOO", "two") is not a quantity ("InSulin O Units").
+_NUM = r"[0-9OoSZIlB|]+(?:[.,][0-9OoSZIlB|]+)*"
+_QUANTITY = re.compile(rf"{_NUM}(?:[-–]{_NUM})?")
+_QUANTITY_UNIT = re.compile(rf"({_NUM}(?:[-–]{_NUM})?)([^\W\d_]+)")  # "20mg", "2.5mL", "1-2tabs"
+_LIST_INDEX = re.compile(r"\(?\d{1,3}[.):]\)?")  # "1.", "2)", "(3)", "4:" at the start of a line
+
+
+def _is_quantity(part: str) -> bool:
+    return bool(_QUANTITY.fullmatch(part)) and any(c.isdigit() for c in part)
+
+
+def units_without_quantity(text: str) -> list[str]:
+    """The units of the text that count (as in has_number_or_unit) but have no quantity of their own.
+
+    A unit's quantity is the token right before it: a number with a real digit ("20 mg", "2.5 mg",
+    ".5 mg", "1-2 tabs"), or a unit that has its quantity ("5 mmol/L", "1 tab od"); or the number is
+    written together with the unit ("20mg"). Nothing else stands in for it: not a list number at the
+    start of the line ("1. Omeprazole mg"), a duration ("Omeprazole mg for 7 days"), another medicine's
+    dose ("Amlodipine 5 mg and Omeprazole mg") or any other digit on the line. Frequency words (od, bd,
+    tds, qds, prn, nocte, mane) need no quantity."""
+    chunks = (text or "").split()
+    if chunks and _LIST_INDEX.fullmatch(chunks[0]):
+        chunks = chunks[1:]
+    out = []
+    prev_ok = False  # the previous token is a quantity, or a unit that has its quantity
+    prev_counts = False  # the previous token is number-like, so a unit after it counts
+    for part in _parts(" ".join(chunks)):
+        if part.isalpha() and part.lower() in _UNIT_WORDS and (part in _USUAL_SPELLING or prev_counts):
+            if not prev_ok and part.lower() not in _FREQUENCY_WORDS:
+                out.append(part)
+            prev_counts = _number_like(part)
+            continue  # prev_ok carries over: "1 tab od", "5 mmol/L"
+        m = _QUANTITY_UNIT.fullmatch(part)
+        attached = bool(m) and any(c.isdigit() for c in m.group(1)) and m.group(2).lower() in _UNIT_WORDS
+        prev_ok = attached or _is_quantity(part)
+        prev_counts = _number_like(part) or _is_quantity(part)
+    return out
+
+
 def number_lost(text: str) -> bool:
-    """True when a unit counts (see has_number_or_unit) but the text has no digit: the number that went
-    with it was probably lost or misread ("Omeprazole mg", "Insulin glargine IZ Units")."""
-    return has_number_or_unit(text) and not any(c.isdigit() for c in text or "")
+    """True when a unit counts (see has_number_or_unit) but its number is missing: the text has no digit at
+    all ("Omeprazole mg", "Insulin glargine IZ Units"), or a unit has no quantity of its own right before
+    it (units_without_quantity: "1. Omeprazole mg", "Omeprazole mg for 7 days", "Amlodipine 5 mg and
+    Omeprazole mg"). The number that went with it was probably lost or misread; a digit elsewhere on the
+    line does not stand in for it."""
+    if not has_number_or_unit(text):
+        return False
+    return not any(c.isdigit() for c in text or "") or bool(units_without_quantity(text))
 
 
 # Misread units that a printed reader makes of mg, mL and mcg ("Metformin SOO my").
@@ -255,3 +304,34 @@ def has_misread_number(text: str) -> bool:
             return True
     return False
 
+
+
+READINGS = ("text", "handwriting_text", "printed_text")  # the shown reading first, then the other ones
+
+
+def line_confirm_numbers(ln: dict, *, script_known: bool | None = None, flag_misread_digits: bool = False) -> bool:
+    """Must a person check this line's numbers against the page, whatever its confidence? (the
+    confirm_numbers flag of one line; ocr.scan.confirm_numbers is this function, torch-free here)
+
+    ln holds the shown "text" and, when the line went to the handwriting reader, "handwriting_text" and
+    (when the handwriting reading was chosen) "printed_text". Yes when:
+      - the line went to the handwriting reader (or is handwritten) and any reading holds a number or unit:
+        handwritten doses are misread with high confidence (2.5 mg read as 25 mg), and either reader can
+        be the one that kept the digits;
+      - the script is unknown (no printed / handwritten routing ran: script_known False; None means known
+        when the line has a "script") and the text holds a number or unit, since it may be handwriting;
+      - the shown text has a unit without its own number (number_lost: "Omeprazole mg", "1. Omeprazole mg",
+        "Amlodipine 5 mg and Omeprazole mg");
+      - flag_misread_digits is on and any reading has letters that look like misread digits before a unit
+        ("Metformin SOO my", has_misread_number). Off by default.
+    A printed line with its numbers in place ("1. Omeprazole 20 mg") is not flagged here; it gets the
+    quieter has_numbers flag."""
+    readings = [ln.get(k) or "" for k in READINGS]
+    if script_known is None:
+        script_known = "script" in ln
+    routed = "handwriting_text" in ln or ln.get("script") == "handwritten"
+    if (not script_known or routed) and any(has_number_or_unit(t) for t in readings):
+        return True
+    if number_lost(readings[0]):
+        return True
+    return bool(flag_misread_digits) and any(has_misread_number(t) for t in readings)
