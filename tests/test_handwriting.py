@@ -128,8 +128,15 @@ def test_postcorrect_fixes_one_typo_and_leaves_numbers():
 
 # ---------------------------------------------------------------- end to end (needs the trained weights)
 
+def _printed_weights_present() -> bool:
+    """The detector and recogniser weights, with the size rule of ocr.api (an empty cache file is missing)."""
+    from ocr.api import missing_weights
+    return not missing_weights()
+
+
 HAVE_WEIGHTS = all(os.path.exists(p) for p in (O.ORIENT_CKPT, scriptclf.CKPT,
-                                                os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json")))
+                                                os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json"))) \
+    and _printed_weights_present()
 
 
 @pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",

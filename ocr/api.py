@@ -84,6 +84,7 @@ PACKAGES = ("torch", "doctr")  # import names of the optional dependencies
 SETUP_HINT = "pip install -r requirements-ocr.txt"
 
 PRETRAINED = {"detector": "fast_base-*.pt", "recogniser": "crnn_mobilenet_v3_large_pt-*.pt"}  # docTR cache
+MIN_WEIGHTS_BYTES = 1024  # the real files are megabytes; anything smaller is a failed or cut-off download
 
 # What the v2 pipeline (ocr.scan.Scanner) needs on top of v1: the same files that ocr/orientation.py,
 # ocr/scriptclf.py and ocr/handwriting.py load.
@@ -148,7 +149,17 @@ def missing_weights() -> list[str]:
     cache = os.environ.get("DOCTR_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "doctr")
     ckpt = {"detector": DET_CKPT, "recogniser": REC_CKPT}  # looked up here so tests can replace the paths
     return [stage for stage, pattern in PRETRAINED.items()
-            if not os.path.exists(ckpt[stage]) and not glob.glob(os.path.join(cache, "models", pattern))]
+            if not os.path.exists(ckpt[stage])
+            and not any(weights_file_ok(f) for f in glob.glob(os.path.join(cache, "models", pattern)))]
+
+
+def weights_file_ok(path: str) -> bool:
+    """A cached weights file that can be loaded: at least MIN_WEIGHTS_BYTES. A failed download leaves an
+    empty (or cut-off) file behind; it is treated as missing (and left in place)."""
+    try:
+        return os.path.getsize(path) >= MIN_WEIGHTS_BYTES
+    except OSError:
+        return False
 
 
 def model_names() -> dict:

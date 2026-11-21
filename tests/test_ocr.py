@@ -382,6 +382,36 @@ def test_capitalised_names_are_not_misread_numbers(text, flag):
     assert common.has_misread_number(text) is flag
 
 
+@pytest.mark.parametrize("text", ["Insulin Il units", "Insulin Sl units", "Insulin Ill units", "Metformin Bl mg"])
+def test_capitalised_look_alikes_without_a_vowel_are_misread_numbers(text):
+    """"Il" (11), "Sl" (51), "Bl" (81): name-shaped but with no vowel, so still digits read as letters."""
+    assert common.has_number_or_unit(text) and common.number_lost(text)
+    assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True) is True
+    routed = {"text": text, "script": "handwritten", "handwriting_text": text, "printed_text": text}
+    assert common.line_confirm_numbers(routed, script_known=True) is True
+
+
+@pytest.mark.parametrize("text,lost", [
+    ("Salbutamol puffs prn", True), ("Salbutamol tabs bd", True),  # the count went missing
+    ("Paracetamol tablets as needed", False), ("Eye drops nocte", False), ("Ear drops bd", False),
+    ("Analyte (mmol/L)", False), ("Test Units Result", False),  # column headers
+    ("Glucose (mmol/L)", True), ("Potassium mmol/L", True),  # a test whose value went missing
+])
+def test_plural_counts_and_unit_headers(text, lost):
+    assert common.number_lost(text) is lost
+    assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True) is lost
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Timolol OS drops", False), ("Timolol OS drops bd", False), ("Apply to OS", False),  # OS: left eye
+    ("Levothyroxine SO mcq", True), ("Warfarin SO mg", True),  # capitals before a dose unit: 50
+])
+def test_look_alike_words_are_words_except_in_capitals_before_a_dose_unit(text, flag):
+    assert common.has_misread_number(text) is flag
+    ln = {"text": text, "script": "printed"}
+    assert common.line_confirm_numbers(ln, script_known=True, flag_misread_digits=True) is flag
+
+
 M = "Metformin SOO my"
 ROUTINGS = {  # (a) printed only, (b) handwriting reading shown, (c) printed reading kept after handwriting
     "a": [{"text": M, "script": "printed"}],

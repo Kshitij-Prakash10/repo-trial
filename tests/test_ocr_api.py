@@ -150,10 +150,10 @@ def test_status_when_weights_are_not_cached(client, monkeypatch, tmp_path):
     assert post(client, png_bytes()).status_code == 503  # and nothing is downloaded
     models = tmp_path / "models"
     models.mkdir()
-    (models / "fast_base-00000000.pt").write_bytes(b"x")
+    (models / "fast_base-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == ["recogniser"]
     assert client.get("/api/ocr/status").get_json()["available"] is False
-    (models / "crnn_mobilenet_v3_large_pt-00000000.pt").write_bytes(b"x")
+    (models / "crnn_mobilenet_v3_large_pt-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == []
     assert client.get("/api/ocr/status").get_json()["available"] is True
 
@@ -171,7 +171,7 @@ def test_a_finetuned_checkpoint_needs_no_cached_weights(client, monkeypatch, tmp
     body = client.get("/api/ocr/status").get_json()
     assert body["available"] is False and "(detector)" in body["reason"] and "recogniser" not in body["reason"]
     (tmp_path / "models").mkdir()
-    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x")
+    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == []
     assert client.get("/api/ocr/status").get_json()["available"] is True
     det = tmp_path / "det_ft.pt"  # with both fine-tuned checkpoints the cache is not looked at
@@ -179,6 +179,20 @@ def test_a_finetuned_checkpoint_needs_no_cached_weights(client, monkeypatch, tmp
     monkeypatch.setattr(api, "DET_CKPT", str(det))
     monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path / "nowhere"))
     assert api.missing_weights() == []
+
+
+@pytest.mark.parametrize("size", [0, 1, 1023])
+def test_an_empty_or_truncated_cache_file_is_missing(client, monkeypatch, tmp_path, size):
+    """A failed download leaves an empty (or cut-off) fast_base-*.pt in the docTR cache: that is no detector."""
+    monkeypatch.setattr(api, "PACKAGES", ("json",))
+    monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(api, "DET_CKPT", str(tmp_path / "no_det.pt"))
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x" * size)
+    assert "detector" in api.missing_weights()
+    assert api.availability()[0] is False
+    (tmp_path / "models" / "fast_base-11111111.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)  # a good copy too
+    assert "detector" not in api.missing_weights()
 
 
 def test_the_repository_recogniser_checkpoint_is_found():
@@ -690,7 +704,7 @@ def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypa
 
 @pytest.mark.parametrize("text,flag", [
     ("Metformin SOO my", True), ("Warfarin B my", True), ("Total 9.00", True), ("Omeprazole mg", True),
-    ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("see overleaf", False),
+    ("Insulin Il units", True), ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("see overleaf", False),
 ])
 def test_v1_lines_get_the_per_line_decision_with_the_script_unknown(text, flag):
     """v1 (printed reader only, script unknown): any number or unit still gets the prominent warning, and

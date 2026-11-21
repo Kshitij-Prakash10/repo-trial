@@ -210,10 +210,11 @@ def _parts(text: str) -> list[str]:
 
 
 def _word_like(part: str) -> bool:
-    """A capitalised word ("Bo", "So", "Il"): an initial capital and lower-case letters after it. Readers
-    turn digits into upper-case look-alikes ("SOO", "ZO", "O") or into l / o mixed with other letters
-    ("lO", "Z.S"), not into a name-shaped word, so such a token is not a misread number."""
-    return len(part) > 1 and part.isalpha() and part[0].isupper() and part[1:].islower()
+    """A capitalised word ("Bo", "So"): an initial capital, then lower-case letters with a vowel among them.
+    The only lower-case look-alikes are o (0) and l (1), so a name-shaped token of look-alikes needs an "o"
+    to be a word; "Il", "Sl", "Bl", "Ill" (11, 51, 81, 111) have no vowel and stay misread numbers."""
+    return (len(part) > 1 and part.isalpha() and part[0].isupper() and part[1:].islower()
+            and any(ch in "aeiouy" for ch in part[1:]))
 
 
 def _number_like(part: str) -> bool:
@@ -264,6 +265,14 @@ _COUNT_UNITS = frozenset(("tab", "tabs", "tablet", "tablets", "cap", "caps", "ca
 # The plural of a count unit with no number is the name of the form ("Paracetamol tablets as needed",
 # "Eye drops nocte"), not a count whose number was lost.
 _COUNT_PLURALS = frozenset(("tabs", "tablets", "caps", "capsules", "puffs", "drops"))
+# ... unless the plural stands between a capitalised medicine and a frequency word: "Salbutamol puffs prn"
+# lost its count ("2 puffs"). Words that name the form with the plural are not medicines ("Eye drops nocte").
+_FORM_NAMES = frozenset(("eye", "ear", "nasal", "nose", "mouth", "throat", "skin"))
+# Header words of a lab table: a line of them and a unit is a column header, not a value that went missing
+# ("Analyte (mmol/L)", "Test Units"); a test name with a unit and no value is ("Glucose (mmol/L)").
+_HEADER_WORDS = frozenset(("analyte", "test", "tests", "parameter", "parameters", "investigation",
+                           "investigations", "result", "results", "value", "values", "unit", "units",
+                           "reference", "range", "interval", "flag", "name", "method", "specimen"))
 _COUNT_WORDS = _NUMBER_WORDS | {"a", "an"}
 # Unit words that count only next to a number in has_number_or_unit (they collide with initials and words:
 # "G Sample", "Department of Mol Biology"). Right before a unit or frequency word that counts they are
@@ -317,6 +326,8 @@ def units_without_quantity(text: str) -> list[str]:
             return False
         return j + 1 >= len(parts) or parts[j + 1].lower() not in _TAKES_NUMBER
 
+    words = [p.lower() for p in parts if p.lower() not in _UNIT_WORDS]
+    header_line = bool(words) and all(w in _HEADER_WORDS for w in words)  # "Analyte (mmol/L)"
     out = []
     prev_ok = False  # the previous token is a quantity, or a unit that has its quantity
     for i, part in enumerate(parts):
@@ -329,10 +340,13 @@ def units_without_quantity(text: str) -> list[str]:
             ok = prev_ok
             if not ok and low in _COUNT_UNITS:
                 before = parts[i - 1].lower() if i else ""
-                ok = (before in _COUNT_WORDS or low in _COUNT_PLURALS
+                lost_count = (low in _COUNT_PLURALS and 0 < i < len(parts) - 1 and _word_like(parts[i - 1])
+                              and before not in _FORM_NAMES and parts[i + 1].lower() in _FREQUENCY_WORDS
+                              and counted[i + 1])  # "Salbutamol puffs prn"
+                ok = (before in _COUNT_WORDS or (low in _COUNT_PLURALS and not lost_count)
                       or (i == 0 and i + 1 < len(parts) and parts[i + 1].isalpha() and not counted[i + 1]))
             if not ok and low not in _COUNT_UNITS:
-                ok = value_after(i)
+                ok = value_after(i) or header_line
             if not ok:
                 out.append(part)
             prev_ok = ok
@@ -354,7 +368,10 @@ def number_lost(text: str) -> bool:
 
 # Misread units that a printed reader makes of mg, mL and mcg ("Metformin SOO my").
 _MISREAD_UNITS = frozenset(("my", "rng", "mq", "mI", "rnl", "rnL", "rncg", "mcq", "rnmol"))
-_NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words of look-alike letters (capitalised ones: _word_like); "SO mcq" is 50
+_NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words made of look-alike letters, in any case
+# Dose units: a look-alike word in capitals right before one of these is a misread number after all
+# ("Levothyroxine SO mcq": 50 mcg), while before a form or count it is the word ("Timolol OS drops": left eye).
+_DOSE_UNITS = frozenset(("mcg", "µg", "ug", "mg", "g", "kg", "ml", "l", "dl", "mmol", "mol", "miu", "iu"))
 
 
 def has_misread_number(text: str) -> bool:
@@ -363,8 +380,8 @@ def has_misread_number(text: str) -> bool:
     Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
     parts = _parts(text)
     for a, b in zip(parts, parts[1:]):
-        if (not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a) or a in _NOT_A_NUMBER
-                or _word_like(a)):
+        word = a.lower() in _NOT_A_NUMBER and not (a.isupper() and (b in _MISREAD_UNITS or b.lower() in _DOSE_UNITS))
+        if not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a) or word or _word_like(a):
             continue
         if b in _MISREAD_UNITS or (b.isalpha() and b.lower() in _UNIT_WORDS):
             return True
