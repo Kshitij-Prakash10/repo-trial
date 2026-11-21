@@ -40,7 +40,7 @@ def test_fixture_schema(recs):
             assert k in r, (r["id"], k)
         assert r["routing"] in ROUTINGS
         assert r["path"] == ("v1" if r["routing"] == "none_v1" else "v2")
-        assert r["set"] in ("original_39", "extended", "extended_r2")
+        assert r["set"] in ("original_39", "extended", "extended_r2", "extended_r3")
         assert r["expected_fields"] == parse_fields(r["ground_truth"])
         for f in r["expected_fields"]:
             assert set(f) == {"drug", "value", "unit"}
@@ -214,9 +214,10 @@ def test_alpha_pairs_differ_by_one_pixel():
 
 def test_round2_set_is_appended_and_covers_each_kind(recs):
     sets = [r["set"] for r in recs]
-    first_r2 = sets.index("extended_r2")
-    assert set(sets[first_r2:]) == {"extended_r2"} and len(sets) - first_r2 >= 40  # appended after round 1
-    assert sum(s != "extended_r2" for s in sets) == 295  # the round-1 records stay as they were
+    first_r2, first_r3 = sets.index("extended_r2"), sets.index("extended_r3")
+    assert set(sets[first_r2:first_r3]) == {"extended_r2"} and first_r3 - first_r2 == 76  # appended after round 1
+    assert set(sets[first_r3:]) == {"extended_r3"}  # round 3 appended after round 2
+    assert first_r2 == 295  # the round-1 records stay as they were
     r2 = [r for r in recs if r["set"] == "extended_r2"]
     for cat in ("r2_count_freq_no_digit", "r2_unit_before_value", "r2_form_word", "r2_v1_misread", "r2_misread_unit"):
         sub = [r for r in r2 if r["category"] == cat]
@@ -238,3 +239,15 @@ def test_hw_options_are_routed_or_ignored():
     assert o["read"] == {"num_beams": 4} and o["constructor"] == {"local_only": True}
     assert o["ignored"] == {"hw_beams": 4, "x": "abc"}
     assert RH.split_hw_options(None, Reader) == {"requested": {}, "constructor": {}, "read": {}, "ignored": {}}
+
+
+def test_round3_set_covers_the_review_cases(recs):
+    r3 = [r for r in recs if r["set"] == "extended_r3"]
+    shown = {(r["path"], r["displayed_text"]) for r in r3}
+    for path in ("v1", "v2"):
+        for t in ("Insulin Il units", "Insulin Sl units", "Timolol OS drops", "Ear drops bd", "Salbutamol puffs prn",
+                  "Analyte (mmol/L)", "Glucose (mmol/L)", "Bo Tab and Sons Chemists", "Ask Bo my pharmacist",
+                  "So my doctor said to continue"):
+            assert (path, t) in shown, (path, t)
+    assert any(r["routing"] == "handwriting_selected" and r["displayed_text"] == "Insulin Il units" for r in r3)
+    assert sum(r["dose_incorrect_or_lost"] for r in r3) >= 15 and sum(not r["warning_warranted"] for r in r3) >= 15

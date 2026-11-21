@@ -3,7 +3,7 @@ dataset text). Deterministic; run `python -m benchmarks.warnings.build_fixtures`
 and commit the output. tests/test_benchmarks.py checks that the committed file matches this script.
 
 Record fields
-  id, set ("original_39" | "extended" | "extended_r2", the last appended in round 2), category, path ("v1" | "v2"),
+  id, set ("original_39" | "extended" | "extended_r2" | "extended_r3", appended in rounds 2 and 3), category, path ("v1" | "v2"),
   routing: printed_only (v2, never sent to the handwriting reader) | handwriting_selected (v2, the
            handwriting reading is shown, the printed one kept as printed_text) |
            printed_selected_after_handwriting (v2, the line went to the handwriting reader, whose reading
@@ -304,6 +304,48 @@ NEW_R2 = [
     V1("Since 2019 my blood pressure is fine", cat="r2_misread_unit"),
 ]
 
+# ---------------------------------------------------------------- round 3 additions (set "extended_r3", appended only)
+NEW_R3 = [
+    # capitalised look-alikes of digits (I/l for 1, S for 5, B for 8)
+    P("Insulin 11 units", "Insulin Il units", cat="r3_capital_lookalike"),
+    P("Insulin 51 units", "Insulin Sl units", cat="r3_capital_lookalike"),
+    P("Aspirin 81 mg", "Aspirin Bl mg", cat="r3_capital_lookalike"),
+    V1("Insulin 11 units", "Insulin Il units", cat="r3_capital_lookalike"),
+    V1("Insulin 51 units", "Insulin Sl units", cat="r3_capital_lookalike"),
+    HW("Insulin 11 units", "Insulin Il units", "Insulin Il units", cat="r3_capital_lookalike"),
+    HW("Insulin 11 units", "Insulin Il units", "Insulin 11 units", cat="r3_capital_lookalike"),
+    HW("Insulin 111 units", "Insulin Ill units", "Insulin Ill units", chosen="printed", cat="r3_capital_lookalike"),
+    HW("Aspirin 81 mg", "Aspirin Bl mg", "Aspirin Bl mg", cat="r3_capital_lookalike"),
+    HW("Metformin 500 mg", "Metformin SOO my", "Metformin SOO my", chosen="printed", cat="r3_capital_lookalike"),
+    P("Insulin 11 units", cat="r3_capital_lookalike"),
+    # OS (left eye) and SO (50) before a unit
+    P("Timolol OS drops", cat="r3_os_so"), V1("Timolol OS drops", cat="r3_os_so"),
+    P("Latanoprost OS nocte", cat="r3_os_so"),
+    P("Levothyroxine 50 mcg", "Levothyroxine SO mcq", cat="r3_os_so"),
+    V1("Levothyroxine 50 mcg", "Levothyroxine SO mcq", cat="r3_os_so"),
+    P("Levothyroxine 50 mcg", "Levothyroxine SO mcg", cat="r3_os_so"),
+    # plural forms and counts before a frequency word
+    P("Ear drops bd", cat="r3_plural_count"), P("Eye drops nocte", cat="r3_plural_count"),
+    P("Paracetamol tablets as needed", cat="r3_plural_count"), V1("Ear drops bd", cat="r3_plural_count"),
+    P("Salbutamol 2 puffs prn", cat="r3_plural_count"),
+    P("Salbutamol 2 puffs prn", "Salbutamol puffs prn", cat="r3_plural_count"),
+    V1("Salbutamol 2 puffs prn", "Salbutamol puffs prn", cat="r3_plural_count"),
+    HW("Salbutamol 2 puffs prn", "Salbutamol puffs prn", "Salbutamol 2 puffs prn", cat="r3_plural_count"),
+    P("Paracetamol 2 tablets qds", "Paracetamol tablets qds", cat="r3_plural_count"),
+    # unit column headers and a test whose value was lost
+    P("Analyte (mmol/L)", cat="r3_unit_header"), P("Test (units)", cat="r3_unit_header"),
+    P("Result (mmol/L) Reference range", cat="r3_unit_header"), V1("Analyte (mmol/L)", cat="r3_unit_header"),
+    P("Glucose (mmol/L) 5.4", "Glucose (mmol/L)", cat="r3_unit_header"),
+    V1("Glucose (mmol/L) 5.4", "Glucose (mmol/L)", cat="r3_unit_header"),
+    P("Potassium (mmol/L) 4.2", "Potassium (mmol/L)", cat="r3_unit_header"),
+    # look-alike words that are not numbers
+    P("Bo Tab and Sons Chemists", cat="r3_lookalike_words"), V1("Bo Tab and Sons Chemists", cat="r3_lookalike_words"),
+    P("Ask Bo my pharmacist", cat="r3_lookalike_words"), V1("Ask Bo my pharmacist", cat="r3_lookalike_words"),
+    P("So my doctor said to continue", cat="r3_lookalike_words"),
+    V1("So my doctor said to continue", cat="r3_lookalike_words"),
+    HW("Ask Bo my pharmacist", "Ask Bo my pharmacist", "Ask Bo my pharmacist", cat="r3_lookalike_words"),
+]
+
 
 def _is_numeric(text: str) -> bool:
     return bool(re.search(r"\d", text)) or bool(_QTY_WORD.search(text))
@@ -353,6 +395,8 @@ def build() -> list[dict]:
         recs.append(finish(r, f"ext-{e:03d}", "extended", "new"))
     for k, r in enumerate(NEW_R2, 1):  # appended after every round-1 record, which stay as they were
         recs.append(finish(r, f"r2-{k:03d}", "extended_r2", "new_r2"))
+    for k, r in enumerate(NEW_R3, 1):  # appended after round 2, which stays as it was
+        recs.append(finish(r, f"r3-{k:03d}", "extended_r3", "new_r3"))
     return recs
 
 
