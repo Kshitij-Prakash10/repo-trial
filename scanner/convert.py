@@ -18,37 +18,51 @@ def _grey_to_rgb(a: np.ndarray) -> Image.Image:
     return Image.fromarray(g).convert("RGB")
 
 
-def alpha_to_rgb(image: Image.Image) -> Image.Image:
-    """RGB copy of an image with transparency.
+# Alpha at and above which a pixel keeps its own colour (alpha_to_rgb). Below it the colour is blended towards
+# white in proportion to the alpha, down to white at alpha 0.
+ALPHA_FULL = 64
 
-    Fully transparent pixels become white: the colour stored under them means nothing (cut-out PNGs
-    store black there). Partly transparent pixels keep their own colour: compositing a photo's half
-    see-through surroundings on white lightened them towards the page and hid its edge (20 synthetic
-    test photos with alpha 128 outside the page: IoU >= 0.9 fell from 0.75 to 0.40; keeping the colour
-    gives 0.75 again, docs/scanner.md). An image with no opaque pixel at all is a see-through layer,
-    such as half see-through text, and is shown over white paper."""
+
+def has_alpha(image: Image.Image) -> bool:
+    """Whether the image carries transparency: an alpha channel, or a transparent colour of an 8-bit image
+    (palette, RGB, L, 1). A transparent value of 16-bit or deeper grey is ignored: it is scaled instead."""
+    return image.mode in _ALPHA_MODES or ("transparency" in image.info and image.mode in ("P", "RGB", "L", "1"))
+
+
+def alpha_to_rgb(image: Image.Image) -> Image.Image:
+    """RGB copy of an image with transparency, decided pixel by pixel.
+
+    out = white + (colour - white) * min(1, alpha / ALPHA_FULL). Fully transparent pixels become white:
+    the colour stored under them means nothing (cut-out PNGs store black there). Pixels with alpha of at
+    least ALPHA_FULL (a quarter) keep their own colour: compositing a photo's half see-through
+    surroundings on white lightened them towards the page and hid its edge (20 synthetic test photos
+    with alpha 128 outside the page: IoU >= 0.9 fell from 0.75 to 0.40; keeping the colour gives 0.75,
+    docs/scanner.md). In between, the colour fades towards white, so nearly transparent pixels with
+    meaningless dark colour do not turn black and the result changes little when alpha changes a little.
+
+    Each pixel depends only on its own colour and alpha, so pixels elsewhere in the image never change
+    it. (Until 2026-11 an image with no opaque pixel at all was composited on white instead, and adding
+    one opaque pixel anywhere switched every half see-through pixel to its own colour.)"""
     a = np.asarray(image.convert("RGBA"))
-    alpha = a[..., 3]
-    if not (alpha == 255).any():
-        white = Image.new("RGBA", image.size, (255, 255, 255, 255))
-        return Image.alpha_composite(white, Image.fromarray(a, "RGBA")).convert("RGB")
-    rgb = a[..., :3].copy()
-    rgb[alpha == 0] = 255
-    return Image.fromarray(rgb, "RGB")
+    w = np.minimum(a[..., 3:].astype(np.float32) / ALPHA_FULL, 1.0)
+    out = 255.0 + (a[..., :3].astype(np.float32) - 255.0) * w
+    return Image.fromarray(np.clip(np.rint(out), 0, 255).astype(np.uint8), "RGB")
 
 
 def to_rgb(image: Image.Image) -> Image.Image:
     """RGB copy of any PIL image (the image itself when it is already RGB).
 
-    Transparent areas become white, partly transparent ones keep their colour (alpha_to_rgb). 16-bit grey is scaled from 0..65535 to 0..255. Float (F) and
+    Transparency (an alpha channel or a transparent colour, has_alpha) is handled by alpha_to_rgb, as in
+    scanner.api.to_rgb8: transparent areas become white, pixels at least a quarter opaque keep their
+    colour, fainter ones fade towards white. 16-bit grey is scaled from 0..65535 to 0..255. Float (F) and
     32-bit integer (I) grey are scaled by their largest value when that is above 1.0 (F) or 255 (I);
     when they hold negative values, the lowest value becomes black, so nothing is cut off at zero.
     """
     mode = image.mode
+    if has_alpha(image):
+        return alpha_to_rgb(image)
     if mode == "RGB":
         return image
-    if mode in _ALPHA_MODES or (mode == "P" and "transparency" in image.info):
-        return alpha_to_rgb(image)
     if mode in _DEEP_MODES:
         a = np.nan_to_num(np.asarray(image, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
         if a.size == 0:
@@ -65,4 +79,4 @@ def to_rgb(image: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
-__all__ = ["to_rgb", "alpha_to_rgb"]
+__all__ = ["to_rgb", "alpha_to_rgb", "has_alpha", "ALPHA_FULL"]
