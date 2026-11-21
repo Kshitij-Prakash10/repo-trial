@@ -40,7 +40,7 @@ def test_fixture_schema(recs):
             assert k in r, (r["id"], k)
         assert r["routing"] in ROUTINGS
         assert r["path"] == ("v1" if r["routing"] == "none_v1" else "v2")
-        assert r["set"] in ("original_39", "extended", "extended_r2", "extended_r3")
+        assert r["set"] in ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4")
         assert r["expected_fields"] == parse_fields(r["ground_truth"])
         for f in r["expected_fields"]:
             assert set(f) == {"drug", "value", "unit"}
@@ -216,7 +216,9 @@ def test_round2_set_is_appended_and_covers_each_kind(recs):
     sets = [r["set"] for r in recs]
     first_r2, first_r3 = sets.index("extended_r2"), sets.index("extended_r3")
     assert set(sets[first_r2:first_r3]) == {"extended_r2"} and first_r3 - first_r2 == 76  # appended after round 1
-    assert set(sets[first_r3:]) == {"extended_r3"}  # round 3 appended after round 2
+    first_r4 = sets.index("extended_r4")
+    assert set(sets[first_r3:first_r4]) == {"extended_r3"} and first_r4 - first_r3 == 40  # round 3 after round 2
+    assert set(sets[first_r4:]) == {"extended_r4"}  # round 4 after round 3
     assert first_r2 == 295  # the round-1 records stay as they were
     r2 = [r for r in recs if r["set"] == "extended_r2"]
     for cat in ("r2_count_freq_no_digit", "r2_unit_before_value", "r2_form_word", "r2_v1_misread", "r2_misread_unit"):
@@ -251,3 +253,15 @@ def test_round3_set_covers_the_review_cases(recs):
             assert (path, t) in shown, (path, t)
     assert any(r["routing"] == "handwriting_selected" and r["displayed_text"] == "Insulin Il units" for r in r3)
     assert sum(r["dose_incorrect_or_lost"] for r in r3) >= 15 and sum(not r["warning_warranted"] for r in r3) >= 15
+
+
+def test_round4_set_covers_capitalised_o_look_alikes(recs):
+    r4 = [r for r in recs if r["set"] == "extended_r4"]
+    shown = {(r["routing"], r["displayed_text"]) for r in r4}
+    for t in ("Insulin Io units", "Insulin Zo units", "Insulin So units", "Insulin Io units at night"):
+        for routing in ("printed_only", "none_v1"):
+            assert (routing, t) in shown, (routing, t)
+        assert any(r["displayed_text"] == t and r["path"] == "v2" and "handwriting_text" in r for r in r4), t
+    for t in ("So tablets were stopped", "So my doctor said to continue", "Io Health Clinic", "Zo Pharmacy"):
+        assert {("printed_only", t), ("none_v1", t)} <= shown, t
+    assert all(r["dose_incorrect_or_lost"] == (r["category"] == "r4_capital_o") for r in r4)

@@ -31,11 +31,14 @@ from benchmarks.fields import parse_fields  # noqa: E402
 
 FIXTURES = os.path.join(C.HERE, "warnings", "fixtures.jsonl")
 THRESHOLD = 0.95  # the original target: >= 95 % of lines that truly hold a number are flagged by either flag
-SETS = ("original_39", "extended", "extended_r2", "extended_r3", "all", "all_with_r2", "all_with_r3")
+SETS = ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4", "all", "all_with_r2", "all_with_r3",
+        "all_with_r4")
 # "all" is the round-1 sets (original_39 + extended), as in the round-1 results; "all_with_r2" adds extended_r2
-# (and nothing later, so it stays comparable with round-2 results); "all_with_r3" is every record
+# (and nothing later, so it stays comparable with round-2 results); "all_with_r3" adds extended_r3;
+# "all_with_r4" is every record
 ROUND1 = ("original_39", "extended")
 ROUND2 = ROUND1 + ("extended_r2",)
+ROUND3 = ROUND2 + ("extended_r3",)
 PATHS = ("v1", "v2", "all")
 PRINTED_ROUTINGS = ("printed_only", "none_v1")
 
@@ -102,8 +105,8 @@ class Adapter:
 
 
 def _in_set(r_set: str, s: str) -> bool:
-    return (s == "all_with_r3" or (s == "all_with_r2" and r_set in ROUND2) or (s == "all" and r_set in ROUND1)
-            or r_set == s)
+    return (s == "all_with_r4" or (s == "all_with_r3" and r_set in ROUND3) or (s == "all_with_r2" and r_set in ROUND2)
+            or (s == "all" and r_set in ROUND1) or r_set == s)
 
 
 def _ids(rows, cond):
@@ -228,7 +231,7 @@ def markdown(res: dict) -> str:
          f"{res['n_records']} invented lines (`{res['fixtures']}`, sha256 `{res['fixtures_sha256'][:12]}`). "
          "Prominent warning = API `confirm_numbers`; any flag = `confirm_numbers` or `has_numbers`. "
          "`set=all` is the round-1 sets (original_39 + extended); `set=all_with_r2` adds extended_r2; "
-         "`set=all_with_r3` is every record.", ""]
+         "`set=all_with_r3` adds extended_r3; `set=all_with_r4` is every record.", ""]
     for mode, m in res["modes"].items():
         L += [f"## {mode}", ""]
         if not m.get("available"):

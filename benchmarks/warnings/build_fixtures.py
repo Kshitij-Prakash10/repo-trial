@@ -3,7 +3,7 @@ dataset text). Deterministic; run `python -m benchmarks.warnings.build_fixtures`
 and commit the output. tests/test_benchmarks.py checks that the committed file matches this script.
 
 Record fields
-  id, set ("original_39" | "extended" | "extended_r2" | "extended_r3", appended in rounds 2 and 3), category, path ("v1" | "v2"),
+  id, set ("original_39" | "extended" | "extended_r2" | "extended_r3" | "extended_r4", appended in rounds 2 to 4), category, path ("v1" | "v2"),
   routing: printed_only (v2, never sent to the handwriting reader) | handwriting_selected (v2, the
            handwriting reading is shown, the printed one kept as printed_text) |
            printed_selected_after_handwriting (v2, the line went to the handwriting reader, whose reading
@@ -346,6 +346,29 @@ NEW_R3 = [
     HW("Ask Bo my pharmacist", "Ask Bo my pharmacist", "Ask Bo my pharmacist", cat="r3_lookalike_words"),
 ]
 
+# ---------------------------------------------------------------- round 4 additions (set "extended_r4", appended only)
+NEW_R4 = [
+    # capitalised look-alikes with "o" (o for 0) before a unit: 10, 20, 50
+    P("Insulin 10 units", "Insulin Io units", cat="r4_capital_o"), P("Insulin 20 units", "Insulin Zo units", cat="r4_capital_o"),
+    P("Insulin 50 units", "Insulin So units", cat="r4_capital_o"),
+    P("Insulin 10 units at night", "Insulin Io units at night", cat="r4_capital_o"),
+    V1("Insulin 10 units", "Insulin Io units", cat="r4_capital_o"), V1("Insulin 20 units", "Insulin Zo units", cat="r4_capital_o"),
+    V1("Insulin 50 units", "Insulin So units", cat="r4_capital_o"),
+    V1("Insulin 10 units at night", "Insulin Io units at night", cat="r4_capital_o"),
+    HW("Insulin 10 units", "Insulin Io units", "Insulin Io units", cat="r4_capital_o"),
+    HW("Insulin 20 units", "Insulin Zo units", "Insulin 20 units", cat="r4_capital_o"),
+    HW("Insulin 50 units", "Insulin So units", "Insulin So units", chosen="printed", cat="r4_capital_o"),
+    HW("Insulin 10 units at night", "Insulin Io units at night", "Insulin Io units at night", cat="r4_capital_o"),
+    # name-shaped words made of look-alike letters that are not numbers
+    P("So tablets were stopped", cat="r4_capital_o_trap"), V1("So tablets were stopped", cat="r4_capital_o_trap"),
+    P("So my doctor said to continue", cat="r4_capital_o_trap"), V1("So my doctor said to continue", cat="r4_capital_o_trap"),
+    P("Io Health Clinic", cat="r4_capital_o_trap"), V1("Io Health Clinic", cat="r4_capital_o_trap"),
+    P("Zo Pharmacy", cat="r4_capital_o_trap"), V1("Zo Pharmacy", cat="r4_capital_o_trap"),
+    P("So units were checked twice", cat="r4_capital_o_trap"), V1("So units were checked twice", cat="r4_capital_o_trap"),
+    P("So drops are not needed", cat="r4_capital_o_trap"), P("So caps must be worn", cat="r4_capital_o_trap"),
+    HW("So tablets were stopped", "So tablets were stopped", "So tablets were stopped", cat="r4_capital_o_trap"),
+]
+
 
 def _is_numeric(text: str) -> bool:
     return bool(re.search(r"\d", text)) or bool(_QTY_WORD.search(text))
@@ -397,6 +420,8 @@ def build() -> list[dict]:
         recs.append(finish(r, f"r2-{k:03d}", "extended_r2", "new_r2"))
     for k, r in enumerate(NEW_R3, 1):  # appended after round 2, which stays as it was
         recs.append(finish(r, f"r3-{k:03d}", "extended_r3", "new_r3"))
+    for k, r in enumerate(NEW_R4, 1):  # appended after round 3, which stays as it was
+        recs.append(finish(r, f"r4-{k:03d}", "extended_r4", "new_r4"))
     return recs
 
 
