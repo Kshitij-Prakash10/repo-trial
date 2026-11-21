@@ -391,6 +391,26 @@ def test_capitalised_look_alikes_without_a_vowel_are_misread_numbers(text):
     assert common.line_confirm_numbers(routed, script_known=True) is True
 
 
+@pytest.mark.parametrize("text", ["Insulin Io units", "Insulin Zo units", "Insulin So units", "Aspirin Bo mg",
+                                  "Insulin Io units at night"])
+def test_capitalised_look_alikes_with_o_before_a_unit_are_misread_numbers(text):
+    """"o" is the look-alike of 0, so "Io" (10), "Zo" (20), "So" (50) right before a unit are numbers, on
+    printed, handwriting-routed and (see test_ocr_api) v1 lines."""
+    assert common.has_number_or_unit(text) and common.number_lost(text)
+    assert common.has_misread_number(text)
+    assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True) is True
+    routed = {"text": text, "script": "handwritten", "handwriting_text": text, "printed_text": text}
+    assert common.line_confirm_numbers(routed, script_known=True) is True
+
+
+@pytest.mark.parametrize("text", ["Bo Tab and Sons Chemists", "So my doctor said to continue", "Ask Bo my pharmacist",
+                                  "Timolol OS drops", "Latanoprost OS nocte", "Eye drops nocte", "So tablets were stopped"])
+def test_capitalised_words_before_a_name_or_word_stay_clean(text):
+    for misread in (False, True):
+        assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True,
+                                           flag_misread_digits=misread) is False
+
+
 @pytest.mark.parametrize("text,lost", [
     ("Salbutamol puffs prn", True), ("Salbutamol tabs bd", True),  # the count went missing
     ("Paracetamol tablets as needed", False), ("Eye drops nocte", False), ("Ear drops bd", False),

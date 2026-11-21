@@ -217,8 +217,18 @@ def _word_like(part: str) -> bool:
             and any(ch in "aeiouy" for ch in part[1:]))
 
 
-def _number_like(part: str) -> bool:
-    if _word_like(part):
+def _before_dose_unit(nxt: str | None) -> bool:
+    """The next token is a dose or count unit written in lower case or its usual spelling ("units", "mg",
+    "tabs"), not a capitalised name ("Bo Tab") and not a frequency word."""
+    return bool(nxt) and nxt.isalpha() and nxt.lower() in _UNIT_WORDS and nxt.lower() not in _FREQUENCY_WORDS \
+        and (nxt.islower() or nxt in _USUAL_SPELLING)
+
+
+def _number_like(part: str, nxt: str | None = None) -> bool:
+    """A number-like token (see _NUMBER_LIKE) or a number word. A capitalised word ("Bo", "So", _word_like)
+    is not one, unless it is made only of look-alike letters and stands right before a dose or count
+    unit: "Insulin Io units", "Zo mg", "So units" are 10, 20, 50 ("o" is the look-alike of 0)."""
+    if _word_like(part) and not (_NUMBER_LIKE.fullmatch(part) and _before_dose_unit(nxt)):
         return False
     return bool(_NUMBER_LIKE.fullmatch(part)) or part.lower() in _NUMBER_WORDS
 
@@ -234,11 +244,12 @@ def has_number_or_unit(text: str) -> bool:
     if any(c.isdigit() for c in text) or "%" in text:
         return True
     prev_counts = False  # the previous token is number-like or a unit that counted
-    for part in _parts(text):
+    parts = _parts(text)
+    for i, part in enumerate(parts):
         is_unit = part.isalpha() and part.lower() in _UNIT_WORDS
         if is_unit and (part in _USUAL_SPELLING or prev_counts):
             return True
-        prev_counts = _number_like(part)
+        prev_counts = _number_like(part, parts[i + 1] if i + 1 < len(parts) else None)
     return False
 
 
@@ -313,7 +324,7 @@ def units_without_quantity(text: str) -> list[str]:
     prev_counts = False  # the previous token is number-like, so a unit after it counts
     for i, part in enumerate(parts):
         counted[i] = part.isalpha() and part.lower() in _UNIT_WORDS and (part in _USUAL_SPELLING or prev_counts)
-        prev_counts = _number_like(part) or _is_quantity(part)
+        prev_counts = _number_like(part, parts[i + 1] if i + 1 < len(parts) else None) or _is_quantity(part)
     for i in range(len(parts) - 2, -1, -1):
         if not counted[i] and counted[i + 1] and parts[i].lower() in _AMBIGUOUS_UNITS and not _word_like(parts[i]):
             counted[i] = True
@@ -380,8 +391,11 @@ def has_misread_number(text: str) -> bool:
     Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
     parts = _parts(text)
     for a, b in zip(parts, parts[1:]):
+        before_unit = not a.isupper() and _before_dose_unit(b)  # "Insulin So units": 50
         word = a.lower() in _NOT_A_NUMBER and not (a.isupper() and (b in _MISREAD_UNITS or b.lower() in _DOSE_UNITS))
-        if not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a) or word or _word_like(a):
+        if (not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a)
+                or (word and not (before_unit and b.lower() not in _COUNT_UNITS))  # "So tablets were stopped"
+                or (_word_like(a) and not before_unit)):
             continue
         if b in _MISREAD_UNITS or (b.isalpha() and b.lower() in _UNIT_WORDS):
             return True

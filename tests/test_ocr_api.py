@@ -704,7 +704,8 @@ def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypa
 
 @pytest.mark.parametrize("text,flag", [
     ("Metformin SOO my", True), ("Warfarin B my", True), ("Total 9.00", True), ("Omeprazole mg", True),
-    ("Insulin Il units", True), ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("see overleaf", False),
+    ("Insulin Il units", True), ("Insulin Io units", True), ("Insulin So units", True),
+    ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("see overleaf", False),
 ])
 def test_v1_lines_get_the_per_line_decision_with_the_script_unknown(text, flag):
     """v1 (printed reader only, script unknown): any number or unit still gets the prominent warning, and

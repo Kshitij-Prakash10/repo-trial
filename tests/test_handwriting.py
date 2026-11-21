@@ -128,19 +128,23 @@ def test_postcorrect_fixes_one_typo_and_leaves_numbers():
 
 # ---------------------------------------------------------------- end to end (needs the trained weights)
 
-def _printed_weights_present() -> bool:
-    """The detector and recogniser weights, with the size rule of ocr.api (an empty cache file is missing)."""
+def _missing_weights() -> list[str]:
+    """What the end-to-end tests need and this computer lacks: the v2 checkpoints, and the detector and
+    recogniser weights with the size rule of ocr.api (an empty cache file is missing)."""
     from ocr.api import missing_weights
-    return not missing_weights()
+    v2 = {"orientation": O.ORIENT_CKPT, "routing": scriptclf.CKPT,
+          "handwriting": os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json")}
+    return [k for k, p in v2.items() if not os.path.exists(p)] + missing_weights()
 
 
-HAVE_WEIGHTS = all(os.path.exists(p) for p in (O.ORIENT_CKPT, scriptclf.CKPT,
-                                                os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json"))) \
-    and _printed_weights_present()
+MISSING_WEIGHTS = _missing_weights()
+HAVE_WEIGHTS = not MISSING_WEIGHTS
+SLOW = os.environ.get("OCR_SLOW") == "1"
+SLOW_REASON = ("slow: set OCR_SLOW=1 to run it" if not SLOW else
+               f"model weights missing on this computer: {', '.join(MISSING_WEIGHTS)}")
 
 
-@pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",
-                    reason="slow: set OCR_SLOW=1 (needs checkpoints/ and the docTR weights)")
+@pytest.mark.skipif(not HAVE_WEIGHTS or not SLOW, reason=SLOW_REASON)
 def test_scan_reads_rotated_page(tmp_path):
     from PIL import Image
     from ocr.scan import scan
@@ -151,8 +155,7 @@ def test_scan_reads_rotated_page(tmp_path):
     assert "quick" in text.lower() and len(conf) == len(text.splitlines())
 
 
-@pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",
-                    reason="slow: set OCR_SLOW=1 (needs checkpoints/ and the docTR weights)")
+@pytest.mark.skipif(not HAVE_WEIGHTS or not SLOW, reason=SLOW_REASON)
 def test_scan_reads_handwriting_line_page(tmp_path):
     """A page of synthetic handwriting lines is routed to the handwriting reader and read."""
     from PIL import Image
