@@ -45,6 +45,23 @@ exact 93/133; handwriting reader alone 0.0244; printed reader alone 0.0702. Both
 selection loss 10/167, routing loss 1/167. Decimal points dropped at confidence >= 0.9 (1.25 -> 125 at
 0.91 and 0.93). Candidate margin selector (-0.05, chosen on validation) did not beat the shipped rule on test.
 
+### Medication warnings with the round-2 set (`warnings_r2.json`, 371 lines)
+
+Same runner and baseline; 76 `extended_r2` lines appended. The round-1 splits in `warnings_r2.json` are
+identical to `warnings.json`. Misread option off (default), all sets with r2 (`set=all_with_r2`):
+
+| Measure | at 0c71106 |
+|---|---|
+| (e) Original target on the original 39 | 37/39 = 0.9487, **FAIL** |
+| (a) either flag on lines with / without numbers | 241/254 / 14/117 |
+| (b) prominent vs dose wrong: precision / recall | 57/139 / 57/95 |
+| (c) prominent on correctly read print, v2 / v1 | 17/170 / 47/77 |
+| Silent dose errors | 38/95 |
+
+Per category (extended_r2; prominent on lines whose dose is wrong / on lines where no warning is warranted):
+count or frequency words 5/5 / 12/12; unit before value 2/5 / 2/11; lower-case form word 3/4 / 2/9;
+v1 misreads 2/8 / 0/6; misread units with digits kept 3/8 / 2/7.
+
 ## BLOCKED
 
 - Real held-out handwriting pages (GNHK, IAM): need huggingface.co.
