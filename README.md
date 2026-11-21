@@ -38,7 +38,8 @@ A basic web app that works as a personal health diary. Each user keeps their
   that lists those lines, whatever the confidence. Printed numbers get a quieter
   one-line note instead ("Numbers were read on 12 printed lines"); without the
   handwriting models nothing tells print from handwriting, so every line with a
-  number gets the warning. The warning is saved
+  number gets the warning, and so does a line whose digits look misread as
+  letters next to a unit ("Metformin SOO my"). The warning is saved
   with the document and shown again in View; after the text is corrected by hand
   it becomes a shorter reminder, and it goes only when the page is read again
   without such lines.
@@ -275,14 +276,25 @@ the token right before it is a number with a real digit ("20 mg", "2.5 mg", ".5 
 the number is written with it ("20mg"), or it follows a unit that has one ("5 mmol/L", "1 tab od").
 A list number ("1. Omeprazole mg"), a duration ("Omeprazole mg for 7 days") or another medicine's dose
 on the same line ("Amlodipine 5 mg and Omeprazole mg") does not count, so those lines get the
-warning; "1. Omeprazole 20 mg" gets only `has_numbers`. Frequency words (od, bd, prn, ...) need no
-number. Known false alarms of this rule: a unit written before its value ("Glucose (mmol/L) 5.4") and a
-lower-case form word before the medicine ("tab Metformin 500 mg"). The text itself is never changed.
+warning; "1. Omeprazole 20 mg" gets only `has_numbers`. Some words need no number: frequency words
+("Apply the cream bd", "Eye drops nocte"; but a frequency right after a capitalised name, "Amitriptyline
+nocte", is a dose that went missing); a count unit with a number word or "a" ("Take one tablet at
+night", "Half a tablet"); a plural form ("Paracetamol tablets as needed"); a form word starting the line
+("tab Metformin 500 mg"); and a unit written before its value in a lab table ("Glucose (mmol/L) 5.4",
+not when the number belongs to a duration: "Omeprazole mg 7 days"). A capitalised name made of
+look-alike letters ("Bo Tab and Sons Chemists") is not a misread number. Known misses and false alarms
+of these rules (invented lines): "Salbutamol puffs prn" (2 puffs lost) is not flagged, a lab header
+"Analyte (mmol/L)" is. The text itself is never changed.
 `Scanner(flag_misread_digits=True)` also flags lines whose digits look misread as letters before a unit
-("Metformin SOO my"), in any of their readings (the shown text, `handwriting_text` and
-`printed_text`); it is off by default because it was measured only on invented lines (see "Measured
-on synthetic data only"). The per-line decision is `ocr.scan.confirm_numbers(ln, script_known=...,
-flag_misread_digits=...)` (torch-free as `ocr.common.line_confirm_numbers`).
+("Metformin SOO my") or whose digits stand before a misread unit ("50 mcq", "10 mI", "11.8 q/dL"), in any
+of their readings (the shown text, `handwriting_text` and `printed_text`); it is off by default because
+it was measured only on invented lines (see "Measured on synthetic data only"). With it off, a line that
+went to the handwriting reader and whose readings are all such misreads ("Metformin SOO my" twice) gets
+no flag (2 of 28 lost-dose lines among the review's 54 invented routed lines). The v1 pipeline (printed
+reader only, script unknown) always applies this check, since it reads handwriting with the printed
+reader and such a line holds no digit (`ocr.api.V1_FLAG_MISREAD_DIGITS`). The per-line decision is
+`ocr.scan.confirm_numbers(ln, script_known=..., flag_misread_digits=...)` (torch-free as
+`ocr.common.line_confirm_numbers`).
 Documents categorized as prescriptions also show a reminder to
 compare every medicine, dose and unit against the image and check for missing lines, even if OCR
 missed every numeric cue. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
@@ -371,6 +383,25 @@ report exact transcription counts for references containing a digit, including c
 misses every digit. Training validation reports the same metric. Full-page summaries distinguish
 lines sent to the handwriting reader from lines where its prediction was selected. In the older
 committed summaries, `lines_routed_to_handwriting` counted selections.
+
+### Handwriting decoding (experiment)
+
+`Scanner(hw_beams=2)` (or `HandwritingReader(num_beams=2)`) decodes handwriting with beam search instead of
+greedy decoding. Off by default (1). Measured only on invented lines rendered with the training fonts
+(`benchmarks/run_handwriting.py`, 2 threads); chosen on the validation pages, scored once on the test pages:
+
+| Test pages, 167 lines | greedy (default) | 2 beams |
+|---|---|---|
+| shipped reading: line CER / WER | 0.0177 / 0.077 | 0.0171 / 0.0755 |
+| shipped reading: lines exact | 121 | 122 |
+| shipped reading: numeric lines exact (133) | 93 | 94 |
+| shipped reading: drug / value / unit all right (104) | 88 | 87 |
+| handwriting reader alone: lines exact | 106 | 113 |
+| wrong decimals among accepted, conf >= 0.90 (11) | 2 | 2 |
+| handwriting reader, ms per line | 339 | 431 |
+
+The printed readings are identical. The gain is one line in 167 and decimals dropped at high confidence
+("1.25 mg" read as "125 mg") are not fixed by it, so it stays off.
 
 ## Measured on synthetic data only
 

@@ -191,6 +191,12 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
   the plain RGB photos. The synthetic test (200) and OOD (80) sets are RGB and unchanged (test found
   0.945, mean IoU 0.887, IoU >= 0.9 0.755; OOD 0.575 / 0.673 / 0.375). A see-through layer with no
   opaque pixel now keeps its own colour (black at alpha 128 stays black, it used to become grey 127).
+- **16-bit grey holding 8-bit values (not changed).** An `I;16` image whose values are all 0..255 (8-bit
+  data saved in a 16-bit container without scaling) is scaled by 65535 like any 16-bit image, so it comes
+  out nearly black. Not fixed on purpose: scaling by 255 "when the largest value is at most 255" (as is done
+  for 32-bit `I` images) would switch the whole image on its brightest pixel, so one pixel of 256 would
+  darken everything 257 times (the same one-pixel discontinuity the alpha rule above removes); scaling
+  every image by its own maximum would change the documented scaling of ordinary 16-bit scans.
 - **Tiny images.** A photo whose shorter side is under 32 px (`MIN_SIDE`) is never a page.
 - **Noise guard.** Uniform random RGB noise used to reach confidence ~0.63 and `page_found=True`. A quad
   that passes the confidence test is now rejected when the photo inside and outside it is
