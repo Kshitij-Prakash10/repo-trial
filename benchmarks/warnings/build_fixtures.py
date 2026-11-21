@@ -3,7 +3,7 @@ dataset text). Deterministic; run `python -m benchmarks.warnings.build_fixtures`
 and commit the output. tests/test_benchmarks.py checks that the committed file matches this script.
 
 Record fields
-  id, set ("original_39" | "extended"), category, path ("v1" | "v2"),
+  id, set ("original_39" | "extended" | "extended_r2", the last appended in round 2), category, path ("v1" | "v2"),
   routing: printed_only (v2, never sent to the handwriting reader) | handwriting_selected (v2, the
            handwriting reading is shown, the printed one kept as printed_text) |
            printed_selected_after_handwriting (v2, the line went to the handwriting reader, whose reading
@@ -35,7 +35,7 @@ from benchmarks.fields import numbers, parse_fields, units
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "fixtures.jsonl")
-_QTY_WORD = re.compile(r"\b(one|two|three|four|five|six|seven|eight|nine|ten|half)\s+(tab|tabs|tablet|tablets|cap|caps|"
+_QTY_WORD = re.compile(r"\b(one|two|three|four|five|six|seven|eight|nine|ten|half)\s+(?:a\s+)?(tab|tabs|tablet|tablets|cap|caps|"
                        r"capsule|capsules|puff|puffs|drop|drops)\b", re.I)
 
 
@@ -241,6 +241,69 @@ NEW = [
     V1("Prednisolone 40 mg", "Prednisolone 4O my", cat="v1_handwritten", source="handwritten"),
 ]
 
+# ---------------------------------------------------------------- round 2 additions (set "extended_r2", appended only)
+NEW_R2 = [
+    # count or frequency words without a digit: correct print (no warning warranted) and doses that were lost
+    P("Take one tablet at night", cat="r2_count_freq_no_digit"), P("Take two tablets twice daily", cat="r2_count_freq_no_digit"),
+    P("Apply the cream bd", cat="r2_count_freq_no_digit"), P("Eye drops nocte", cat="r2_count_freq_no_digit"),
+    P("Salbutamol inhaler prn", cat="r2_count_freq_no_digit"), P("Paracetamol tablets as needed", cat="r2_count_freq_no_digit"),
+    P("One puff when needed", cat="r2_count_freq_no_digit"), P("Two drops in each eye tds", cat="r2_count_freq_no_digit"),
+    P("Half a tablet in the morning", cat="r2_count_freq_no_digit"),
+    V1("Take one tablet at night", cat="r2_count_freq_no_digit"), V1("Eye drops nocte", cat="r2_count_freq_no_digit"),
+    V1("Use two puffs prn", cat="r2_count_freq_no_digit"),
+    HW("Take one tablet daily", "Take one tablet daily", "Take one tablet daily", cat="r2_count_freq_no_digit"),
+    P("Amitriptyline 10 mg nocte", "Amitriptyline nocte", cat="r2_count_freq_no_digit"),
+    P("Paracetamol 1 g prn", "Paracetamol prn", cat="r2_count_freq_no_digit"),
+    P("Salbutamol 2 puffs prn", "Salbutamol puffs prn", cat="r2_count_freq_no_digit"),
+    P("Bisoprolol 2.5 mg od", "Bisoprolol od", cat="r2_count_freq_no_digit"),
+    V1("Amitriptyline 10 mg nocte", "Amitriptyline mg nocte", cat="r2_count_freq_no_digit"),
+    # lab layouts with the unit before the value, and unit column headers
+    P("Glucose (mmol/L) 5.4", cat="r2_unit_before_value"), P("Glucose mmol/L 5.4", cat="r2_unit_before_value"),
+    P("Test (units) Result Reference range", cat="r2_unit_before_value"), P("Test Units Result", cat="r2_unit_before_value"),
+    P("Haemoglobin (g/dL) 13.2", cat="r2_unit_before_value"), P("Potassium mmol/L 4.2 3.5-5.0", cat="r2_unit_before_value"),
+    P("Ferritin (ug/L) 45", cat="r2_unit_before_value"), P("Creatinine (umol/L) 72", cat="r2_unit_before_value"),
+    P("Analyte (mmol/L)", cat="r2_unit_before_value"),
+    V1("Glucose (mmol/L) 5.4", cat="r2_unit_before_value"), V1("Test (units) Result Reference range", cat="r2_unit_before_value"),
+    P("Glucose (mmol/L) 5.4", "Glucose (mmol/L)", cat="r2_unit_before_value"),
+    P("Glucose mmol/L 5.4", "Glucose mmol/L S.4", cat="r2_unit_before_value"),
+    P("Haemoglobin (g/dL) 13.2", "Haemoglobin (g/dL) l3.2", cat="r2_unit_before_value"),
+    P("Ferritin (ug/L) 45", "Ferritin (ug/L) 4S", cat="r2_unit_before_value"),
+    V1("Potassium mmol/L 4.2", "Potassium mmol/L", cat="r2_unit_before_value"),
+    # a lower-case form word before the medicine
+    P("tab Metformin 500 mg", cat="r2_form_word"), P("cap Omeprazole 20 mg", cat="r2_form_word"),
+    P("tab Amlodipine 5 mg od", cat="r2_form_word"), P("1. tab Ramipril 2.5 mg", cat="r2_form_word"),
+    P("cap Amoxicillin 500 mg tds", cat="r2_form_word"), P("tabs Paracetamol 1 g prn", cat="r2_form_word"),
+    P("inj Insulin 10 units", cat="r2_form_word"),
+    V1("tab Metformin 500 mg", cat="r2_form_word"), V1("cap Omeprazole 20 mg", cat="r2_form_word"),
+    P("tab Metformin 500 mg", "tab Metformin mg", cat="r2_form_word"),
+    P("cap Omeprazole 20 mg", "cap Omeprazole 2O mg", cat="r2_form_word"),
+    V1("tab Amlodipine 5 mg", "tab Amlodipine S mg", cat="r2_form_word"),
+    HW("tab Ramipril 2.5 mg", "tab Ramipril 25 mg", "tab Ramipril 2.5 mg", cat="r2_form_word"),
+    # v1 readings with digits misread as letters, and v1 sentences made of look-alike letters
+    V1("Metformin 500 mg", "Metformin SOO my", cat="r2_v1_misread"), V1("Warfarin 3 mg", "Warfarin B my", cat="r2_v1_misread"),
+    V1("Amlodipine 5 mg", "Amlodipine S my", cat="r2_v1_misread"),
+    V1("Atorvastatin 20 mg at night", "Atorvastatin ZO my at night", cat="r2_v1_misread"),
+    V1("Prednisolone 40 mg", "Prednisolone 4O my", cat="r2_v1_misread"),
+    V1("Levothyroxine 50 mcg", "Levothyroxine SO mcq", cat="r2_v1_misread"),
+    V1("Insulin 10 units", "lnsulin lO Units", cat="r2_v1_misread"), V1("Ramipril 2.5 mg", "Ramipril Z.S my", cat="r2_v1_misread"),
+    V1("So my doctor said to continue", cat="r2_v1_misread"), V1("Ask Bo my pharmacist", cat="r2_v1_misread"),
+    V1("OBS stable overnight", cat="r2_v1_misread"), V1("ZOO Road Pharmacy", cat="r2_v1_misread"),
+    V1("Is my dose right", cat="r2_v1_misread"), V1("Boss my manager", cat="r2_v1_misread"),
+    # misread units next to digits that were kept
+    P("Levothyroxine 50 mcg OD", "Levothyroxine 50 mcq OD", cat="r2_misread_unit"),
+    P("Lactulose 10 mL bd", "Lactulose 10 mI bd", cat="r2_misread_unit"),
+    P("Haemoglobin 11.8 g/dL", "Haemoglobin 11.8 q/dL", cat="r2_misread_unit"),
+    P("Metformin 500 mg bd", "Metformin 500 my bd", cat="r2_misread_unit"),
+    P("Atorvastatin 20 mg", "Atorvastatin 20 rng", cat="r2_misread_unit"),
+    V1("Levothyroxine 50 mcg", "Levothyroxine 50 mcq", cat="r2_misread_unit"),
+    V1("Lactulose 10 mL", "Lactulose 10 mI", cat="r2_misread_unit"),
+    HW("Digoxin 125 mcg OD", "Digoxin 125 mcq OD", "Digoxin 125 mcg OD", cat="r2_misread_unit"),
+    P("Levothyroxine 50 mcg OD", cat="r2_misread_unit"), P("Lactulose 10 mL bd", cat="r2_misread_unit"),
+    P("Haemoglobin 11.8 g/dL", cat="r2_misread_unit"), V1("Metformin 500 mg bd", cat="r2_misread_unit"),
+    P("Since 2019 my blood pressure is fine", cat="r2_misread_unit"), P("In 2024 my dose was reduced", cat="r2_misread_unit"),
+    V1("Since 2019 my blood pressure is fine", cat="r2_misread_unit"),
+]
+
 
 def _is_numeric(text: str) -> bool:
     return bool(re.search(r"\d", text)) or bool(_QTY_WORD.search(text))
@@ -288,6 +351,8 @@ def build() -> list[dict]:
     for r in NEW:
         e += 1
         recs.append(finish(r, f"ext-{e:03d}", "extended", "new"))
+    for k, r in enumerate(NEW_R2, 1):  # appended after every round-1 record, which stay as they were
+        recs.append(finish(r, f"r2-{k:03d}", "extended_r2", "new_r2"))
     return recs
 
 

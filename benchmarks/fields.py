@@ -13,6 +13,8 @@ Rules (all of them; anything else is ignored):
 - unit: the token right after the value (or right after the name when there is no value) when it is in
   UNITS, compared case-insensitively and returned in canonical lower case ("mL" and "ML" -> "ml").
   Misread units ("my", "mcq", "rng") are not units, so they give unit None.
+- Unit before value (lab layouts "Glucose (mmol/L) 5.4", "Glucose mmol/L 5.4"): when the name is followed
+  by a unit and then a number, that number is the value.
 - The field ends at the next name; a value or unit after another word than those skipped is not taken
   ("Omeprazole before breakfast 20 mg" -> value None).
 
@@ -34,12 +36,13 @@ NAMES = tuple(sorted({
     "hydroxychloroquine",
     # lab analytes
     "haemoglobin", "fasting glucose", "glucose", "hba1c", "cholesterol", "total cholesterol", "creatinine",
-    "sodium", "potassium", "tsh", "platelets", "mcv", "haematocrit",
+    "sodium", "potassium", "tsh", "urea", "albumin", "ferritin", "vitamin b12", "platelets", "mcv", "haematocrit",
 }, key=lambda s: (-len(s.split()), s)))
 UNITS = frozenset((
     "mg", "mcg", "µg", "ug", "g", "kg", "ml", "l", "dl", "mmol", "mmol/l", "umol/l", "µmol/l", "g/dl", "g/l",
     "iu", "miu/l", "unit", "units", "%", "mmhg", "tab", "tabs", "tablet", "tablets", "cap", "caps", "capsule",
-    "capsules", "puff", "puffs", "drop", "drops", "fl"))
+    "capsules", "puff", "puffs", "drop", "drops", "fl", "ug/l", "µg/l", "nmol/l", "pmol/l", "u/l", "mg/l", "mg/dl",
+    "mmol/mol"))
 SKIP_AFTER = frozenset(("to", ":", "-", "of", "="))  # between a name and its value
 _NUM = re.compile(r"^(?:\d+(?:[.,]\d+)?|[.,]\d+)$")
 _GLUED = re.compile(r"^(\d+(?:[.,]\d+)?|[.,]\d+)([A-Za-zµ%/]+)$")
@@ -87,6 +90,8 @@ def parse_fields(text: str) -> list[dict]:
             j += 1
         if j < end and low[j] in UNITS:
             unit = low[j]
+            if value is None and j + 1 < end and _NUM.match(toks[j + 1]):  # "Glucose (mmol/L) 5.4"
+                value = toks[j + 1]
         fields.append({"drug": name, "value": value, "unit": unit})
     return fields
 

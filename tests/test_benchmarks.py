@@ -40,7 +40,7 @@ def test_fixture_schema(recs):
             assert k in r, (r["id"], k)
         assert r["routing"] in ROUTINGS
         assert r["path"] == ("v1" if r["routing"] == "none_v1" else "v2")
-        assert r["set"] in ("original_39", "extended")
+        assert r["set"] in ("original_39", "extended", "extended_r2")
         assert r["expected_fields"] == parse_fields(r["ground_truth"])
         for f in r["expected_fields"]:
             assert set(f) == {"drug", "value", "unit"}
@@ -210,3 +210,31 @@ def test_alpha_pairs_differ_by_one_pixel():
     b = RA.add_pixel(a)
     assert (a != b).any(axis=2).sum() == 1 and m.any()
     assert not (a[..., 3] == 255).any() and (b[..., 3] == 255).sum() == 1
+
+
+def test_round2_set_is_appended_and_covers_each_kind(recs):
+    sets = [r["set"] for r in recs]
+    first_r2 = sets.index("extended_r2")
+    assert set(sets[first_r2:]) == {"extended_r2"} and len(sets) - first_r2 >= 40  # appended after round 1
+    assert sum(s != "extended_r2" for s in sets) == 295  # the round-1 records stay as they were
+    r2 = [r for r in recs if r["set"] == "extended_r2"]
+    for cat in ("r2_count_freq_no_digit", "r2_unit_before_value", "r2_form_word", "r2_v1_misread", "r2_misread_unit"):
+        sub = [r for r in r2 if r["category"] == cat]
+        assert len(sub) >= 8, cat
+        assert any(r["dose_incorrect_or_lost"] for r in sub) and any(not r["warning_warranted"] for r in sub), cat
+        assert {r["path"] for r in sub} == {"v1", "v2"} or cat == "r2_v1_misread", cat
+
+
+def test_hw_options_are_routed_or_ignored():
+    from benchmarks import run_handwriting as RH
+
+    class Reader:
+        def __init__(self, path_or_name=None, local_only=False):
+            pass
+
+        def read(self, lines, batch_size=8, num_beams=1):
+            pass
+    o = RH.split_hw_options(["num_beams=4", "local_only=true", "hw_beams=4", "x=abc"], Reader)
+    assert o["read"] == {"num_beams": 4} and o["constructor"] == {"local_only": True}
+    assert o["ignored"] == {"hw_beams": 4, "x": "abc"}
+    assert RH.split_hw_options(None, Reader) == {"requested": {}, "constructor": {}, "read": {}, "ignored": {}}

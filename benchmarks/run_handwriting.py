@@ -272,6 +272,31 @@ def detector_prerequisite(root: str, det_ckpt: str) -> str | None:
             "is blocked here)")
 
 
+# ------------------------------------------------------------------ decoding options passed through to the reader
+def split_hw_options(options: list[str] | None, reader_cls) -> dict:
+    """--hw-option key=value pairs -> keyword arguments for HandwritingReader(...) or its read(...).
+
+    A key in HandwritingReader.__init__ goes to the constructor, else a key in read() goes to every read
+    call, else it is ignored (the checkout lacks the option) and recorded as such. Values are parsed as JSON
+    ("4" -> 4, "true" -> True), otherwise kept as text. With no options both calls are exactly as before."""
+    import inspect
+    import json
+    init_p = set(inspect.signature(reader_cls.__init__).parameters) - {"self"}
+    read_p = set(inspect.signature(reader_cls.read).parameters) - {"self", "lines"}
+    out = {"requested": {}, "constructor": {}, "read": {}, "ignored": {}}
+    for opt in options or []:
+        if "=" not in opt:
+            raise SystemExit(f"--hw-option needs key=value, got {opt!r}")
+        k, v = opt.split("=", 1)
+        try:
+            val = json.loads(v)
+        except ValueError:
+            val = v
+        out["requested"][k] = val
+        out["constructor" if k in init_p else "read" if k in read_p else "ignored"][k] = val
+    return out
+
+
 # ------------------------------------------------------------------ main evaluation
 def read_pages(pages, mods, latency):
     torch, models, scriptclf, hwdata, oscan, reader, rec = (mods[k] for k in
@@ -289,7 +314,7 @@ def read_pages(pages, mods, latency):
             p_hw = scriptclf.handwritten_prob(mods["clf"], crops)
             t2 = time.perf_counter()
             crop = hwdata.rect_crop(img, np.concatenate(quads))
-            (hw_text, hw_conf), = reader.read([crop])
+            (hw_text, hw_conf), = reader.read([crop], **mods.get("read_kw", {}))
             t3 = time.perf_counter()
             latency["printed_ms"].append((t1 - t0) * 1000)
             latency["route_ms"].append((t2 - t1) * 1000)
@@ -357,7 +382,7 @@ def diagnosis(rows) -> dict:
                                                                             zip(hw_ok, rows, sh_ok)), n)}
 
 
-def run(root, limit=None, threads=2) -> dict:
+def run(root, limit=None, threads=2, hw_options=None) -> dict:
     root = C.use_root(root)
     import torch  # noqa: E402
     torch.set_num_threads(threads)
@@ -371,8 +396,9 @@ def run(root, limit=None, threads=2) -> dict:
     if not fonts:
         raise SystemExit("no handwriting fonts in data/raw/fonts")
     val_seeds, test_seeds = (VAL_SEEDS[:limit], TEST_SEEDS[:limit]) if limit else (VAL_SEEDS, TEST_SEEDS)
+    hw_opts = split_hw_options(hw_options, HandwritingReader)
     mods = {"torch": torch, "models": models, "scriptclf": scriptclf, "hwdata": hwdata, "scan": oscan,
-            "hw": HandwritingReader(local_only=True), "rec": models.rec_predictor(models.load_rec(ckpt=models.REC_CKPT)),
+            "hw": HandwritingReader(**{"local_only": True, **hw_opts["constructor"]}), "read_kw": hw_opts["read"], "rec": models.rec_predictor(models.load_rec(ckpt=models.REC_CKPT)),
             "clf": scriptclf.load_clf()}
     latency = {"printed_ms": [], "route_ms": [], "handwriting_ms": []}
     res = {"benchmark": "handwriting", "root": root, "git": C.git_info(root),
@@ -380,6 +406,7 @@ def run(root, limit=None, threads=2) -> dict:
                     "fonts": len(fonts), "validation_seeds": [val_seeds[0], val_seeds[-1]],
                     "test_seeds": [test_seeds[0], test_seeds[-1]]},
            "readers": {"handwriting": mods["hw"].name, "printed": os.path.relpath(models.REC_CKPT, root)},
+           "hw_options": hw_opts, "threads": threads,
            "real_heldout_pages": "BLOCKED: GNHK / IAM need huggingface.co (blocked here)"}
     parts = {}
     for name, seeds in (("validation", val_seeds), ("test", test_seeds)):
@@ -423,7 +450,8 @@ def run(root, limit=None, threads=2) -> dict:
 def markdown(res) -> str:
     L = [f"# Handwriting benchmark: {res['git'].get('commit') or res['root']}", "",
          f"Data: {res['data']['kind']}. Real held-out pages: {res['real_heldout_pages']}.", "",
-         f"Automatic line detection: {res['detected_lines'].get('status')}.", ""]
+         f"Automatic line detection: {res['detected_lines'].get('status')}.", "",
+         f"Handwriting decoding options: {res.get('hw_options')}.", ""]
     for part in ("validation", "test"):
         p = res[part]
         L += [f"## {part}: {p['n_pages']} pages, {p['n_lines']} lines", ""]
@@ -452,10 +480,14 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int, default=None, help="pages per part")
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument("--hw-option", action="append", default=[], metavar="KEY=VALUE",
+                    help="decoding option for HandwritingReader(...) or .read(...), e.g. num_beams=4; ignored "
+                         "(and recorded) when the checkout lacks it")
+    ap.add_argument("--name", default="handwriting", help="result file name")
     a = ap.parse_args(argv)
     C.limit_threads(a.threads)
-    res = run(a.root, a.limit, a.threads)
-    print(C.write_result(a.out, C.out_name("handwriting", a.limit), res, markdown(res)))
+    res = run(a.root, a.limit, a.threads, a.hw_option)
+    print(C.write_result(a.out, C.out_name(a.name, a.limit), res, markdown(res)))
     return 0
 
 

@@ -37,6 +37,12 @@ python -m benchmarks.run_alpha --root . --out reports/review_2026-11/<sha> \
 python -m benchmarks.common A.json B.json
 ```
 
+Compare handwriting runs made with the same `--threads`: torch's float results change in the fourth decimal
+of a confidence between one and two threads (the baseline used `--threads 1`). `--hw-option KEY=VALUE`
+(repeatable, e.g. `num_beams=4`) passes a decoding option to `HandwritingReader(...)` or its `read(...)`; a key
+the checkout lacks is ignored and listed under `hw_options.ignored` in the result. `run_warnings --name
+warnings_r2` writes the round-2 result without touching `warnings.json`.
+
 Run from the repository root (the runners import `benchmarks.*` from the current directory and the code
 under test from `--root`). The synthetic page photos (`data/synthetic/{test,ood}`) are not in git;
 `run_alpha` and `run_pages` look in `--data`, then `<root>/data/synthetic`, then the main checkout. Limit
@@ -59,6 +65,14 @@ medicine's dose; "Metformin SOO my" under every routing with the misread reading
 alternate; "InSulin O Units"; a dose kept only by the alternate reader; unit-word collisions; decimals;
 missing quantities; mcg / mL / IU / mmol/L / g/dL; od / bd / tds / prn / nocte / twice daily; numbered lists;
 printed values and dates; plain-text controls; v1 and v2.
+
+`set: "extended_r2"` (76 records, ids `r2-001`...) was appended in round 2 without changing any earlier record:
+count or frequency words without a digit, unit-before-value lab layouts and unit headers, a lower-case form
+word before the medicine ("tab Metformin 500 mg"), v1 misreads ("Metformin SOO my", "Warfarin B my") and
+look-alike v1 sentences, and misread units next to kept digits ("50 mcq", "10 mI", "11.8 q/dL"), each with
+correct-print negatives and lost or misread positives on v1 and v2. In the results `set=all` stays the
+round-1 sets (original_39 + extended), `set=extended_r2` is the new set and `set=all_with_r2` both; each mode
+also has a per-category table.
 
 Metrics, each with numerator / denominator and the list of misses, split by set and path, with the opt-in
 misread-digit option off (default) and on: (a) numeric content detected by either flag; (b) precision and

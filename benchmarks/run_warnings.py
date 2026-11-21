@@ -31,7 +31,9 @@ from benchmarks.fields import parse_fields  # noqa: E402
 
 FIXTURES = os.path.join(C.HERE, "warnings", "fixtures.jsonl")
 THRESHOLD = 0.95  # the original target: >= 95 % of lines that truly hold a number are flagged by either flag
-SETS = ("original_39", "extended", "all")
+SETS = ("original_39", "extended", "extended_r2", "all", "all_with_r2")
+# "all" is the round-1 sets (original_39 + extended), as in the round-1 results; "all_with_r2" adds extended_r2
+ROUND1 = ("original_39", "extended")
 PATHS = ("v1", "v2", "all")
 PRINTED_ROUTINGS = ("printed_only", "none_v1")
 
@@ -49,14 +51,18 @@ class Adapter:
         self.confirm_params = list(inspect.signature(oscan.confirm_numbers).parameters)
         self.scanner_params = list(inspect.signature(oscan.Scanner.__init__).parameters)
         self.line_params = list(inspect.signature(oapi._line).parameters)
-        self.misread_available = "misread_digits" in self.confirm_params
+        # the option's keyword: "misread_digits" at 0c71106, "flag_misread_digits" from 01d993e (old name kept)
+        self.misread_kw = next((k for k in ("flag_misread_digits", "misread_digits") if k in self.confirm_params), None)
+        self.misread_available = self.misread_kw is not None
         src = inspect.getsource(oscan.Scanner.run)
-        # the adapter mirrors this call in Scanner.run at 0c71106; recorded so a later change is visible
-        self.scanner_run_call_matches = "confirm_numbers(ln, script_known=routed, misread_digits=misread)" in src
+        # the adapter mirrors this call in Scanner.run; recorded so a later change is visible
+        self.scanner_run_call_matches = any(f"confirm_numbers(ln, script_known=routed, {k}=misread)" in src
+                                            for k in ("misread_digits", "flag_misread_digits"))
 
     def describe(self) -> dict:
         return {"confirm_numbers_params": self.confirm_params, "scanner_init_params": self.scanner_params,
                 "api_line_params": self.line_params, "misread_option_available": self.misread_available,
+                "misread_option_keyword": self.misread_kw,
                 "scanner_run_call_matches_adapter": self.scanner_run_call_matches}
 
     def v2_line(self, r: dict, misread: bool) -> tuple[dict, bool]:
@@ -69,7 +75,7 @@ class Adapter:
         if "script_known" in self.confirm_params:
             kw["script_known"] = True  # Scanner.run: routed = clf and hw loaded (the full v2 pipeline)
         if misread:
-            kw["misread_digits"] = True
+            kw[self.misread_kw] = True
         flag = bool(self.oscan.confirm_numbers(dict(ln), **kw))
         ln["low_confidence"] = False
         ln["confirm_numbers"] = flag
@@ -91,6 +97,10 @@ class Adapter:
                 "displayed_text": r["displayed_text"], "scan_flag": scan_flag, "prominent": prominent,
                 "has_numbers": quiet, "any_flag": prominent or quiet, "fields_ok": fields_ok,
                 "other_api_flags": other or None}
+
+
+def _in_set(r_set: str, s: str) -> bool:
+    return s == "all_with_r2" or (s == "all" and r_set in ROUND1) or r_set == s
 
 
 def _ids(rows, cond):
@@ -142,6 +152,30 @@ def summarise(rows: list[dict], recs: dict) -> dict:
     }
 
 
+def by_category(rows: list[dict], recs: dict) -> dict:
+    """Per category (all sets, both paths): prominent warnings on lines whose dose is wrong or lost, on lines
+    where a warning is warranted, and on lines where it is not; any flag on lines with and without numbers."""
+    out = {}
+    for c in sorted({r["category"] for r in rows}):
+        sub = [r for r in rows if r["category"] == c]
+        g = lambda k: [r for r in sub if recs[r["id"]][k]]  # noqa: E731
+        ng = lambda k: [r for r in sub if not recs[r["id"]][k]]  # noqa: E731
+        out[c] = {"set": sorted({r["set"] for r in sub}), "paths": sorted({r["path"] for r in sub}), "n": len(sub),
+                  "prominent_on_dose_wrong": C.frac(sum(r["prominent"] for r in g("dose_incorrect_or_lost")),
+                                                    len(g("dose_incorrect_or_lost"))),
+                  "prominent_on_warranted": C.frac(sum(r["prominent"] for r in g("warning_warranted")),
+                                                   len(g("warning_warranted"))),
+                  "prominent_on_not_warranted": C.frac(sum(r["prominent"] for r in ng("warning_warranted")),
+                                                       len(ng("warning_warranted"))),
+                  "any_flag_on_numeric": C.frac(sum(r["any_flag"] for r in g("has_numeric_content")),
+                                                len(g("has_numeric_content"))),
+                  "any_flag_on_non_numeric": C.frac(sum(r["any_flag"] for r in ng("has_numeric_content")),
+                                                    len(ng("has_numeric_content"))),
+                  "false_prominent": _ids(sub, lambda r: r["prominent"] and not recs[r["id"]]["warning_warranted"]),
+                  "missed_prominent": _ids(sub, lambda r: not r["prominent"] and recs[r["id"]]["warning_warranted"])}
+    return out
+
+
 def target(rows: list[dict], recs: dict) -> dict:
     sub = [r for r in rows if r["set"] == "original_39" and recs[r["id"]]["has_numeric_content"]]
     k = sum(r["any_flag"] for r in sub)
@@ -175,10 +209,11 @@ def run(root: str, fixtures: str = FIXTURES, limit: int | None = None) -> dict:
             out["modes"][mode] = {"available": False, "reason": "confirm_numbers has no misread_digits parameter"}
             continue
         rows = [ad.evaluate(r, misread) for r in recs_list]
-        m = {"available": True, "target_original_39": target(rows, recs), "splits": {}, "rows": rows}
+        m = {"available": True, "target_original_39": target(rows, recs), "splits": {}, "rows": rows,
+             "by_category": by_category(rows, recs)}
         for s in SETS:
             for p in PATHS:
-                sub = [r for r in rows if (s == "all" or r["set"] == s) and (p == "all" or r["path"] == p)]
+                sub = [r for r in rows if _in_set(r["set"], s) and (p == "all" or r["path"] == p)]
                 if sub:
                     m["splits"][f"set={s} path={p}"] = summarise(sub, recs)
         out["modes"][mode] = m
@@ -188,7 +223,8 @@ def run(root: str, fixtures: str = FIXTURES, limit: int | None = None) -> dict:
 def markdown(res: dict) -> str:
     L = [f"# Medication-warning benchmark: {res['git'].get('commit') or res['root']}", "",
          f"{res['n_records']} invented lines (`{res['fixtures']}`, sha256 `{res['fixtures_sha256'][:12]}`). "
-         "Prominent warning = API `confirm_numbers`; any flag = `confirm_numbers` or `has_numbers`.", ""]
+         "Prominent warning = API `confirm_numbers`; any flag = `confirm_numbers` or `has_numbers`. "
+         "`set=all` is the round-1 sets (original_39 + extended); `set=all_with_r2` adds extended_r2.", ""]
     for mode, m in res["modes"].items():
         L += [f"## {mode}", ""]
         if not m.get("available"):
@@ -210,8 +246,14 @@ def markdown(res: dict) -> str:
                           "(b) P vs dose wrong", "(b) R vs dose wrong", "(b) P vs warranted", "(b) R vs warranted",
                           "(c) prominent on correct print", "(d) exact fields", "silent dose errors"], rows), ""]
         allk = "set=all path=all"
-        L += ["Silent dose errors (all lines): " + "; ".join(
+        L += ["Silent dose errors (round-1 sets): " + "; ".join(
             m["splits"][allk]["d_field_agreement"]["silent_dose_error_lines"]), ""]
+        L += [f"### Per category ({mode})", "",
+              C.md_table(["category", "set", "paths", "prominent on dose wrong", "prominent on warranted",
+                          "prominent on not warranted", "any flag on numeric", "any flag on non-numeric"],
+                         [[c, ",".join(v["set"]), ",".join(v["paths"]), v["prominent_on_dose_wrong"],
+                           v["prominent_on_warranted"], v["prominent_on_not_warranted"], v["any_flag_on_numeric"],
+                           v["any_flag_on_non_numeric"]] for c, v in m["by_category"].items()]), ""]
     L += ["Field parser limits: see `benchmarks/fields.py` (lexicon names only, first value per name, units "
           "compared without case, frequencies and durations not parsed)."]
     return "\n".join(L)
@@ -223,10 +265,11 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--fixtures", default=FIXTURES)
+    ap.add_argument("--name", default="warnings", help="result file name (default warnings; e.g. warnings_r2)")
     a = ap.parse_args(argv)
     C.limit_threads(2)
     res = run(a.root, a.fixtures, a.limit)
-    name = C.out_name("warnings", a.limit)
+    name = C.out_name(a.name, a.limit)
     path = C.write_result(a.out, name, res, markdown(res))
     print(path)
     for mode, m in res["modes"].items():
