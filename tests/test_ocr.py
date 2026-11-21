@@ -329,6 +329,59 @@ def test_printed_line_warning_follows_its_own_quantity(text, lost):
     assert out["confirm_numbers"] is lost and out["has_numbers"] is True and out["text"] == text
 
 
+# Correct print that holds a count, a frequency or a form but no dose: no "number lost" warning. Doses that
+# are gone keep it (invented lines).
+NO_LOST_NUMBER = ["Take one tablet at night", "Take two tablets twice daily", "Half a tablet in the morning",
+                  "One puff when needed", "Two drops in each eye tds", "Eye drops nocte", "Apply the cream bd",
+                  "Salbutamol inhaler prn", "Paracetamol tablets as needed", "Bo Tab and Sons Chemists",
+                  "Paracetamol 500 mg two tablets", "tab Metformin 500 mg", "cap Omeprazole 20 mg",
+                  "1. tab Ramipril 2.5 mg", "tabs Paracetamol 1 g prn", "Glucose (mmol/L) 5.4", "Glucose mmol/L 5.4",
+                  "Haemoglobin (g/dL) 13.2", "Potassium mmol/L 4.2 3.5-5.0", "Test (units) Result Reference range",
+                  "Test Units Result"]
+STILL_LOST = ["Omeprazole mg", "1. Omeprazole mg", "Amlodipine 5 mg and Omeprazole mg", "Omeprazole mg, Amlodipine 5 mg",
+              "Omeprazole mg for 7 days", "Omeprazole mg 7 days", "Omeprazole mg 1 tab od", "Omeprazole mg x 14 days",
+              "InSulin O Units", "Take tab nocte", "Amitriptyline nocte", "Bisoprolol od", "Paracetamol prn",
+              "Paracetamol g prn", "Amitriptyline mg nocte", "tab Metformin mg", "Glucose (mmol/L)",
+              "Glucose mmol/L S.4", "Haemoglobin (g/dL) l3.2", "Ferritin (ug/L) 4S", "Haemoglobin 11.8 q/dL"]
+
+
+@pytest.mark.parametrize("text", NO_LOST_NUMBER)
+def test_counts_frequencies_forms_and_lab_columns_are_not_lost_numbers(text):
+    assert not common.number_lost(text), common.units_without_quantity(text)
+    ln = {"text": text, "script": "printed"}
+    assert common.line_confirm_numbers(ln, script_known=True) is False
+    assert common.line_confirm_numbers(ln, script_known=True, flag_misread_digits=True) is False
+
+
+@pytest.mark.parametrize("text", STILL_LOST)
+def test_doses_that_are_gone_are_still_lost_numbers(text):
+    assert common.number_lost(text), text
+    assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True) is True
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Levothyroxine 50 mcq OD", True), ("Lactulose 10 mI bd", True), ("Haemoglobin 11.8 q/dL", True),
+    ("Metformin 500 my bd", True), ("Atorvastatin 20 rng", True),
+    ("Levothyroxine 50 mcg OD", False), ("Lactulose 10 mL bd", False), ("Haemoglobin 11.8 g/dL", False),
+    ("Since 2019 my blood pressure is fine", False), ("In 2024 my dose was reduced", False),
+])
+def test_misread_units_after_digits_only_with_the_option(text, flag):
+    assert common.has_misread_unit(text) is flag
+    ln = {"text": text, "script": "printed"}
+    assert common.line_confirm_numbers(ln, script_known=True, flag_misread_digits=True) is (flag or common.number_lost(text))
+    if text != "Haemoglobin 11.8 q/dL":  # that one also lost the unit of its value ("dL" without a number)
+        assert common.line_confirm_numbers(ln, script_known=True) is False  # off by default
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Metformin SOO my", True), ("Warfarin B my", True), ("Levothyroxine SO mcq", True), ("Ramipril Z.S my", True),
+    ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("Bo Tab and Sons Chemists", False),
+    ("OBS stable overnight", False), ("ZOO Road Pharmacy", False), ("Is my dose right", False), ("Boss my manager", False),
+])
+def test_capitalised_names_are_not_misread_numbers(text, flag):
+    assert common.has_misread_number(text) is flag
+
+
 M = "Metformin SOO my"
 ROUTINGS = {  # (a) printed only, (b) handwriting reading shown, (c) printed reading kept after handwriting
     "a": [{"text": M, "script": "printed"}],

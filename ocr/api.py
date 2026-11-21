@@ -18,7 +18,8 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                       dose unit, or a unit has no number of its own right before it ("Omeprazole mg",
                       also "1. Omeprazole mg" or "Amlodipine 5 mg and Omeprazole mg": a list number, a
                       duration or another medicine's dose does not count), or (v1, which cannot tell
-                      print from handwriting) the text holds a number or unit.
+                      print from handwriting) the text holds a number or unit, or digits misread as
+                      letters next to a unit ("Metformin SOO my", "50 mcq").
                       has_numbers: the shown text holds a number or unit (quieter; also printed lines).
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",
@@ -57,7 +58,7 @@ from typing import Any, Optional, Tuple
 from flask import Blueprint, jsonify, request
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit  # torch-free: the status check must not import torch
+from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit, line_confirm_numbers  # torch-free: the status check must not import torch
 
 ocr_bp = Blueprint("ocr", __name__)
 
@@ -69,6 +70,11 @@ MAX_ASPECT = 20  # long side / short side; beyond this it is not a page
 MIN_SIDE = 16  # px, the shortest side accepted (the same rule as /api/scan)
 TOO_SMALL = f"image is too small: each side must be at least {MIN_SIDE} pixels"
 LOW_CONFIDENCE = 0.5  # lines below this are flagged (the same value as ocr.scan.LOW_CONFIDENCE)
+# v1 cannot tell print from handwriting, and it reads handwriting with the printed reader, which turns
+# digits into look-alike letters ("Metformin SOO my"). Such a line holds no digit, so without this check it
+# got no flag at all. v1 already gives every line with a number the prominent warning, so the few false
+# alarms of the check (none on the review's 9 invented look-alike traps) add little.
+V1_FLAG_MISREAD_DIGITS = True
 MAX_WAITING = 3  # requests held at once (one reading, the others waiting); more are told to retry
 LOCK_WAIT = 60.0  # seconds a request waits for its turn before it is told to retry
 RETRY_AFTER = 10  # seconds, sent with a "busy" answer
@@ -398,15 +404,23 @@ def _read_upload():
     })
 
 
-def _line(ln: dict) -> dict:
+def _line(ln: dict, *, flag_misread_digits: bool | None = None) -> dict:
     """The line as the API returns it. v2 lines carry their own confirm_numbers (ocr.scan.confirm_numbers);
-    v1 lines, whose script nobody checked, are flagged whenever the text holds a number or unit."""
+    v1 lines, whose script nobody checked, get the same per-line decision with the script unknown
+    (ocr.common.line_confirm_numbers): flagged whenever the text holds a number or unit, and, with
+    flag_misread_digits (V1_FLAG_MISREAD_DIGITS when None), when it holds digits misread as letters
+    before a unit ("Metformin SOO my") or digits before a misread unit ("50 mcq")."""
     conf = ln["confidence"]
     low = ln.get("low_confidence")
     numbers = has_number_or_unit(ln["text"])
+    if "confirm_numbers" in ln:
+        confirm = bool(ln["confirm_numbers"])
+    else:
+        flag = V1_FLAG_MISREAD_DIGITS if flag_misread_digits is None else flag_misread_digits
+        confirm = line_confirm_numbers(ln, script_known=False, flag_misread_digits=flag)
     return {"text": ln["text"], "box": ln["box"], "confidence": conf,
             "low_confidence": bool(conf < LOW_CONFIDENCE) if low is None else bool(low),
-            "confirm_numbers": bool(ln["confirm_numbers"]) if "confirm_numbers" in ln else numbers,
+            "confirm_numbers": confirm,
             "script": ln.get("script") or "printed", "has_numbers": numbers}
 
 

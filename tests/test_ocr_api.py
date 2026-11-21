@@ -686,3 +686,16 @@ def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypa
                    "Amlodipine 5 mg and Omeprazole mg": (True, True), "Omeprazole mg, Amlodipine 5 mg": (True, True),
                    "InSulin O Units": (True, True), "Dr L Example": (False, False), "Mehta OD Clinic": (False, False),
                    "Test Result Units Reference range": (False, False)}
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Metformin SOO my", True), ("Warfarin B my", True), ("Total 9.00", True), ("Omeprazole mg", True),
+    ("So my doctor said to continue", False), ("Ask Bo my pharmacist", False), ("see overleaf", False),
+])
+def test_v1_lines_get_the_per_line_decision_with_the_script_unknown(text, flag):
+    """v1 (printed reader only, script unknown): any number or unit still gets the prominent warning, and
+    digits misread as letters next to a unit too, since such a line holds no digit (V1_FLAG_MISREAD_DIGITS)."""
+    out = api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9})
+    assert out["confirm_numbers"] is flag and out["text"] == text
+    assert api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9},
+                     flag_misread_digits=False)["confirm_numbers"] is (flag and text not in ("Metformin SOO my", "Warfarin B my"))
