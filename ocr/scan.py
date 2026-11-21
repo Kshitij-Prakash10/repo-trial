@@ -45,7 +45,8 @@ class Scanner:
 
     def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
-                 flip_check: bool = True, mask_neighbours: bool = False, flag_misread_digits: bool = False):
+                 flip_check: bool = True, mask_neighbours: bool = False, flag_misread_digits: bool = False,
+                 hw_beams: int = 1):
         if postcorrect:
             # Withdrawn: on medical text it rewrites drug names and units (digoxin -> dioxin,
             # mmol -> mol), and the evaluation found no gain from it (reports/final_report.md).
@@ -55,7 +56,9 @@ class Scanner:
         self.do_deskew = deskew
         self.flip_check = flip_check
         self.clf = scriptclf.load_clf() if handwriting else None
-        self.hw = HandwritingReader() if handwriting else None
+        # hw_beams: beam width of the handwriting decoder (1: greedy, the default). Experiment, README
+        # "Handwriting decoding (experiment)"; it changes only what the handwriting reader reads.
+        self.hw = HandwritingReader(num_beams=hw_beams) if handwriting else None
         self.postcorrect = postcorrect
         # Paint out words of neighbouring lines inside a handwriting line's crop (ocr.hwdata.rect_crop).
         # Off by default: its effect on real handwriting (GNHK) has not been measured yet.

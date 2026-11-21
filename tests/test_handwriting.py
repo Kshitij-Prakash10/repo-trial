@@ -413,3 +413,54 @@ def test_scanner_looks_for_misread_digits_in_every_reading_when_asked(monkeypatc
            for ln in r["lines"]]
     assert got == [(M, "printed", None, None, flag), (M, "handwritten", M, P, flag),
                    (P, "handwritten", P, M, flag), (M, "printed", P, None, flag), (P, "printed", M, None, flag)]
+
+
+def test_handwriting_beam_width_is_an_option_and_greedy_by_default(monkeypatch):
+    """HandwritingReader(num_beams=...) sets the decoder's beam width for read(); 1 (greedy) by default, and
+    read(num_beams=...) still overrides it. Scanner(hw_beams=...) passes it on (experiment, opt-in)."""
+    import inspect
+    from ocr import handwriting as H
+    from ocr import scan as S
+    assert inspect.signature(H.HandwritingReader.__init__).parameters["num_beams"].default == 1
+    assert inspect.signature(S.Scanner.__init__).parameters["hw_beams"].default == 1
+    seen = []
+
+    class Gen:
+        def __init__(self, n):
+            self.sequences = torch.ones((n, 3), dtype=torch.long)
+            self.scores = [torch.zeros((n, 5))] * 2
+
+    class Model:
+        def generate(self, px, num_beams, **kw):
+            seen.append(num_beams)
+            return Gen(px.shape[0])
+
+        def compute_transition_scores(self, seq, scores, beam_indices, normalize_logits):
+            return torch.zeros((seq.shape[0], 2))
+
+    class Proc:
+        tokenizer = type("T", (), {"pad_token_id": 0})()
+
+        def __call__(self, images, return_tensors):
+            return type("P", (), {"pixel_values": torch.zeros((len(images), 3, 4, 4))})()
+
+        def batch_decode(self, seq, skip_special_tokens):
+            return ["x"] * seq.shape[0]
+
+    r = object.__new__(H.HandwritingReader)
+    r.model, r.processor = Model(), Proc()
+    line = np.full((20, 60, 3), 255, np.uint8)
+    r.read([line])  # an old pickled / hand-built reader without the attribute: greedy
+    r.num_beams = 2
+    r.read([line])
+    r.read([line], num_beams=4)
+    assert seen == [1, 2, 4]
+    made = []
+    monkeypatch.setattr(S, "HandwritingReader", lambda **kw: made.append(kw) or object())
+    for name in ("OcrPipeline",):
+        monkeypatch.setattr(S, name, type("P", (), {"load": staticmethod(lambda *a, **k: object())}))
+    monkeypatch.setattr(S.O, "load_orient", lambda: object())
+    monkeypatch.setattr(S.scriptclf, "load_clf", lambda: object())
+    S.Scanner()
+    S.Scanner(hw_beams=2)
+    assert made == [{"num_beams": 1}, {"num_beams": 2}]

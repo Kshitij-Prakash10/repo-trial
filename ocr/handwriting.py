@@ -43,7 +43,10 @@ def prep_line(crop: np.ndarray) -> np.ndarray:
 class HandwritingReader:
     """Wraps processor + model. `read` takes RGB arrays or PIL images of single text lines."""
 
-    def __init__(self, path_or_name: str | None = None, revision: str | None = None, local_only: bool = False):
+    def __init__(self, path_or_name: str | None = None, revision: str | None = None, local_only: bool = False,
+                 num_beams: int = 1):
+        """num_beams: beam width of the decoder for read() (1: greedy, the default). An experiment, see
+        README "Handwriting decoding (experiment)"."""
         from transformers import TrOCRProcessor, VisionEncoderDecoderModel
         if path_or_name is None:
             path_or_name = HW_DIR if os.path.exists(os.path.join(HW_DIR, "config.json")) else HW_NAME
@@ -55,12 +58,17 @@ class HandwritingReader:
         self.processor = TrOCRProcessor.from_pretrained(path_or_name, use_fast=False, **kw)
         self.model = VisionEncoderDecoderModel.from_pretrained(path_or_name, dtype=torch.float32, **kw).eval()
         self.name = path_or_name
+        self.num_beams = int(num_beams)
 
     @torch.no_grad()
-    def read(self, lines: list, batch_size: int = 8, num_beams: int = 1, prep: bool = True) -> list[tuple[str, float]]:
+    def read(self, lines: list, batch_size: int = 8, num_beams: int | None = None,
+             prep: bool = True) -> list[tuple[str, float]]:
         """(text, confidence) per line. Confidence is the geometric mean of the token probabilities.
 
+        num_beams: None uses the reader's own setting (1 unless set in the constructor).
         prep applies prep_line first (the model is fine-tuned on lines prepared that way)."""
+        if num_beams is None:
+            num_beams = getattr(self, "num_beams", 1)
         out = []
         arrs = [x if isinstance(x, np.ndarray) else np.asarray(x.convert("RGB")) for x in lines]
         ims = [Image.fromarray(prep_line(a) if prep else a) for a in arrs]
