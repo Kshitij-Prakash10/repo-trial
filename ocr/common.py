@@ -419,7 +419,7 @@ _DOSE_UNITS = frozenset(("mcg", "µg", "ug", "mg", "g", "kg", "ml", "l", "dl", "
 def has_misread_number(text: str) -> bool:
     """True when a token of look-alike letters, with no real digit or with digits mixed with look-alike
     letters, stands right before a unit or a misread unit ("Metformin SOO my", "Atorvastatin ZO mg").
-    Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
+    Used when the misread-digit check is on (FLAG_MISREAD_DIGITS, on by default in Scanner and /api/ocr)."""
     parts = _parts(text)
     for i, (a, b) in enumerate(zip(parts, parts[1:])):
         # "Insulin So units": 50; not "So units were checked twice"
@@ -436,8 +436,8 @@ def has_misread_number(text: str) -> bool:
 
 def has_misread_unit(text: str) -> bool:
     """True when a number with real digits stands right before a misread unit: "Levothyroxine 50 mcq OD",
-    "Lactulose 10 mI bd", "Haemoglobin 11.8 q/dL" (q for g before /dL or /L). Speculative, so it is used
-    only with flag_misread_digits (off by default), like has_misread_number."""
+    "Lactulose 10 mI bd", "Haemoglobin 11.8 q/dL" (q for g before /dL or /L). Used with the misread-digit
+    check (FLAG_MISREAD_DIGITS), like has_misread_number."""
     parts = _parts(text)
     for i in range(len(parts) - 1):
         a, b = parts[i], parts[i + 1]
@@ -451,6 +451,13 @@ def has_misread_unit(text: str) -> bool:
 
 
 READINGS = ("text", "handwriting_text", "printed_text")  # the shown reading first, then the other ones
+
+# The one switch for the misread-digit check in what ships: ocr.scan.Scanner (v2) and the v1 lines of
+# /api/ocr use it when they are not told otherwise. On: a line such as "Metformin SOO my" holds no digit,
+# so without the check it gets no flag at all. Set it to False (or pass Scanner(flag_misread_digits=False))
+# to turn the check off. line_confirm_numbers / ocr.scan.confirm_numbers take the setting as an explicit
+# keyword (default False there, so a caller always says which one it means).
+FLAG_MISREAD_DIGITS = True
 
 
 def line_confirm_numbers(ln: dict, *, script_known: bool | None = None, flag_misread_digits: bool = False) -> bool:
@@ -468,7 +475,8 @@ def line_confirm_numbers(ln: dict, *, script_known: bool | None = None, flag_mis
         "Amlodipine 5 mg and Omeprazole mg");
       - flag_misread_digits is on and any reading has letters that look like misread digits before a unit
         ("Metformin SOO my", has_misread_number) or digits before a misread unit ("50 mcq",
-        has_misread_unit). Off by default.
+        has_misread_unit). The keyword defaults to False here; the shipped pipelines pass
+        FLAG_MISREAD_DIGITS (on).
     A printed line with its numbers in place ("1. Omeprazole 20 mg") is not flagged here; it gets the
     quieter has_numbers flag."""
     readings = [ln.get(k) or "" for k in READINGS]

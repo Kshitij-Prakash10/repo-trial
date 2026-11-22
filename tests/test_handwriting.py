@@ -474,3 +474,36 @@ def test_handwriting_beam_width_is_an_option_and_greedy_by_default(monkeypatch):
     S.Scanner()
     S.Scanner(hw_beams=2)
     assert made == [{"num_beams": 1}, {"num_beams": 2}]
+
+
+def test_scanner_checks_misread_digits_by_default_and_can_be_told_not_to(monkeypatch):
+    """The v2 Scanner ships with the misread-digit check on (ocr.common.FLAG_MISREAD_DIGITS), like v1;
+    Scanner(flag_misread_digits=False) or the switch turn it off. The shown text stays as read."""
+    from PIL import Image
+    from ocr import common
+    from ocr import scan as S
+    for name in ("OcrPipeline",):
+        monkeypatch.setattr(S, name, type("P", (), {"load": staticmethod(lambda *a, **k: object())}))
+    monkeypatch.setattr(S.O, "load_orient", lambda: object())
+    monkeypatch.setattr(S.scriptclf, "load_clf", lambda: object())
+    monkeypatch.setattr(S, "HandwritingReader", lambda **kw: object())
+    assert S.Scanner().flag_misread_digits is True
+    assert S.Scanner(flag_misread_digits=False).flag_misread_digits is False
+    page = np.full((200, 600, 3), 235, np.uint8)
+    printed = [("Metformin SOO my", 0.9, [20, 20, 400, 60]), ("Review in clinic", 0.9, [20, 100, 400, 140])]
+
+    def run(setting="unset"):
+        sc = object.__new__(S.Scanner)
+        sc.ocr, sc.hw = _FakeOcr(page, printed), _FakeHw([])
+        sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, object(), False
+        sc.mask_neighbours = False
+        if setting != "unset":
+            sc.flag_misread_digits = setting
+        monkeypatch.setattr(S.scriptclf, "handwritten_prob", lambda clf, crops: np.zeros(len(crops)))
+        r = sc.run(Image.new("RGB", (600, 200), "white"))
+        assert [ln["text"] for ln in r["lines"]] == ["Metformin SOO my", "Review in clinic"]
+        return [ln["confirm_numbers"] for ln in r["lines"]]
+
+    assert run() == [True, False] and run(True) == [True, False] and run(False) == [False, False]
+    monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
+    assert run() == [False, False] and S.Scanner().flag_misread_digits is False

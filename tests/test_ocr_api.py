@@ -709,8 +709,19 @@ def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypa
 ])
 def test_v1_lines_get_the_per_line_decision_with_the_script_unknown(text, flag):
     """v1 (printed reader only, script unknown): any number or unit still gets the prominent warning, and
-    digits misread as letters next to a unit too, since such a line holds no digit (V1_FLAG_MISREAD_DIGITS)."""
+    digits misread as letters next to a unit too, since such a line holds no digit (ocr.common.FLAG_MISREAD_DIGITS)."""
     out = api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9})
     assert out["confirm_numbers"] is flag and out["text"] == text
     assert api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9},
                      flag_misread_digits=False)["confirm_numbers"] is (flag and text not in ("Metformin SOO my", "Warfarin B my"))
+
+
+def test_the_misread_digit_check_ships_on_with_one_switch(monkeypatch):
+    """v1 API lines use ocr.common.FLAG_MISREAD_DIGITS (on); setting it to False turns the check off."""
+    from ocr import common
+    assert common.FLAG_MISREAD_DIGITS is True
+    ln = {"text": "Metformin SOO my", "box": [0, 0, 1, 1], "confidence": 0.9}
+    assert api._line(dict(ln))["confirm_numbers"] is True
+    monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
+    assert api._line(dict(ln))["confirm_numbers"] is False
+    assert api._line(dict(ln), flag_misread_digits=True)["confirm_numbers"] is True

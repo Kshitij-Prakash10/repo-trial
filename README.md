@@ -38,8 +38,8 @@ A basic web app that works as a personal health diary. Each user keeps their
   that lists those lines, whatever the confidence. Printed numbers get a quieter
   one-line note instead ("Numbers were read on 12 printed lines"); without the
   handwriting models nothing tells print from handwriting, so every line with a
-  number gets the warning, and so does a line whose digits look misread as
-  letters next to a unit ("Metformin SOO my"). The warning is saved
+  number gets the warning. With or without them, so does a line whose digits
+  look misread as letters next to a unit ("Metformin SOO my"). The warning is saved
   with the document and shown again in View; after the text is corrected by hand
   it becomes a shorter reminder, and it goes only when the page is read again
   without such lines.
@@ -282,19 +282,21 @@ nocte", is a dose that went missing); a count unit with a number word or "a" ("T
 night", "Half a tablet"); a plural form ("Paracetamol tablets as needed"); a form word starting the line
 ("tab Metformin 500 mg"); and a unit written before its value in a lab table ("Glucose (mmol/L) 5.4",
 not when the number belongs to a duration: "Omeprazole mg 7 days"). A capitalised name made of
-look-alike letters ("Bo Tab and Sons Chemists") is not a misread number. Known misses and false alarms
-of these rules (invented lines): "Salbutamol puffs prn" (2 puffs lost) is not flagged, a lab header
-"Analyte (mmol/L)" is. The text itself is never changed.
-`Scanner(flag_misread_digits=True)` also flags lines whose digits look misread as letters before a unit
-("Metformin SOO my") or whose digits stand before a misread unit ("50 mcq", "10 mI", "11.8 q/dL"), in any
-of their readings (the shown text, `handwriting_text` and `printed_text`); it is off by default because
-it was measured only on invented lines (see "Measured on synthetic data only"). With it off, a line that
-went to the handwriting reader and whose readings are all such misreads ("Metformin SOO my" twice) gets
-no flag (2 of 28 lost-dose lines among the review's 54 invented routed lines). The v1 pipeline (printed
-reader only, script unknown) always applies this check, since it reads handwriting with the printed
-reader and such a line holds no digit (`ocr.api.V1_FLAG_MISREAD_DIGITS`). The per-line decision is
-`ocr.scan.confirm_numbers(ln, script_known=..., flag_misread_digits=...)` (torch-free as
-`ocr.common.line_confirm_numbers`).
+look-alike letters ("Bo Tab and Sons Chemists", "So my doctor said", "So units were checked twice") is
+not a misread number, but one right before a unit in a dose is ("Insulin Io units", "Insulin Il units":
+10, 11). A unit after header words only ("Analyte (mmol/L)", "Result (mmol/L) Reference range") is a
+column header; "Result mmol/L" or "Glucose (mmol/L)" is a value that went missing. The text itself is
+never changed.
+The misread-digit check is on by default, for v2 (`ocr.scan.Scanner`) and v1 alike: it also flags lines
+whose digits look misread as letters before a unit ("Metformin SOO my") or whose digits stand before a
+misread unit ("50 mcq", "10 mI", "11.8 q/dL"), in any of their readings (the shown text,
+`handwriting_text` and `printed_text`). Such a line holds no digit (or a wrong unit), so without the
+check it gets no flag at all. It was measured only on invented lines (see "Measured on synthetic data
+only"). One switch turns it off everywhere: `ocr.common.FLAG_MISREAD_DIGITS = False` (or
+`Scanner(flag_misread_digits=False)` for one scanner, `ocr.api._line(..., flag_misread_digits=False)` for
+v1 lines). The per-line decision is `ocr.scan.confirm_numbers(ln, script_known=...,
+flag_misread_digits=...)` (torch-free as `ocr.common.line_confirm_numbers`); there the keyword defaults
+to False, so a caller always says which setting it means.
 Documents categorized as prescriptions also show a reminder to
 compare every medicine, dose and unit against the image and check for missing lines, even if OCR
 missed every numeric cue. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
@@ -418,7 +420,7 @@ this was done). Before = commit `4bd35c0`, after = this version; app scanner mod
 | Invented lines with a number flagged by either flag (39) | 37 | 37 |
 | Unit-like words without a number ("Dr L Example", "BD Diagnostics") flagged (15) | 15 | 0 |
 | v1 lab report / prescription, "Check the numbers" (30 / 20) | 22 / 12 | 21 / 12 |
-| Opt-in `flag_misread_digits`: invented misread dose lines found (200) | - | 179 (precision 0.95 on 238 invented lines without numbers) |
+| Misread-digit check (on by default since 2026-11): invented misread dose lines found (200) | - | 179 (precision 0.95 on 238 invented lines without numbers) |
 | Synthetic test photos: found, mean IoU, IoU >= 0.9 (200) | 189, 0.887, 0.755 | identical, photo for photo |
 | Synthetic ood photos: found, mean IoU, IoU >= 0.9 (80) | 46, 0.673, 0.375 | identical, photo for photo |
 | Test photos, alpha 128 outside the page: found, mean IoU, IoU >= 0.9 (20) | 0.90, 0.856, 0.40 | 0.95, 0.907, 0.75 |
