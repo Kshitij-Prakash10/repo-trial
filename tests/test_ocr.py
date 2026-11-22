@@ -416,6 +416,8 @@ def test_capitalised_words_before_a_name_or_word_stay_clean(text):
     ("Io Health Clinic", False), ("Zo Pharmacy", False), ("So drops are not needed", False), ("So caps must be worn", False),
     ("Insulin Io units", True), ("Insulin Zo units", True), ("Insulin So units", True), ("Insulin Io units at night", True),
     ("Insulin Il units", True), ("Io units at night", True), ("So units", True),
+    ("So units are counted at the pharmacy", False), ("So units given", True), ("So units subcutaneously", True),
+    ("Zo mg daily", True), ("So units should be checked", False), ("So units insulin given", True),
 ])
 def test_a_capitalised_word_that_starts_a_sentence_is_not_a_misread_number(text, flag):
     """With the misread-digit check off and on (v2 printed lines) the same answer: a sentence that starts
@@ -423,8 +425,10 @@ def test_a_capitalised_word_that_starts_a_sentence_is_not_a_misread_number(text,
     for misread in (False, True):
         assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True,
                                            flag_misread_digits=misread) is flag, (text, misread)
-    if text == "So units were checked twice":
+    if text in ("So units were checked twice", "So units are counted at the pharmacy"):
         assert not common.has_number_or_unit(text)  # v1 gives no flag either
+    if flag:  # a dose line that starts with a misread number: v1 (script unknown) flags it too
+        assert common.line_confirm_numbers({"text": text}, script_known=False, flag_misread_digits=True)
 
 
 @pytest.mark.parametrize("text,lost", [

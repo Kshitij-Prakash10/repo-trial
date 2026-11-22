@@ -224,20 +224,24 @@ def _before_dose_unit(nxt: str | None) -> bool:
         and (nxt.islower() or nxt in _USUAL_SPELLING)
 
 
-# Words that may follow a dose ("Io units at night", "So units daily"); any other lower-case word after the
-# unit makes a line that starts "So units ..." a sentence ("So units were checked twice").
-_DOSE_CONTEXT = frozenset(("at", "in", "on", "before", "after", "with", "daily", "nightly", "weekly", "once",
-                           "twice", "morning", "night", "evening", "bedtime", "noon", "per", "each", "every",
-                           "sc", "subcut", "iv", "im", "po", "x", "for", "and", "then", "when", "if", "as"))
+# Finite verbs and auxiliaries that continue a sentence: a line that starts "So units were ...", "So
+# tablets are ..." is prose. Anything else after the unit ("So units given", "So units subcutaneously",
+# "Io units at night") keeps the line-start look-alike a misread number (the safe direction).
+_SENTENCE_VERBS = frozenset((
+    "is", "are", "was", "were", "be", "been", "being", "am", "has", "have", "had", "having", "do", "does",
+    "did", "will", "would", "shall", "should", "must", "can", "could", "may", "might", "need", "needs",
+    "needed", "remain", "remains", "remained", "seem", "seems", "seemed", "appear", "appears", "appeared",
+    "look", "looks", "looked", "become", "became", "get", "gets", "got"))
 
 
 def _sentence_start(parts: list[str], i: int) -> bool:
-    """parts[i] starts the line and the unit after it is followed by ordinary prose: a capitalised word
-    there is the first word of a sentence ("So units were checked twice"), not a misread number."""
+    """parts[i] starts the line and the word after the unit that follows it is a finite verb or auxiliary
+    (_SENTENCE_VERBS): a capitalised word there is the first word of a sentence ("So units were checked
+    twice"), not a misread number. Any other word ("So units given", "So units subcutaneously") leaves it
+    a number."""
     if i != 0 or i + 2 >= len(parts):
         return False
-    after = parts[i + 2]
-    return after.isalpha() and after.islower() and after not in _UNIT_WORDS and after not in _DOSE_CONTEXT
+    return parts[i + 2].lower() in _SENTENCE_VERBS
 
 
 def _number_like(part: str, nxt: str | None = None, *, sentence_start: bool = False) -> bool:
