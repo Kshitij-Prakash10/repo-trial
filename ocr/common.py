@@ -224,13 +224,35 @@ def _before_dose_unit(nxt: str | None) -> bool:
         and (nxt.islower() or nxt in _USUAL_SPELLING)
 
 
-def _number_like(part: str, nxt: str | None = None) -> bool:
+# Words that may follow a dose ("Io units at night", "So units daily"); any other lower-case word after the
+# unit makes a line that starts "So units ..." a sentence ("So units were checked twice").
+_DOSE_CONTEXT = frozenset(("at", "in", "on", "before", "after", "with", "daily", "nightly", "weekly", "once",
+                           "twice", "morning", "night", "evening", "bedtime", "noon", "per", "each", "every",
+                           "sc", "subcut", "iv", "im", "po", "x", "for", "and", "then", "when", "if", "as"))
+
+
+def _sentence_start(parts: list[str], i: int) -> bool:
+    """parts[i] starts the line and the unit after it is followed by ordinary prose: a capitalised word
+    there is the first word of a sentence ("So units were checked twice"), not a misread number."""
+    if i != 0 or i + 2 >= len(parts):
+        return False
+    after = parts[i + 2]
+    return after.isalpha() and after.islower() and after not in _UNIT_WORDS and after not in _DOSE_CONTEXT
+
+
+def _number_like(part: str, nxt: str | None = None, *, sentence_start: bool = False) -> bool:
     """A number-like token (see _NUMBER_LIKE) or a number word. A capitalised word ("Bo", "So", _word_like)
     is not one, unless it is made only of look-alike letters and stands right before a dose or count
-    unit: "Insulin Io units", "Zo mg", "So units" are 10, 20, 50 ("o" is the look-alike of 0)."""
-    if _word_like(part) and not (_NUMBER_LIKE.fullmatch(part) and _before_dose_unit(nxt)):
+    unit: "Insulin Io units", "Zo mg", "So units" are 10, 20, 50 ("o" is the look-alike of 0); but not
+    as the first word of a sentence (sentence_start, see _sentence_start)."""
+    if _word_like(part) and not (_NUMBER_LIKE.fullmatch(part) and _before_dose_unit(nxt) and not sentence_start):
         return False
     return bool(_NUMBER_LIKE.fullmatch(part)) or part.lower() in _NUMBER_WORDS
+
+
+def _number_like_at(parts: list[str], i: int) -> bool:
+    return _number_like(parts[i], parts[i + 1] if i + 1 < len(parts) else None,
+                        sentence_start=_sentence_start(parts, i))
 
 
 def has_number_or_unit(text: str) -> bool:
@@ -249,7 +271,7 @@ def has_number_or_unit(text: str) -> bool:
         is_unit = part.isalpha() and part.lower() in _UNIT_WORDS
         if is_unit and (part in _USUAL_SPELLING or prev_counts):
             return True
-        prev_counts = _number_like(part, parts[i + 1] if i + 1 < len(parts) else None)
+        prev_counts = _number_like_at(parts, i)
     return False
 
 
@@ -284,6 +306,8 @@ _FORM_NAMES = frozenset(("eye", "ear", "nasal", "nose", "mouth", "throat", "skin
 _HEADER_WORDS = frozenset(("analyte", "test", "tests", "parameter", "parameters", "investigation",
                            "investigations", "result", "results", "value", "values", "unit", "units",
                            "reference", "range", "interval", "flag", "name", "method", "specimen"))
+_COLUMN_NAMES = frozenset(("analyte", "test", "tests", "parameter", "parameters", "investigation", "investigations",
+                           "name", "method", "specimen"))
 _COUNT_WORDS = _NUMBER_WORDS | {"a", "an"}
 # Unit words that count only next to a number in has_number_or_unit (they collide with initials and words:
 # "G Sample", "Department of Mol Biology"). Right before a unit or frequency word that counts they are
@@ -324,7 +348,7 @@ def units_without_quantity(text: str) -> list[str]:
     prev_counts = False  # the previous token is number-like, so a unit after it counts
     for i, part in enumerate(parts):
         counted[i] = part.isalpha() and part.lower() in _UNIT_WORDS and (part in _USUAL_SPELLING or prev_counts)
-        prev_counts = _number_like(part, parts[i + 1] if i + 1 < len(parts) else None) or _is_quantity(part)
+        prev_counts = _number_like_at(parts, i) or _is_quantity(part)
     for i in range(len(parts) - 2, -1, -1):
         if not counted[i] and counted[i + 1] and parts[i].lower() in _AMBIGUOUS_UNITS and not _word_like(parts[i]):
             counted[i] = True
@@ -338,7 +362,14 @@ def units_without_quantity(text: str) -> list[str]:
         return j + 1 >= len(parts) or parts[j + 1].lower() not in _TAKES_NUMBER
 
     words = [p.lower() for p in parts if p.lower() not in _UNIT_WORDS]
-    header_line = bool(words) and all(w in _HEADER_WORDS for w in words)  # "Analyte (mmol/L)"
+    units_at = [i for i, p in enumerate(parts) if p.lower() in _UNIT_WORDS]
+    header_after_unit = bool(units_at) and any(p.lower() in _HEADER_WORDS for p in parts[units_at[0] + 1:])
+    # A column header: only header words, and either a word that names the first column ("Analyte
+    # (mmol/L)", "Test Result Units") or header words on both sides of the unit ("Result (mmol/L)
+    # Reference range"). "Result mmol/L", "Value (mg)", "Reference range mmol/L" may be a row whose value
+    # went missing, so they are not headers.
+    header_line = (bool(words) and all(w in _HEADER_WORDS for w in words)
+                   and (any(w in _COLUMN_NAMES for w in words) or header_after_unit))
     out = []
     prev_ok = False  # the previous token is a quantity, or a unit that has its quantity
     for i, part in enumerate(parts):
@@ -390,8 +421,9 @@ def has_misread_number(text: str) -> bool:
     letters, stands right before a unit or a misread unit ("Metformin SOO my", "Atorvastatin ZO mg").
     Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
     parts = _parts(text)
-    for a, b in zip(parts, parts[1:]):
-        before_unit = not a.isupper() and _before_dose_unit(b)  # "Insulin So units": 50
+    for i, (a, b) in enumerate(zip(parts, parts[1:])):
+        # "Insulin So units": 50; not "So units were checked twice"
+        before_unit = not a.isupper() and _before_dose_unit(b) and not _sentence_start(parts, i)
         word = a.lower() in _NOT_A_NUMBER and not (a.isupper() and (b in _MISREAD_UNITS or b.lower() in _DOSE_UNITS))
         if (not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a)
                 or (word and not (before_unit and b.lower() not in _COUNT_UNITS))  # "So tablets were stopped"

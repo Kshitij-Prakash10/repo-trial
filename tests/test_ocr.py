@@ -411,6 +411,32 @@ def test_capitalised_words_before_a_name_or_word_stay_clean(text):
                                            flag_misread_digits=misread) is False
 
 
+@pytest.mark.parametrize("text,flag", [
+    ("So units were checked twice", False), ("So tablets were stopped", False), ("So my doctor said to continue", False),
+    ("Io Health Clinic", False), ("Zo Pharmacy", False), ("So drops are not needed", False), ("So caps must be worn", False),
+    ("Insulin Io units", True), ("Insulin Zo units", True), ("Insulin So units", True), ("Insulin Io units at night", True),
+    ("Insulin Il units", True), ("Io units at night", True), ("So units", True),
+])
+def test_a_capitalised_word_that_starts_a_sentence_is_not_a_misread_number(text, flag):
+    """With the misread-digit check off and on (v2 printed lines) the same answer: a sentence that starts
+    "So units were ..." is prose; "Insulin So units" and "Io units at night" are lost doses."""
+    for misread in (False, True):
+        assert common.line_confirm_numbers({"text": text, "script": "printed"}, script_known=True,
+                                           flag_misread_digits=misread) is flag, (text, misread)
+    if text == "So units were checked twice":
+        assert not common.has_number_or_unit(text)  # v1 gives no flag either
+
+
+@pytest.mark.parametrize("text,lost", [
+    ("Analyte (mmol/L)", False), ("Test Result Units Reference range", False), ("Result (mmol/L) Reference range", False),
+    ("Test (units)", False),
+    ("Result mmol/L", True), ("Value (mg)", True), ("Reference range mmol/L", True), ("Glucose Result mmol/L", True),
+    ("Glucose (mmol/L)", True),
+])
+def test_unit_headers_need_a_column_name_or_columns_on_both_sides(text, lost):
+    assert common.number_lost(text) is lost
+
+
 @pytest.mark.parametrize("text,lost", [
     ("Salbutamol puffs prn", True), ("Salbutamol tabs bd", True),  # the count went missing
     ("Paracetamol tablets as needed", False), ("Eye drops nocte", False), ("Ear drops bd", False),
