@@ -74,8 +74,10 @@ correct-print negatives and lost or misread positives on v1 and v2. In the resul
 round-1 sets (original_39 + extended), `set=extended_r2` is the new set and `set=all_with_r2` both; each mode
 also has a per-category table.
 
-Metrics, each with numerator / denominator and the list of misses, split by set and path, with the opt-in
-misread-digit option off (default) and on: (a) numeric content detected by either flag; (b) precision and
+Metrics, each with numerator / denominator and the list of misses, split by set and path, in three modes of the
+misread-digit check: `shipped_default` (the setting the commit ships, read from its code), `explicit_off`
+and `explicit_on` (results written before round 5 use `misread_option_off (default)` / `misread_option_on`,
+in which v1 always ran as shipped): (a) numeric content detected by either flag; (b) precision and
 recall of the prominent warning (`confirm_numbers`) against `dose_incorrect_or_lost` and against
 `warning_warranted`; (c) prominent warnings on correctly read printed lines; (d) exact drug / value / unit
 agreement (`fields.py`, whose docstring lists its limits) and silent dose errors; (e) the original target:

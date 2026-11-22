@@ -40,7 +40,7 @@ def test_fixture_schema(recs):
             assert k in r, (r["id"], k)
         assert r["routing"] in ROUTINGS
         assert r["path"] == ("v1" if r["routing"] == "none_v1" else "v2")
-        assert r["set"] in ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4")
+        assert r["set"] in ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4", "extended_r5")
         assert r["expected_fields"] == parse_fields(r["ground_truth"])
         for f in r["expected_fields"]:
             assert set(f) == {"drug", "value", "unit"}
@@ -125,7 +125,9 @@ def test_warning_runner_is_deterministic_and_scores_the_target():
     a = RW.run(ROOT, limit=60)
     b = RW.run(ROOT, limit=60)
     assert C.strip_volatile(C._clean(a)) == C.strip_volatile(C._clean(b))
-    t = a["modes"]["misread_option_off (default)"]["target_original_39"]
+    assert set(a["modes"]) == {"shipped_default", "explicit_off", "explicit_on"}
+    assert a["modes"]["explicit_off"]["misread_check"]["v2"] == "off"
+    t = a["modes"]["shipped_default"]["target_original_39"]
     assert t["recall"]["den"] == 39 and t["threshold"] == ">= 0.95"
     assert t["result"] == ("PASS" if t["recall"]["num"] >= 0.95 * 39 else "FAIL")
 
@@ -218,7 +220,9 @@ def test_round2_set_is_appended_and_covers_each_kind(recs):
     assert set(sets[first_r2:first_r3]) == {"extended_r2"} and first_r3 - first_r2 == 76  # appended after round 1
     first_r4 = sets.index("extended_r4")
     assert set(sets[first_r3:first_r4]) == {"extended_r3"} and first_r4 - first_r3 == 40  # round 3 after round 2
-    assert set(sets[first_r4:]) == {"extended_r4"}  # round 4 after round 3
+    first_r5 = sets.index("extended_r5")
+    assert set(sets[first_r4:first_r5]) == {"extended_r4"} and first_r5 - first_r4 == 25  # round 4 after round 3
+    assert set(sets[first_r5:]) == {"extended_r5"}  # round 5 after round 4
     assert first_r2 == 295  # the round-1 records stay as they were
     r2 = [r for r in recs if r["set"] == "extended_r2"]
     for cat in ("r2_count_freq_no_digit", "r2_unit_before_value", "r2_form_word", "r2_v1_misread", "r2_misread_unit"):
@@ -265,3 +269,11 @@ def test_round4_set_covers_capitalised_o_look_alikes(recs):
     for t in ("So tablets were stopped", "So my doctor said to continue", "Io Health Clinic", "Zo Pharmacy"):
         assert {("printed_only", t), ("none_v1", t)} <= shown, t
     assert all(r["dose_incorrect_or_lost"] == (r["category"] == "r4_capital_o") for r in r4)
+
+
+def test_round5_set_mixes_prose_doses_and_headers(recs):
+    r5 = [r for r in recs if r["set"] == "extended_r5"]
+    for cat in ("r5_sentence_start", "r5_header"):
+        sub = [r for r in r5 if r["category"] == cat]
+        assert {r["path"] for r in sub} == {"v1", "v2"}
+        assert any(r["dose_incorrect_or_lost"] for r in sub) and any(not r["warning_warranted"] for r in sub)

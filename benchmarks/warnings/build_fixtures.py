@@ -3,7 +3,7 @@ dataset text). Deterministic; run `python -m benchmarks.warnings.build_fixtures`
 and commit the output. tests/test_benchmarks.py checks that the committed file matches this script.
 
 Record fields
-  id, set ("original_39" | "extended" | "extended_r2" | "extended_r3" | "extended_r4", appended in rounds 2 to 4), category, path ("v1" | "v2"),
+  id, set ("original_39" | "extended" | "extended_r2" | "extended_r3" | "extended_r4" | "extended_r5", appended in rounds 2 to 5), category, path ("v1" | "v2"),
   routing: printed_only (v2, never sent to the handwriting reader) | handwriting_selected (v2, the
            handwriting reading is shown, the printed one kept as printed_text) |
            printed_selected_after_handwriting (v2, the line went to the handwriting reader, whose reading
@@ -369,6 +369,30 @@ NEW_R4 = [
     HW("So tablets were stopped", "So tablets were stopped", "So tablets were stopped", cat="r4_capital_o_trap"),
 ]
 
+# ---------------------------------------------------------------- round 5 additions (set "extended_r5", appended only)
+NEW_R5 = [
+    # a capitalised look-alike at the start of the line: prose, or a dose whose first digits were misread
+    P("So units were checked twice", cat="r5_sentence_start"), V1("So units were checked twice", cat="r5_sentence_start"),
+    P("So units are counted at the pharmacy", cat="r5_sentence_start"),
+    V1("So units are counted at the pharmacy", cat="r5_sentence_start"),
+    P("So drops were stopped", cat="r5_sentence_start"), P("So mg doses were reduced", cat="r5_sentence_start"),
+    HW("So units were checked twice", "So units were checked twice", "So units were checked twice",
+       cat="r5_sentence_start"),
+    P("50 units given", "So units given", cat="r5_sentence_start"), V1("50 units given", "So units given", cat="r5_sentence_start"),
+    P("10 units at night", "Io units at night", cat="r5_sentence_start"),
+    V1("10 units at night", "Io units at night", cat="r5_sentence_start"),
+    P("50 units subcutaneously", "So units subcutaneously", cat="r5_sentence_start"),
+    HW("20 units before breakfast", "Zo units before breakfast", "Zo units before breakfast", cat="r5_sentence_start"),
+    # unit headers and lab rows whose value went missing
+    P("Result (mmol/L)", cat="r5_header"), V1("Result (mmol/L)", cat="r5_header"),
+    P("Parameter Result Unit", cat="r5_header"), P("Investigation (units) Result", cat="r5_header"),
+    P("Test Result Units Reference range", cat="r5_header"), V1("Analyte (mmol/L)", cat="r5_header"),
+    P("Result mmol/L 5.4", "Result mmol/L", cat="r5_header"), V1("Result mmol/L 5.4", "Result mmol/L", cat="r5_header"),
+    P("Value (mg) 12", "Value (mg)", cat="r5_header"),
+    P("Reference range mmol/L 3.5-5.0", "Reference range mmol/L", cat="r5_header"),
+    P("Glucose (mmol/L) 5.4", "Glucose (mmol/L)", cat="r5_header"),
+]
+
 
 def _is_numeric(text: str) -> bool:
     return bool(re.search(r"\d", text)) or bool(_QTY_WORD.search(text))
@@ -422,6 +446,8 @@ def build() -> list[dict]:
         recs.append(finish(r, f"r3-{k:03d}", "extended_r3", "new_r3"))
     for k, r in enumerate(NEW_R4, 1):  # appended after round 3, which stays as it was
         recs.append(finish(r, f"r4-{k:03d}", "extended_r4", "new_r4"))
+    for k, r in enumerate(NEW_R5, 1):  # appended after round 4, which stays as it was
+        recs.append(finish(r, f"r5-{k:03d}", "extended_r5", "new_r5"))
     return recs
 
 

@@ -11,8 +11,13 @@ Each fixture line is turned into the line dict the pipeline would produce:
       below sets "confirm_numbers", "low_confidence" and "has_numbers" the way Scanner.run does with every
       stage on (routing known), and _line() gives the API line;
   v1: {"text", "box", "confidence"} straight into _line() (the v1 pipeline sets no flags).
-The opt-in misread-digit option (Scanner(flag_misread_digits=True) -> confirm_numbers(...,
-misread_digits=True) at 0c71106) is scored both off (the default) and on. Keyword arguments are detected
+The misread-digit check is scored in three modes: "shipped_default" (the setting the code ships, read
+from it: Scanner's flag_misread_digits default, resolving None through ocr.common.FLAG_MISREAD_DIGITS, and
+for v1 _line's own default; off for v2 and absent for v1 at 0c71106), "explicit_off" and "explicit_on"
+(set on v2 through confirm_numbers and on v1 through _line(flag_misread_digits=...) where it exists; on
+commits without that keyword v1 keeps its own behaviour, which the result records). Result files written
+before this change use the older labels "misread_option_off (default)" (v2 off, v1 as shipped) and
+"misread_option_on" (v2 on, v1 as shipped). Keyword arguments are detected
 with inspect.signature, so the runner works with the baseline and with later interfaces; a mode whose
 option does not exist in --root is reported as unavailable instead of being guessed.
 """
@@ -31,14 +36,15 @@ from benchmarks.fields import parse_fields  # noqa: E402
 
 FIXTURES = os.path.join(C.HERE, "warnings", "fixtures.jsonl")
 THRESHOLD = 0.95  # the original target: >= 95 % of lines that truly hold a number are flagged by either flag
-SETS = ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4", "all", "all_with_r2", "all_with_r3",
-        "all_with_r4")
+SETS = ("original_39", "extended", "extended_r2", "extended_r3", "extended_r4", "extended_r5", "all", "all_with_r2",
+        "all_with_r3", "all_with_r4", "all_with_r5")
 # "all" is the round-1 sets (original_39 + extended), as in the round-1 results; "all_with_r2" adds extended_r2
 # (and nothing later, so it stays comparable with round-2 results); "all_with_r3" adds extended_r3;
-# "all_with_r4" is every record
+# "all_with_r4" adds extended_r4; "all_with_r5" is every record
 ROUND1 = ("original_39", "extended")
 ROUND2 = ROUND1 + ("extended_r2",)
 ROUND3 = ROUND2 + ("extended_r3",)
+ROUND4 = ROUND3 + ("extended_r4",)
 PATHS = ("v1", "v2", "all")
 PRINTED_ROUTINGS = ("printed_only", "none_v1")
 
@@ -59,6 +65,21 @@ class Adapter:
         # the option's keyword: "misread_digits" at 0c71106, "flag_misread_digits" from 01d993e (old name kept)
         self.misread_kw = next((k for k in ("flag_misread_digits", "misread_digits") if k in self.confirm_params), None)
         self.misread_available = self.misread_kw is not None
+        # The shipped default of the misread-digit check, read from the code (older commits: off for v2).
+        # v2: Scanner(flag_misread_digits=...) default; None means ocr.common.FLAG_MISREAD_DIGITS (5d3a676+).
+        p = inspect.signature(oscan.Scanner.__init__).parameters.get("flag_misread_digits")
+        d = p.default if p is not None and p.default is not inspect.Parameter.empty else False
+        self.shipped_v2 = bool(getattr(ocommon, "FLAG_MISREAD_DIGITS", False) if d is None else d)
+        # v1: _line(ln) with no keyword. Its own setting: _line's flag_misread_digits=None resolves to
+        # ocr.api.V1_FLAG_MISREAD_DIGITS (ce56e17..2d80375) or ocr.common.FLAG_MISREAD_DIGITS (5d3a676+);
+        # at 0c71106 v1 has no misread check at all.
+        self.v1_kw = "flag_misread_digits" in self.line_params
+        if not self.v1_kw:
+            self.shipped_v1 = False
+        elif hasattr(oapi, "V1_FLAG_MISREAD_DIGITS"):
+            self.shipped_v1 = bool(oapi.V1_FLAG_MISREAD_DIGITS)
+        else:
+            self.shipped_v1 = bool(getattr(ocommon, "FLAG_MISREAD_DIGITS", False))
         src = inspect.getsource(oscan.Scanner.run)
         # the adapter mirrors this call in Scanner.run; recorded so a later change is visible
         self.scanner_run_call_matches = any(f"confirm_numbers(ln, script_known=routed, {k}=misread)" in src
@@ -67,7 +88,8 @@ class Adapter:
     def describe(self) -> dict:
         return {"confirm_numbers_params": self.confirm_params, "scanner_init_params": self.scanner_params,
                 "api_line_params": self.line_params, "misread_option_available": self.misread_available,
-                "misread_option_keyword": self.misread_kw,
+                "misread_option_keyword": self.misread_kw, "shipped_misread_check_v2": self.shipped_v2,
+                "shipped_misread_check_v1": self.shipped_v1, "v1_misread_check_settable": self.v1_kw,
                 "scanner_run_call_matches_adapter": self.scanner_run_call_matches}
 
     def v2_line(self, r: dict, misread: bool) -> tuple[dict, bool]:
@@ -79,7 +101,7 @@ class Adapter:
         kw = {}
         if "script_known" in self.confirm_params:
             kw["script_known"] = True  # Scanner.run: routed = clf and hw loaded (the full v2 pipeline)
-        if misread:
+        if misread and self.misread_kw:
             kw[self.misread_kw] = True
         flag = bool(self.oscan.confirm_numbers(dict(ln), **kw))
         ln["low_confidence"] = False
@@ -87,12 +109,23 @@ class Adapter:
         ln["has_numbers"] = bool(self.ocommon.has_number_or_unit(ln["text"]))
         return ln, flag
 
-    def evaluate(self, r: dict, misread: bool) -> dict:
+    def setting(self, mode: str) -> dict:
+        """The misread-digit check per path in a mode: "shipped" (what the code does by default),
+        "off" or "on" (set explicitly; on v1 only where _line takes the keyword, else what v1 does)."""
+        if mode == "shipped":
+            return {"v2": self.shipped_v2, "v1": self.shipped_v1}
+        want = mode == "on"
+        return {"v2": want, "v1": want if self.v1_kw else self.shipped_v1}
+
+    def evaluate(self, r: dict, mode: str) -> dict:
+        st = self.setting(mode)
         if r["path"] == "v2":
-            ln, scan_flag = self.v2_line(r, misread)
+            ln, scan_flag = self.v2_line(r, st["v2"])
+            api = self.oapi._line(dict(ln))
         else:
             ln, scan_flag = {"text": r["displayed_text"], "box": [0, 0, 10, 10], "confidence": 0.9}, None
-        api = self.oapi._line(dict(ln))
+            api = (self.oapi._line(dict(ln)) if mode == "shipped" or not self.v1_kw
+                   else self.oapi._line(dict(ln), flag_misread_digits=st["v1"]))
         prominent = bool(api.get("confirm_numbers"))
         quiet = bool(api.get("has_numbers", False))
         other = {k: v for k, v in sorted(api.items()) if isinstance(v, bool)
@@ -105,7 +138,7 @@ class Adapter:
 
 
 def _in_set(r_set: str, s: str) -> bool:
-    return (s == "all_with_r4" or (s == "all_with_r3" and r_set in ROUND3) or (s == "all_with_r2" and r_set in ROUND2)
+    return (s == "all_with_r5" or (s == "all_with_r4" and r_set in ROUND4) or (s == "all_with_r3" and r_set in ROUND3) or (s == "all_with_r2" and r_set in ROUND2)
             or (s == "all" and r_set in ROUND1) or r_set == s)
 
 
@@ -210,13 +243,15 @@ def run(root: str, fixtures: str = FIXTURES, limit: int | None = None) -> dict:
                            "script_known=True[, misread_digits=True]) then has_numbers = has_number_or_unit(text); "
                            "the API line is ocr.api._line(ln).",
            "modes": {}}
-    for mode, misread in (("misread_option_off (default)", False), ("misread_option_on", True)):
-        if misread and not ad.misread_available:
+    # Modes: the shipped default (read from the code), and the check set explicitly off and on.
+    for mode, key in (("shipped_default", "shipped"), ("explicit_off", "off"), ("explicit_on", "on")):
+        if key == "on" and not ad.misread_available:
             out["modes"][mode] = {"available": False, "reason": "confirm_numbers has no misread_digits parameter"}
             continue
-        rows = [ad.evaluate(r, misread) for r in recs_list]
-        m = {"available": True, "target_original_39": target(rows, recs), "splits": {}, "rows": rows,
-             "by_category": by_category(rows, recs)}
+        st = ad.setting(key)
+        rows = [ad.evaluate(r, key) for r in recs_list]
+        m = {"available": True, "misread_check": {"v2": "on" if st["v2"] else "off", "v1": "on" if st["v1"] else "off"},
+             "target_original_39": target(rows, recs), "splits": {}, "rows": rows, "by_category": by_category(rows, recs)}
         for s in SETS:
             for p in PATHS:
                 sub = [r for r in rows if _in_set(r["set"], s) and (p == "all" or r["path"] == p)]
@@ -231,9 +266,10 @@ def markdown(res: dict) -> str:
          f"{res['n_records']} invented lines (`{res['fixtures']}`, sha256 `{res['fixtures_sha256'][:12]}`). "
          "Prominent warning = API `confirm_numbers`; any flag = `confirm_numbers` or `has_numbers`. "
          "`set=all` is the round-1 sets (original_39 + extended); `set=all_with_r2` adds extended_r2; "
-         "`set=all_with_r3` adds extended_r3; `set=all_with_r4` is every record.", ""]
+         "`set=all_with_r3` and `all_with_r4` add those sets; `set=all_with_r5` is every record.", ""]
     for mode, m in res["modes"].items():
-        L += [f"## {mode}", ""]
+        L += [f"## {mode}" + (f" (misread-digit check: v2 {m['misread_check']['v2']}, v1 {m['misread_check']['v1']})"
+                              if m.get("misread_check") else ""), ""]
         if not m.get("available"):
             L += [f"unavailable: {m['reason']}", ""]
             continue
