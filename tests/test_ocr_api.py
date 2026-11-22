@@ -150,10 +150,10 @@ def test_status_when_weights_are_not_cached(client, monkeypatch, tmp_path):
     assert post(client, png_bytes()).status_code == 503  # and nothing is downloaded
     models = tmp_path / "models"
     models.mkdir()
-    (models / "fast_base-00000000.pt").write_bytes(b"x")
+    (models / "fast_base-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == ["recogniser"]
     assert client.get("/api/ocr/status").get_json()["available"] is False
-    (models / "crnn_mobilenet_v3_large_pt-00000000.pt").write_bytes(b"x")
+    (models / "crnn_mobilenet_v3_large_pt-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == []
     assert client.get("/api/ocr/status").get_json()["available"] is True
 
@@ -171,7 +171,7 @@ def test_a_finetuned_checkpoint_needs_no_cached_weights(client, monkeypatch, tmp
     body = client.get("/api/ocr/status").get_json()
     assert body["available"] is False and "(detector)" in body["reason"] and "recogniser" not in body["reason"]
     (tmp_path / "models").mkdir()
-    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x")
+    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)
     assert api.missing_weights() == []
     assert client.get("/api/ocr/status").get_json()["available"] is True
     det = tmp_path / "det_ft.pt"  # with both fine-tuned checkpoints the cache is not looked at
@@ -179,6 +179,20 @@ def test_a_finetuned_checkpoint_needs_no_cached_weights(client, monkeypatch, tmp
     monkeypatch.setattr(api, "DET_CKPT", str(det))
     monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path / "nowhere"))
     assert api.missing_weights() == []
+
+
+@pytest.mark.parametrize("size", [0, 1, 1023])
+def test_an_empty_or_truncated_cache_file_is_missing(client, monkeypatch, tmp_path, size):
+    """A failed download leaves an empty (or cut-off) fast_base-*.pt in the docTR cache: that is no detector."""
+    monkeypatch.setattr(api, "PACKAGES", ("json",))
+    monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(api, "DET_CKPT", str(tmp_path / "no_det.pt"))
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "fast_base-00000000.pt").write_bytes(b"x" * size)
+    assert "detector" in api.missing_weights()
+    assert api.availability()[0] is False
+    (tmp_path / "models" / "fast_base-11111111.pt").write_bytes(b"x" * api.MIN_WEIGHTS_BYTES)  # a good copy too
+    assert "detector" not in api.missing_weights()
 
 
 def test_the_repository_recogniser_checkpoint_is_found():
@@ -638,3 +652,77 @@ def test_smallest_accepted_image(client, monkeypatch):
     monkeypatch.setattr(api, "_pipeline", fake)
     assert post(client, png_bytes((16, 16))).status_code == 200
     assert fake.calls[-1]["size"] == (16, 16)
+
+
+# ---------------------------------------------------------------- the numbers warning of printed lines
+
+def _confirm_numbers():
+    """The per-line decision Scanner.run uses (ocr.scan.confirm_numbers; torch-free in ocr.common)."""
+    try:
+        from ocr.scan import confirm_numbers
+    except ImportError:  # no torch / docTR here
+        from ocr.common import line_confirm_numbers as confirm_numbers
+    return confirm_numbers
+
+
+class DoseScanner(FakeScanner):
+    """A v2 scanner whose printed-only lines get their flags the way Scanner.run sets them."""
+
+    TEXTS = ["Omeprazole mg", "1. Omeprazole mg", "Omeprazole mg for 7 days", "1. Omeprazole 20 mg",
+             "Amlodipine 5 mg and Omeprazole mg", "Omeprazole mg, Amlodipine 5 mg", "InSulin O Units",
+             "Dr L Example", "Mehta OD Clinic", "Test Result Units Reference range"]
+
+    def run(self, image):
+        res = super().run(image)
+        from ocr.common import has_number_or_unit
+        confirm = _confirm_numbers()
+        lines = []
+        for i, t in enumerate(self.TEXTS):
+            ln = {"text": t, "box": [1.0, 10.0 * i, 90.0, 10.0 * i + 8], "confidence": 0.96, "script": "printed",
+                  "handwritten_share": 0.0, "words": [], "low_confidence": False}
+            ln["confirm_numbers"] = confirm(ln, script_known=True)
+            ln["has_numbers"] = has_number_or_unit(t)
+            lines.append(ln)
+        res.update(lines=lines, text="\n".join(self.TEXTS), confidences=[0.96] * len(lines))
+        return res
+
+
+def test_a_unit_without_its_own_number_gets_the_numbers_warning(client, monkeypatch):
+    """/api/ocr: a list number, a duration or another medicine's dose does not stand in for a unit's
+    number; "1. Omeprazole 20 mg" gets only the quiet has_numbers; the text is returned as read."""
+    monkeypatch.setattr(api, "_pipeline", DoseScanner())
+    body = post(client, png_bytes((120, 90))).get_json()
+    assert body["pipeline"] == "v2" and body["text"] == "\n".join(DoseScanner.TEXTS)
+    got = {ln["text"]: (ln["confirm_numbers"], ln["has_numbers"]) for ln in body["lines"]}
+    assert [ln["text"] for ln in body["lines"]] == DoseScanner.TEXTS
+    assert got == {"Omeprazole mg": (True, True), "1. Omeprazole mg": (True, True),
+                   "Omeprazole mg for 7 days": (True, True), "1. Omeprazole 20 mg": (False, True),
+                   "Amlodipine 5 mg and Omeprazole mg": (True, True), "Omeprazole mg, Amlodipine 5 mg": (True, True),
+                   "InSulin O Units": (True, True), "Dr L Example": (False, False), "Mehta OD Clinic": (False, False),
+                   "Test Result Units Reference range": (False, False)}
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("Metformin SOO my", True), ("Warfarin B my", True), ("Total 9.00", True), ("Omeprazole mg", True),
+    ("Insulin Il units", True), ("Insulin Io units", True), ("Insulin So units", True),
+    ("So my doctor said to continue", False), ("So units were checked twice", False), ("So units given", True),
+    ("So units subcutaneously", True), ("Ask Bo my pharmacist", False), ("see overleaf", False),
+])
+def test_v1_lines_get_the_per_line_decision_with_the_script_unknown(text, flag):
+    """v1 (printed reader only, script unknown): any number or unit still gets the prominent warning, and
+    digits misread as letters next to a unit too, since such a line holds no digit (ocr.common.FLAG_MISREAD_DIGITS)."""
+    out = api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9})
+    assert out["confirm_numbers"] is flag and out["text"] == text
+    assert api._line({"text": text, "box": [0, 0, 1, 1], "confidence": 0.9},
+                     flag_misread_digits=False)["confirm_numbers"] is (flag and text not in ("Metformin SOO my", "Warfarin B my"))
+
+
+def test_the_misread_digit_check_ships_on_with_one_switch(monkeypatch):
+    """v1 API lines use ocr.common.FLAG_MISREAD_DIGITS (on); setting it to False turns the check off."""
+    from ocr import common
+    assert common.FLAG_MISREAD_DIGITS is True
+    ln = {"text": "Metformin SOO my", "box": [0, 0, 1, 1], "confidence": 0.9}
+    assert api._line(dict(ln))["confirm_numbers"] is True
+    monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
+    assert api._line(dict(ln))["confirm_numbers"] is False
+    assert api._line(dict(ln), flag_misread_digits=True)["confirm_numbers"] is True

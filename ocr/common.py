@@ -209,8 +209,54 @@ def _parts(text: str) -> list[str]:
     return out
 
 
-def _number_like(part: str) -> bool:
+def _word_like(part: str) -> bool:
+    """A capitalised word ("Bo", "So"): an initial capital, then lower-case letters with a vowel among them.
+    The only lower-case look-alikes are o (0) and l (1), so a name-shaped token of look-alikes needs an "o"
+    to be a word; "Il", "Sl", "Bl", "Ill" (11, 51, 81, 111) have no vowel and stay misread numbers."""
+    return (len(part) > 1 and part.isalpha() and part[0].isupper() and part[1:].islower()
+            and any(ch in "aeiouy" for ch in part[1:]))
+
+
+def _before_dose_unit(nxt: str | None) -> bool:
+    """The next token is a dose or count unit written in lower case or its usual spelling ("units", "mg",
+    "tabs"), not a capitalised name ("Bo Tab") and not a frequency word."""
+    return bool(nxt) and nxt.isalpha() and nxt.lower() in _UNIT_WORDS and nxt.lower() not in _FREQUENCY_WORDS \
+        and (nxt.islower() or nxt in _USUAL_SPELLING)
+
+
+# Finite verbs and auxiliaries that continue a sentence: a line that starts "So units were ...", "So
+# tablets are ..." is prose. Anything else after the unit ("So units given", "So units subcutaneously",
+# "Io units at night") keeps the line-start look-alike a misread number (the safe direction).
+_SENTENCE_VERBS = frozenset((
+    "is", "are", "was", "were", "be", "been", "being", "am", "has", "have", "had", "having", "do", "does",
+    "did", "will", "would", "shall", "should", "must", "can", "could", "may", "might", "need", "needs",
+    "needed", "remain", "remains", "remained", "seem", "seems", "seemed", "appear", "appears", "appeared",
+    "look", "looks", "looked", "become", "became", "get", "gets", "got"))
+
+
+def _sentence_start(parts: list[str], i: int) -> bool:
+    """parts[i] starts the line and the word after the unit that follows it is a finite verb or auxiliary
+    (_SENTENCE_VERBS): a capitalised word there is the first word of a sentence ("So units were checked
+    twice"), not a misread number. Any other word ("So units given", "So units subcutaneously") leaves it
+    a number."""
+    if i != 0 or i + 2 >= len(parts):
+        return False
+    return parts[i + 2].lower() in _SENTENCE_VERBS
+
+
+def _number_like(part: str, nxt: str | None = None, *, sentence_start: bool = False) -> bool:
+    """A number-like token (see _NUMBER_LIKE) or a number word. A capitalised word ("Bo", "So", _word_like)
+    is not one, unless it is made only of look-alike letters and stands right before a dose or count
+    unit: "Insulin Io units", "Zo mg", "So units" are 10, 20, 50 ("o" is the look-alike of 0); but not
+    as the first word of a sentence (sentence_start, see _sentence_start)."""
+    if _word_like(part) and not (_NUMBER_LIKE.fullmatch(part) and _before_dose_unit(nxt) and not sentence_start):
+        return False
     return bool(_NUMBER_LIKE.fullmatch(part)) or part.lower() in _NUMBER_WORDS
+
+
+def _number_like_at(parts: list[str], i: int) -> bool:
+    return _number_like(parts[i], parts[i + 1] if i + 1 < len(parts) else None,
+                        sentence_start=_sentence_start(parts, i))
 
 
 def has_number_or_unit(text: str) -> bool:
@@ -224,34 +270,225 @@ def has_number_or_unit(text: str) -> bool:
     if any(c.isdigit() for c in text) or "%" in text:
         return True
     prev_counts = False  # the previous token is number-like or a unit that counted
-    for part in _parts(text):
+    parts = _parts(text)
+    for i, part in enumerate(parts):
         is_unit = part.isalpha() and part.lower() in _UNIT_WORDS
         if is_unit and (part in _USUAL_SPELLING or prev_counts):
             return True
-        prev_counts = _number_like(part)
+        prev_counts = _number_like_at(parts, i)
     return False
 
 
+# Frequency words carry no amount, so they need no quantity of their own ("Paracetamol 500 mg as needed prn").
+_FREQUENCY_WORDS = frozenset(("od", "bd", "tds", "qds", "prn", "nocte", "mane"))
+# A quantity: a number ("20", "2.5", "0,5"; ".5" once _parts strips the leading dot) or a range ("1-2",
+# "2.5–5"). It must hold at least one real digit (see _is_quantity): look-alike letters mixed with digits
+# ("5OO", which has_misread_number flags) count, as they did under the old whole-line rule, but a token of
+# look-alike letters or a number word alone ("O", "SOO", "two") is not a quantity ("InSulin O Units").
+_NUM = r"[0-9OoSZIlB|]+(?:[.,][0-9OoSZIlB|]+)*"
+_QUANTITY = re.compile(rf"{_NUM}(?:[-–]{_NUM})?")
+_QUANTITY_UNIT = re.compile(rf"({_NUM}(?:[-–]{_NUM})?)([^\W\d_]+)")  # "20mg", "2.5mL", "1-2tabs"
+_LIST_INDEX = re.compile(r"\(?\d{1,3}[.):]\)?")  # "1.", "2)", "(3)", "4:" at the start of a line
+
+
+def _is_quantity(part: str) -> bool:
+    return bool(_QUANTITY.fullmatch(part)) and any(c.isdigit() for c in part)
+
+
+# Count units (how many tablets, capsules, drops, puffs). A number word ("one tablet", "two tabs", "half a
+# tab") or "a" / "an" is their quantity too; a dose or measurement unit (mg, mL, units, ...) needs digits.
+_COUNT_UNITS = frozenset(("tab", "tabs", "tablet", "tablets", "cap", "caps", "capsule", "capsules",
+                          "puff", "puffs", "drop", "drops"))
+# The plural of a count unit with no number is the name of the form ("Paracetamol tablets as needed",
+# "Eye drops nocte"), not a count whose number was lost.
+_COUNT_PLURALS = frozenset(("tabs", "tablets", "caps", "capsules", "puffs", "drops"))
+# ... unless the plural stands between a capitalised medicine and a frequency word: "Salbutamol puffs prn"
+# lost its count ("2 puffs"). Words that name the form with the plural are not medicines ("Eye drops nocte").
+_FORM_NAMES = frozenset(("eye", "ear", "nasal", "nose", "mouth", "throat", "skin"))
+# Header words of a lab table: a line of them and a unit is a column header, not a value that went missing
+# ("Analyte (mmol/L)", "Test Units"); a test name with a unit and no value is ("Glucose (mmol/L)").
+_HEADER_WORDS = frozenset(("analyte", "test", "tests", "parameter", "parameters", "investigation",
+                           "investigations", "result", "results", "value", "values", "unit", "units",
+                           "reference", "range", "interval", "flag", "name", "method", "specimen"))
+_COLUMN_NAMES = frozenset(("analyte", "test", "tests", "parameter", "parameters", "investigation", "investigations",
+                           "name", "method", "specimen"))
+_COUNT_WORDS = _NUMBER_WORDS | {"a", "an"}
+# Unit words that count only next to a number in has_number_or_unit (they collide with initials and words:
+# "G Sample", "Department of Mol Biology"). Right before a unit or frequency word that counts they are
+# units too ("Paracetamol g prn", "Insulin units bd").
+_AMBIGUOUS_UNITS = frozenset(("g", "l", "mol", "iu", "unit", "units"))
+_DIGITS = re.compile(r"\d+(?:[.,]\d+)*(?:[-\u2013]\d+(?:[.,]\d+)*)?")  # a value written in digits only
+# Words that take the number before them, so that number is not the value of a unit written before it
+# ("Omeprazole mg 7 days", "Omeprazole mg x 2 weeks").
+_TAKES_NUMBER = frozenset(("day", "days", "week", "weeks", "wk", "wks", "month", "months", "year", "years",
+                           "hour", "hours", "hr", "hrs", "h", "min", "mins", "minute", "minutes", "times",
+                           "x", "doses", "dose")) | _UNIT_WORDS
+
+
+def units_without_quantity(text: str) -> list[str]:
+    """The units of the text that count (as in has_number_or_unit) but have no quantity of their own.
+
+    A unit's quantity is the token right before it: a number with a real digit ("20 mg", "2.5 mg",
+    ".5 mg", "1-2 tabs"), or a unit that has its quantity ("5 mmol/L", "1 tab od"); or the number is
+    written together with the unit ("20mg"). Nothing else stands in for it: not a list number at the
+    start of the line ("1. Omeprazole mg"), a duration ("Omeprazole mg for 7 days"), another medicine's
+    dose ("Amlodipine 5 mg and Omeprazole mg") or any other digit on the line. Besides:
+      - frequency words (od, bd, tds, qds, prn, nocte, mane) need no quantity ("Apply the cream bd");
+      - a count unit (tab, cap, drop, puff, ...) also takes a number word or "a" ("Take one tablet at
+        night"); its plural without a number names the form ("Paracetamol tablets as needed"); and a
+        singular one that starts the line before a word is the form of the medicine ("tab Metformin 500 mg");
+      - a dose or measurement unit written before its value, as in lab tables ("Glucose (mmol/L) 5.4"),
+        takes the number right after it (after any units of its own), written in digits only, unless that
+        number belongs to the word after it ("Omeprazole mg 7 days", "Omeprazole mg 1 tab od");
+      - but a frequency word right after a capitalised name, with no dose before it, marks a lost dose
+        ("Amitriptyline nocte", "Bisoprolol od"), while one after a form or a word does not ("Apply the
+        cream bd", "Salbutamol inhaler prn"); and g, l, mol, iu, unit(s) count as units right before a
+        unit or frequency word that counts ("Paracetamol g prn")."""
+    chunks = (text or "").split()
+    if chunks and _LIST_INDEX.fullmatch(chunks[0]):
+        chunks = chunks[1:]
+    parts = _parts(" ".join(chunks))
+    counted = [False] * len(parts)
+    prev_counts = False  # the previous token is number-like, so a unit after it counts
+    for i, part in enumerate(parts):
+        counted[i] = part.isalpha() and part.lower() in _UNIT_WORDS and (part in _USUAL_SPELLING or prev_counts)
+        prev_counts = _number_like_at(parts, i) or _is_quantity(part)
+    for i in range(len(parts) - 2, -1, -1):
+        if not counted[i] and counted[i + 1] and parts[i].lower() in _AMBIGUOUS_UNITS and not _word_like(parts[i]):
+            counted[i] = True
+
+    def value_after(i: int) -> bool:
+        j = i + 1
+        while j < len(parts) and parts[j].isalpha() and parts[j].lower() in _UNIT_WORDS:
+            j += 1  # its own compound units: "mmol/L 5.4", "mg/dL 98"
+        if j >= len(parts) or not _DIGITS.fullmatch(parts[j]):
+            return False
+        return j + 1 >= len(parts) or parts[j + 1].lower() not in _TAKES_NUMBER
+
+    words = [p.lower() for p in parts if p.lower() not in _UNIT_WORDS]
+    units_at = [i for i, p in enumerate(parts) if p.lower() in _UNIT_WORDS]
+    header_after_unit = bool(units_at) and any(p.lower() in _HEADER_WORDS for p in parts[units_at[0] + 1:])
+    # A column header: only header words, and either a word that names the first column ("Analyte
+    # (mmol/L)", "Test Result Units") or header words on both sides of the unit ("Result (mmol/L)
+    # Reference range"). "Result mmol/L", "Value (mg)", "Reference range mmol/L" may be a row whose value
+    # went missing, so they are not headers.
+    header_line = (bool(words) and all(w in _HEADER_WORDS for w in words)
+                   and (any(w in _COLUMN_NAMES for w in words) or header_after_unit))
+    out = []
+    prev_ok = False  # the previous token is a quantity, or a unit that has its quantity
+    for i, part in enumerate(parts):
+        if counted[i]:
+            low = part.lower()
+            if low in _FREQUENCY_WORDS:
+                if not prev_ok and i and _word_like(parts[i - 1]) and not counted[i - 1]:
+                    out.append(part)  # "Amitriptyline nocte": the dose between name and frequency is gone
+                continue  # prev_ok carries over: "1 tab od"
+            ok = prev_ok
+            if not ok and low in _COUNT_UNITS:
+                before = parts[i - 1].lower() if i else ""
+                lost_count = (low in _COUNT_PLURALS and 0 < i < len(parts) - 1 and _word_like(parts[i - 1])
+                              and before not in _FORM_NAMES and parts[i + 1].lower() in _FREQUENCY_WORDS
+                              and counted[i + 1])  # "Salbutamol puffs prn"
+                ok = (before in _COUNT_WORDS or (low in _COUNT_PLURALS and not lost_count)
+                      or (i == 0 and i + 1 < len(parts) and parts[i + 1].isalpha() and not counted[i + 1]))
+            if not ok and low not in _COUNT_UNITS:
+                ok = value_after(i) or header_line
+            if not ok:
+                out.append(part)
+            prev_ok = ok
+            continue
+        m = _QUANTITY_UNIT.fullmatch(part)
+        attached = bool(m) and any(c.isdigit() for c in m.group(1)) and m.group(2).lower() in _UNIT_WORDS
+        prev_ok = attached or _is_quantity(part)
+    return out
+
+
 def number_lost(text: str) -> bool:
-    """True when a unit counts (see has_number_or_unit) but the text has no digit: the number that went
-    with it was probably lost or misread ("Omeprazole mg", "Insulin glargine IZ Units")."""
-    return has_number_or_unit(text) and not any(c.isdigit() for c in text or "")
+    """True when a unit counts (see has_number_or_unit) but has no quantity of its own (units_without_quantity:
+    "Omeprazole mg", "Insulin glargine IZ Units", "1. Omeprazole mg", "Omeprazole mg for 7 days",
+    "Amlodipine 5 mg and Omeprazole mg"). The number that went with it was probably lost or misread; a
+    digit elsewhere on the line does not stand in for it. Frequency words, count units with a number word
+    and forms ("Take one tablet at night", "Eye drops nocte", "tab Metformin 500 mg") are not lost numbers."""
+    return has_number_or_unit(text) and bool(units_without_quantity(text))
 
 
 # Misread units that a printed reader makes of mg, mL and mcg ("Metformin SOO my").
 _MISREAD_UNITS = frozenset(("my", "rng", "mq", "mI", "rnl", "rnL", "rncg", "mcq", "rnmol"))
-_NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words made of look-alike letters only
+_NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words made of look-alike letters, in any case
+# Dose units: a look-alike word in capitals right before one of these is a misread number after all
+# ("Levothyroxine SO mcq": 50 mcg), while before a form or count it is the word ("Timolol OS drops": left eye).
+_DOSE_UNITS = frozenset(("mcg", "µg", "ug", "mg", "g", "kg", "ml", "l", "dl", "mmol", "mol", "miu", "iu"))
 
 
 def has_misread_number(text: str) -> bool:
     """True when a token of look-alike letters, with no real digit or with digits mixed with look-alike
     letters, stands right before a unit or a misread unit ("Metformin SOO my", "Atorvastatin ZO mg").
-    Used only when Scanner(flag_misread_digits=True): off by default, see ocr/scan.py."""
+    Used when the misread-digit check is on (FLAG_MISREAD_DIGITS, on by default in Scanner and /api/ocr)."""
     parts = _parts(text)
-    for a, b in zip(parts, parts[1:]):
-        if not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a) or a.lower() in _NOT_A_NUMBER:
+    for i, (a, b) in enumerate(zip(parts, parts[1:])):
+        # "Insulin So units": 50; not "So units were checked twice"
+        before_unit = not a.isupper() and _before_dose_unit(b) and not _sentence_start(parts, i)
+        word = a.lower() in _NOT_A_NUMBER and not (a.isupper() and (b in _MISREAD_UNITS or b.lower() in _DOSE_UNITS))
+        if (not _NUMBER_LIKE.fullmatch(a) or not any(c.isalpha() for c in a)
+                or (word and not (before_unit and b.lower() not in _COUNT_UNITS))  # "So tablets were stopped"
+                or (_word_like(a) and not before_unit)):
             continue
         if b in _MISREAD_UNITS or (b.isalpha() and b.lower() in _UNIT_WORDS):
             return True
     return False
 
+
+def has_misread_unit(text: str) -> bool:
+    """True when a number with real digits stands right before a misread unit: "Levothyroxine 50 mcq OD",
+    "Lactulose 10 mI bd", "Haemoglobin 11.8 q/dL" (q for g before /dL or /L). Used with the misread-digit
+    check (FLAG_MISREAD_DIGITS), like has_misread_number."""
+    parts = _parts(text)
+    for i in range(len(parts) - 1):
+        a, b = parts[i], parts[i + 1]
+        if not _is_quantity(a) or (b == "my" and re.fullmatch(r"(?:19|20)\d\d", a)):
+            continue  # "Since 2019 my blood pressure": a year, then the word "my"
+        if b in _MISREAD_UNITS:
+            return True
+        if b == "q" and i + 2 < len(parts) and parts[i + 2].lower() in ("dl", "l"):
+            return True
+    return False
+
+
+READINGS = ("text", "handwriting_text", "printed_text")  # the shown reading first, then the other ones
+
+# The one switch for the misread-digit check in what ships: ocr.scan.Scanner (v2) and the v1 lines of
+# /api/ocr use it when they are not told otherwise. On: a line such as "Metformin SOO my" holds no digit,
+# so without the check it gets no flag at all. Set it to False (or pass Scanner(flag_misread_digits=False))
+# to turn the check off. line_confirm_numbers / ocr.scan.confirm_numbers take the setting as an explicit
+# keyword (default False there, so a caller always says which one it means).
+FLAG_MISREAD_DIGITS = True
+
+
+def line_confirm_numbers(ln: dict, *, script_known: bool | None = None, flag_misread_digits: bool = False) -> bool:
+    """Must a person check this line's numbers against the page, whatever its confidence? (the
+    confirm_numbers flag of one line; ocr.scan.confirm_numbers is this function, torch-free here)
+
+    ln holds the shown "text" and, when the line went to the handwriting reader, "handwriting_text" and
+    (when the handwriting reading was chosen) "printed_text". Yes when:
+      - the line went to the handwriting reader (or is handwritten) and any reading holds a number or unit:
+        handwritten doses are misread with high confidence (2.5 mg read as 25 mg), and either reader can
+        be the one that kept the digits;
+      - the script is unknown (no printed / handwritten routing ran: script_known False; None means known
+        when the line has a "script") and the text holds a number or unit, since it may be handwriting;
+      - the shown text has a unit without its own number (number_lost: "Omeprazole mg", "1. Omeprazole mg",
+        "Amlodipine 5 mg and Omeprazole mg");
+      - flag_misread_digits is on and any reading has letters that look like misread digits before a unit
+        ("Metformin SOO my", has_misread_number) or digits before a misread unit ("50 mcq",
+        has_misread_unit). The keyword defaults to False here; the shipped pipelines pass
+        FLAG_MISREAD_DIGITS (on).
+    A printed line with its numbers in place ("1. Omeprazole 20 mg") is not flagged here; it gets the
+    quieter has_numbers flag."""
+    readings = [ln.get(k) or "" for k in READINGS]
+    if script_known is None:
+        script_known = "script" in ln
+    routed = "handwriting_text" in ln or ln.get("script") == "handwritten"
+    if (not script_known or routed) and any(has_number_or_unit(t) for t in readings):
+        return True
+    if number_lost(readings[0]):
+        return True
+    return bool(flag_misread_digits) and any(has_misread_number(t) or has_misread_unit(t) for t in readings)

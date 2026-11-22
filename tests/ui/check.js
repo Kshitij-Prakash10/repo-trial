@@ -28,7 +28,7 @@
 "use strict";
 
 const { chromium } = require("playwright");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -521,7 +521,31 @@ async function main() {
   const V2_PRINTED = [["SYNTHETIC LAB REPORT", false], ["Haemoglobin 13.5 g/dL", false], ["Sodium 139 mmol/L", false],
     ["Dr L Example", false]];
   const V2_CAPS = { handwriting: true, orientation: true, deskew: true };
-  let ocrMode = "ok"; // ok | low | empty | error | v2 | v2low | v2printed
+  // Printed-only "v2" lines whose flags come from the server's own code (ocr.scan.confirm_numbers, then
+  // ocr.api._line), so the check follows what the server would really send for these texts.
+  const PY_LINES = [
+    "import json, sys",
+    "from ocr.api import _line",
+    "from ocr.common import has_number_or_unit",
+    "try:",
+    "    from ocr.scan import confirm_numbers",
+    "except ImportError:",
+    "    from ocr.common import line_confirm_numbers as confirm_numbers",
+    "out = []",
+    "for i, t in enumerate(json.loads(sys.argv[1])):",
+    "    ln = {'text': t, 'box': [10, 10 + 30 * i, 400, 30 + 30 * i], 'confidence': 0.95, 'script': 'printed'}",
+    "    ln['confirm_numbers'] = confirm_numbers(ln, script_known=True)",
+    "    ln['has_numbers'] = has_number_or_unit(t)",
+    "    out.append(_line(ln))",
+    "print(json.dumps(out))"].join("\n");
+  function serverLines(texts) {
+    const r = spawnSync(process.env.PYTHON || "python3", ["-c", PY_LINES, JSON.stringify(texts)],
+      { cwd: ROOT, encoding: "utf8", timeout: 180000, env: { ...process.env, PYTHONWARNINGS: "ignore" } });
+    if (r.status !== 0) throw new Error("could not compute the lines: " + r.stderr);
+    return JSON.parse(r.stdout.trim().split("\n").pop());
+  }
+  let doseLines = [];
+  let ocrMode = "ok"; // ok | low | empty | error | v2 | v2low | v2printed | v2dose
   let ocrRequests = [];
   let ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
   const mockOcr = async (p) => {
@@ -534,9 +558,9 @@ async function main() {
       if (ocrMode === "error") {
         return r.fulfill({ status: 503, contentType: "application/json", body: '{"error":"The text-reading models could not be loaded (mock)."}' });
       }
-      if (ocrMode === "v2" || ocrMode === "v2low" || ocrMode === "v2printed") {
+      if (ocrMode === "v2" || ocrMode === "v2low" || ocrMode === "v2printed" || ocrMode === "v2dose") {
         const conf = ocrMode === "v2low" ? 0.42 : 0.95;
-        const lines = (ocrMode === "v2printed" ? V2_PRINTED : V2_LINES).map(([t, flag], i) => ({ text: t,
+        const lines = ocrMode === "v2dose" ? doseLines : (ocrMode === "v2printed" ? V2_PRINTED : V2_LINES).map(([t, flag], i) => ({ text: t,
           box: [10, 10 + i * 30, 400, 30 + i * 30], confidence: conf, low_confidence: conf < 0.5, confirm_numbers: flag,
           script: flag ? "handwritten" : "printed", has_numbers: flag || /\d/.test(t) }));
         const words = lines.flatMap((ln, i) => ln.text.split(/\s+/).map((t) => ({ text: t, confidence: conf, box: [10, 10, 50, 30], line: i })));
@@ -895,6 +919,71 @@ async function main() {
     ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
     await unmockOcr(page);
     await unmockScanner(page);
+  });
+
+  await step("read text (mocked v2): a printed dose unit without its own number gets the numbers warning, kept after save and reopen", async () => {
+    const quietTexts = ["SYNTHETIC CLINIC", "1. Omeprazole 20 mg"];
+    const doseTexts = ["SYNTHETIC CLINIC", "1. Omeprazole mg", "2. Amlodipine 5 mg"];
+    const quiet = serverLines(quietTexts);
+    const dose = serverLines(doseTexts);
+    try {
+      await mockScanner(page);
+      await mockOcr(page);
+      ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" }, pipeline: "v2", capabilities: V2_CAPS };
+      await page.click('a[data-view="dashboard"]');
+      await page.click('a[data-view="scan"]');
+      await page.setInputFiles("#scan-file", path.join(tmp, "photo.png"));
+      await scanIdle(page);
+      await readEnabled(page, "#scan-ocr-read");
+      // "1. Omeprazole 20 mg": its number is there, so only the quiet note.
+      ocrMode = "v2dose";
+      doseLines = quiet;
+      await page.click("#scan-ocr-read");
+      await textShown(page, "#scan-ocr");
+      assert((await page.inputValue("#scan-ocr-text")) === quietTexts.join("\n"), "text as read");
+      assert(await page.isHidden("#scan-ocr-confirm"), "no numbers warning for 1. Omeprazole 20 mg: " + JSON.stringify(quiet));
+      const q = await page.textContent("#scan-ocr-numbers");
+      assert(await page.isVisible("#scan-ocr-numbers") && /Numbers were read on 1 printed line\./.test(q), q);
+      // "1. Omeprazole mg": the list number is not its dose, so the warning names that line (and only it).
+      doseLines = dose;
+      await page.click("#scan-ocr-read");
+      await page.waitForFunction(() => !document.querySelector("#scan-ocr-confirm").hidden, null, { timeout: 5000 })
+        .catch(() => { throw new Error("no numbers warning for 1. Omeprazole mg: " + JSON.stringify(dose)); });
+      const read = doseTexts.join("\n");
+      assert((await page.inputValue("#scan-ocr-text")) === read, "text as read, not corrected");
+      const warn = await page.textContent("#scan-ocr-confirm");
+      assert(/Check the numbers\./.test(warn) && warn.includes("1. Omeprazole mg") && !warn.includes("Amlodipine") && !/more/.test(warn), warn);
+      assert(await page.isHidden("#scan-ocr-numbers"), "the quiet note gives way to the warning");
+      await page.click("#scan-next");
+      await page.waitForSelector("#scan-save:not([hidden])");
+      const saveText = await page.textContent("#scan-save-text");
+      assert(/numbers or doses \(1 line\)/.test(saveText), saveText);
+      await page.selectOption("#scan-category", "prescription");
+      assert((await page.textContent("#scan-save-text")).includes("Check for any missing lines."), "prescription reminder on save");
+      await page.fill("#scan-title", "Printed dose without number");
+      await page.click("#scan-save-btn");
+      await page.waitForSelector("#scan-done:not([hidden])");
+      await page.click("#scan-view-docs");
+      await page.waitForSelector('.doc-card .doc-title:text("Printed dose without number")');
+      const rec = await page.evaluate(() => Documents.list().find((d) => d.title === "Printed dose without number"));
+      assert(rec.text === read && rec.ocr.edited === false, "stored text equals the read text: " + JSON.stringify(rec.text));
+      assert(rec.ocr.confirmNumbers && rec.ocr.confirmNumbers.count === 1 && rec.ocr.confirmNumbers.lines[0] === "1. Omeprazole mg", JSON.stringify(rec.ocr));
+      await page.locator(".doc-card", { hasText: "Printed dose without number" }).locator('.card-actions [data-act="view"]').click();
+      await page.waitForSelector("#viewer[open] #viewer-ocr-text");
+      await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
+      const vw = await page.textContent("#viewer-ocr-confirm");
+      assert(/Check the numbers\./.test(vw) && vw.includes("1. Omeprazole mg") && vw.includes("Check for any missing lines."), vw);
+      assert((await page.inputValue("#viewer-ocr-text")) === read, "viewer text equals the read text");
+      await page.keyboard.press("Escape");
+      await page.waitForSelector("#viewer:not([open])", { state: "attached" });
+    } finally { // leave the page as the next step expects, also when a check above failed
+      ocrMode = "ok";
+      ocrStatus = { available: true, models: { detector: "pretrained", recogniser: "finetuned" } };
+      await page.keyboard.press("Escape");
+      for (const b of ["#scan-discard", "#scan-retake"]) if (await page.isVisible(b)) await page.click(b);
+      await unmockOcr(page);
+      await unmockScanner(page);
+    }
   });
 
   await step("save without scanning: the photo carries no text, and the prescription reminder comes with text read later in View", async () => {

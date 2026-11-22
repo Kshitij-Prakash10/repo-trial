@@ -15,8 +15,11 @@ POST /api/ocr         multipart: image (JPEG, PNG or WebP, at most 10 MB) and tw
                       Boxes are [x0, y0, x1, y1] in pixels of the page; confidences are 0..1.
                       confirm_numbers: a person must check the line's numbers against the page whatever
                       its confidence: it went to the handwriting reader and a reading holds a number or
-                      dose unit, or a unit lost its number, or (v1, which cannot tell print from
-                      handwriting) the text holds a number or unit.
+                      dose unit, or a unit has no number of its own right before it ("Omeprazole mg",
+                      also "1. Omeprazole mg" or "Amlodipine 5 mg and Omeprazole mg": a list number, a
+                      duration or another medicine's dose does not count), or (v1, which cannot tell
+                      print from handwriting) the text holds a number or unit, or digits misread as
+                      letters next to a unit ("Metformin SOO my", "50 mcq").
                       has_numbers: the shown text holds a number or unit (quieter; also printed lines).
 GET  /api/ocr/status  {"available": bool, "reason"?: str, "models"?: {"detector", "recogniser"},
                        "loaded"?: bool, "pipeline": "v2" | "v1",
@@ -55,7 +58,7 @@ from typing import Any, Optional, Tuple
 from flask import Blueprint, jsonify, request
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit  # torch-free: the status check must not import torch
+from ocr.common import DET_CKPT, REC_CKPT, ROOT, has_number_or_unit, line_confirm_numbers  # torch-free: the status check must not import torch
 
 ocr_bp = Blueprint("ocr", __name__)
 
@@ -76,6 +79,7 @@ PACKAGES = ("torch", "doctr")  # import names of the optional dependencies
 SETUP_HINT = "pip install -r requirements-ocr.txt"
 
 PRETRAINED = {"detector": "fast_base-*.pt", "recogniser": "crnn_mobilenet_v3_large_pt-*.pt"}  # docTR cache
+MIN_WEIGHTS_BYTES = 1024  # the real files are megabytes; anything smaller is a failed or cut-off download
 
 # What the v2 pipeline (ocr.scan.Scanner) needs on top of v1: the same files that ocr/orientation.py,
 # ocr/scriptclf.py and ocr/handwriting.py load.
@@ -140,7 +144,17 @@ def missing_weights() -> list[str]:
     cache = os.environ.get("DOCTR_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "doctr")
     ckpt = {"detector": DET_CKPT, "recogniser": REC_CKPT}  # looked up here so tests can replace the paths
     return [stage for stage, pattern in PRETRAINED.items()
-            if not os.path.exists(ckpt[stage]) and not glob.glob(os.path.join(cache, "models", pattern))]
+            if not os.path.exists(ckpt[stage])
+            and not any(weights_file_ok(f) for f in glob.glob(os.path.join(cache, "models", pattern)))]
+
+
+def weights_file_ok(path: str) -> bool:
+    """A cached weights file that can be loaded: at least MIN_WEIGHTS_BYTES. A failed download leaves an
+    empty (or cut-off) file behind; it is treated as missing (and left in place)."""
+    try:
+        return os.path.getsize(path) >= MIN_WEIGHTS_BYTES
+    except OSError:
+        return False
 
 
 def model_names() -> dict:
@@ -396,15 +410,25 @@ def _read_upload():
     })
 
 
-def _line(ln: dict) -> dict:
+def _line(ln: dict, *, flag_misread_digits: bool | None = None) -> dict:
     """The line as the API returns it. v2 lines carry their own confirm_numbers (ocr.scan.confirm_numbers);
-    v1 lines, whose script nobody checked, are flagged whenever the text holds a number or unit."""
+    v1 lines, whose script nobody checked, get the same per-line decision with the script unknown
+    (ocr.common.line_confirm_numbers): flagged whenever the text holds a number or unit, and, with
+    flag_misread_digits (ocr.common.FLAG_MISREAD_DIGITS, on, when None: the same switch as the v2
+    Scanner), when it holds digits misread as letters
+    before a unit ("Metformin SOO my") or digits before a misread unit ("50 mcq")."""
     conf = ln["confidence"]
     low = ln.get("low_confidence")
     numbers = has_number_or_unit(ln["text"])
+    if "confirm_numbers" in ln:
+        confirm = bool(ln["confirm_numbers"])
+    else:
+        from ocr import common  # read at call time: the one switch, ocr.common.FLAG_MISREAD_DIGITS
+        flag = common.FLAG_MISREAD_DIGITS if flag_misread_digits is None else flag_misread_digits
+        confirm = line_confirm_numbers(ln, script_known=False, flag_misread_digits=flag)
     return {"text": ln["text"], "box": ln["box"], "confidence": conf,
             "low_confidence": bool(conf < LOW_CONFIDENCE) if low is None else bool(low),
-            "confirm_numbers": bool(ln["confirm_numbers"]) if "confirm_numbers" in ln else numbers,
+            "confirm_numbers": confirm,
             "script": ln.get("script") or "printed", "has_numbers": numbers}
 
 

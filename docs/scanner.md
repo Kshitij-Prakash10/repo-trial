@@ -162,8 +162,11 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
 ## Guards and image modes (scanner/infer.py, scanner/convert.py)
 
 - **Image modes.** `scan` converts its input with `scanner.convert.to_rgb` (also used by the OCR
-  pipeline as `ocr.pipeline.to_rgb`): fully transparent areas become white, partly transparent ones
-  keep their own colour (`alpha_to_rgb`; an image with no opaque pixel at all is put on white), 16-bit
+  pipeline as `ocr.pipeline.to_rgb`): transparency is decided pixel by pixel (`alpha_to_rgb`):
+  `out = white + (colour - white) * min(1, alpha / 64)`. Fully transparent pixels become white, pixels at
+  least a quarter opaque keep their own colour, fainter ones fade towards white. The upload path
+  (`scanner.api.to_rgb8`, also used by `/api/ocr`) uses the same `has_alpha` / `alpha_to_rgb`, so direct
+  input and uploads give identical pixels; 16-bit
   grey (`I;16`) is scaled from
   0..65535 to 0..255, float and 32-bit grey are scaled by their largest value, and negative floats are
   shifted so the lowest value is black. A plain `convert("RGB")` made transparent images black and
@@ -175,6 +178,25 @@ next to the gray output): `test_200001.png`, `test_200004.png`, `test_200007.png
   0.80 / 0.921 there but lost a page (found 1.00 -> 0.90) when the see-through surroundings were black,
   so the simpler rule was kept. Fully transparent cut-outs and 16-bit grey are unchanged (0.95 / 0.953
   and 0.50 / 0.751).
+  Until 2026-11 an image with no fully opaque pixel was composited on white instead, so one opaque pixel
+  anywhere switched the whole image to the other rule: a half see-through text layer (black under
+  alpha <= 160) came out with text grey 110 or black 0, and a photo saved with alpha 128 everywhere changed
+  its outline on 14 of 20 synthetic test photos (up to 516 px; IoU >= 0.9 0.60 vs 0.75) when one corner
+  pixel was made opaque. With the per-pixel rule both images of each pair convert to the same pixels
+  (except that one pixel) and give the same outline, directly and through `/api/scan`. On the same 20
+  photos (seed 2026): alpha 64 / 128 / 192 outside the page, alpha 128 over black and fully transparent
+  cut-outs give exactly the earlier results (found 0.95 / 0.95 / 0.95 / 1.00 / 0.95, IoU >= 0.9 0.75 /
+  0.75 / 0.75 / 0.90 / 0.95); a page of alpha 254 with alpha 128 outside (no opaque pixel, so composited
+  before) goes from found 0.90, mean IoU 0.861, IoU >= 0.9 0.50 to 0.95 / 0.907 / 0.75, the same as
+  the plain RGB photos. The synthetic test (200) and OOD (80) sets are RGB and unchanged (test found
+  0.945, mean IoU 0.887, IoU >= 0.9 0.755; OOD 0.575 / 0.673 / 0.375). A see-through layer with no
+  opaque pixel now keeps its own colour (black at alpha 128 stays black, it used to become grey 127).
+- **16-bit grey holding 8-bit values (not changed).** An `I;16` image whose values are all 0..255 (8-bit
+  data saved in a 16-bit container without scaling) is scaled by 65535 like any 16-bit image, so it comes
+  out nearly black. Not fixed on purpose: scaling by 255 "when the largest value is at most 255" (as is done
+  for 32-bit `I` images) would switch the whole image on its brightest pixel, so one pixel of 256 would
+  darken everything 257 times (the same one-pixel discontinuity the alpha rule above removes); scaling
+  every image by its own maximum would change the documented scaling of ordinary 16-bit scans.
 - **Tiny images.** A photo whose shorter side is under 32 px (`MIN_SIDE`) is never a page.
 - **Noise guard.** Uniform random RGB noise used to reach confidence ~0.63 and `page_found=True`. A quad
   that passes the confidence test is now rejected when the photo inside and outside it is

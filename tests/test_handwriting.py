@@ -128,12 +128,23 @@ def test_postcorrect_fixes_one_typo_and_leaves_numbers():
 
 # ---------------------------------------------------------------- end to end (needs the trained weights)
 
-HAVE_WEIGHTS = all(os.path.exists(p) for p in (O.ORIENT_CKPT, scriptclf.CKPT,
-                                                os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json")))
+def _missing_weights() -> list[str]:
+    """What the end-to-end tests need and this computer lacks: the v2 checkpoints, and the detector and
+    recogniser weights with the size rule of ocr.api (an empty cache file is missing)."""
+    from ocr.api import missing_weights
+    v2 = {"orientation": O.ORIENT_CKPT, "routing": scriptclf.CKPT,
+          "handwriting": os.path.join(O.ROOT, "checkpoints", "handwriting_v1", "config.json")}
+    return [k for k, p in v2.items() if not os.path.exists(p)] + missing_weights()
 
 
-@pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",
-                    reason="slow: set OCR_SLOW=1 (needs checkpoints/ and the docTR weights)")
+MISSING_WEIGHTS = _missing_weights()
+HAVE_WEIGHTS = not MISSING_WEIGHTS
+SLOW = os.environ.get("OCR_SLOW") == "1"
+SLOW_REASON = ("slow: set OCR_SLOW=1 to run it" if not SLOW else
+               f"model weights missing on this computer: {', '.join(MISSING_WEIGHTS)}")
+
+
+@pytest.mark.skipif(not HAVE_WEIGHTS or not SLOW, reason=SLOW_REASON)
 def test_scan_reads_rotated_page(tmp_path):
     from PIL import Image
     from ocr.scan import scan
@@ -144,8 +155,7 @@ def test_scan_reads_rotated_page(tmp_path):
     assert "quick" in text.lower() and len(conf) == len(text.splitlines())
 
 
-@pytest.mark.skipif(not HAVE_WEIGHTS or os.environ.get("OCR_SLOW") != "1",
-                    reason="slow: set OCR_SLOW=1 (needs checkpoints/ and the docTR weights)")
+@pytest.mark.skipif(not HAVE_WEIGHTS or not SLOW, reason=SLOW_REASON)
 def test_scan_reads_handwriting_line_page(tmp_path):
     """A page of synthetic handwriting lines is routed to the handwriting reader and read."""
     from PIL import Image
@@ -374,3 +384,126 @@ def test_scanner_gives_printed_numbers_the_quieter_flag(monkeypatch, routing):
     assert all(ln["script"] == "printed" for ln in r["lines"])
     assert flags == ([(True, False), (True, True), (False, False)] if routing
                      else [(True, True), (True, True), (False, False)])
+
+
+def test_confirm_numbers_keeps_its_old_call_and_takes_the_option_by_name():
+    from ocr.scan import confirm_numbers
+    ln = {"text": "Metformin twice daily", "script": "printed", "handwriting_text": "Metformin SOO my"}
+    assert confirm_numbers(ln) is False and confirm_numbers(ln, True, False) is False
+    assert confirm_numbers(ln, misread_digits=True) is True  # the older keyword
+    assert confirm_numbers(ln, script_known=True, flag_misread_digits=True) is True
+    assert confirm_numbers(ln, script_known=True, flag_misread_digits=False) is False
+    assert confirm_numbers({"text": "1. Omeprazole mg", "script": "printed"}, script_known=True) is True
+    assert confirm_numbers({"text": "1. Omeprazole 20 mg", "script": "printed"}, script_known=True) is False
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_scanner_looks_for_misread_digits_in_every_reading_when_asked(monkeypatch, flag):
+    """Scanner.run with fake readers, "Metformin SOO my" in each position: (a) printed only, (b) the
+    handwriting reading shown (misread in the shown text or in printed_text), (c) the printed reading
+    kept after handwriting (misread shown or in handwriting_text). The shown text stays as read."""
+    from PIL import Image
+    from ocr import scan as S
+    M, P = "Metformin SOO my", "Metformin twice daily"
+    page = np.full((500, 600, 3), 235, np.uint8)
+    printed = [(M, 0.9, [20, 20, 400, 60]),  # (a): not routed
+               (P, 0.30, [20, 100, 400, 140]),  # (b) hw reading M is surer: shown
+               (M, 0.30, [20, 180, 400, 220]),  # (b) hw reading P is surer: M goes to printed_text
+               (M, 0.90, [20, 260, 400, 300]),  # (c) printed M kept, hw P in handwriting_text
+               (P, 0.90, [20, 340, 400, 380])]  # (c) printed P kept, hw M in handwriting_text
+    hw = [(M, 0.8), (P, 0.8), (P, 0.5), (M, 0.5)]
+    sc = object.__new__(S.Scanner)
+    sc.ocr, sc.hw = _FakeOcr(page, printed), _FakeHw(hw)
+    sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, object(), False
+    sc.mask_neighbours, sc.flag_misread_digits = False, flag
+    monkeypatch.setattr(S.scriptclf, "handwritten_prob",
+                        lambda clf, crops: np.array([0.0] + [1.0] * (len(crops) - 1)))
+    r = sc.run(Image.new("RGB", (600, 500), "white"))
+    got = [(ln["text"], ln["script"], ln.get("handwriting_text"), ln.get("printed_text"), ln["confirm_numbers"])
+           for ln in r["lines"]]
+    assert got == [(M, "printed", None, None, flag), (M, "handwritten", M, P, flag),
+                   (P, "handwritten", P, M, flag), (M, "printed", P, None, flag), (P, "printed", M, None, flag)]
+
+
+def test_handwriting_beam_width_is_an_option_and_greedy_by_default(monkeypatch):
+    """HandwritingReader(num_beams=...) sets the decoder's beam width for read(); 1 (greedy) by default, and
+    read(num_beams=...) still overrides it. Scanner(hw_beams=...) passes it on (experiment, opt-in)."""
+    import inspect
+    from ocr import handwriting as H
+    from ocr import scan as S
+    assert inspect.signature(H.HandwritingReader.__init__).parameters["num_beams"].default == 1
+    assert inspect.signature(S.Scanner.__init__).parameters["hw_beams"].default == 1
+    seen = []
+
+    class Gen:
+        def __init__(self, n):
+            self.sequences = torch.ones((n, 3), dtype=torch.long)
+            self.scores = [torch.zeros((n, 5))] * 2
+
+    class Model:
+        def generate(self, px, num_beams, **kw):
+            seen.append(num_beams)
+            return Gen(px.shape[0])
+
+        def compute_transition_scores(self, seq, scores, beam_indices, normalize_logits):
+            return torch.zeros((seq.shape[0], 2))
+
+    class Proc:
+        tokenizer = type("T", (), {"pad_token_id": 0})()
+
+        def __call__(self, images, return_tensors):
+            return type("P", (), {"pixel_values": torch.zeros((len(images), 3, 4, 4))})()
+
+        def batch_decode(self, seq, skip_special_tokens):
+            return ["x"] * seq.shape[0]
+
+    r = object.__new__(H.HandwritingReader)
+    r.model, r.processor = Model(), Proc()
+    line = np.full((20, 60, 3), 255, np.uint8)
+    r.read([line])  # an old pickled / hand-built reader without the attribute: greedy
+    r.num_beams = 2
+    r.read([line])
+    r.read([line], num_beams=4)
+    assert seen == [1, 2, 4]
+    made = []
+    monkeypatch.setattr(S, "HandwritingReader", lambda **kw: made.append(kw) or object())
+    for name in ("OcrPipeline",):
+        monkeypatch.setattr(S, name, type("P", (), {"load": staticmethod(lambda *a, **k: object())}))
+    monkeypatch.setattr(S.O, "load_orient", lambda: object())
+    monkeypatch.setattr(S.scriptclf, "load_clf", lambda: object())
+    S.Scanner()
+    S.Scanner(hw_beams=2)
+    assert made == [{"num_beams": 1}, {"num_beams": 2}]
+
+
+def test_scanner_checks_misread_digits_by_default_and_can_be_told_not_to(monkeypatch):
+    """The v2 Scanner ships with the misread-digit check on (ocr.common.FLAG_MISREAD_DIGITS), like v1;
+    Scanner(flag_misread_digits=False) or the switch turn it off. The shown text stays as read."""
+    from PIL import Image
+    from ocr import common
+    from ocr import scan as S
+    for name in ("OcrPipeline",):
+        monkeypatch.setattr(S, name, type("P", (), {"load": staticmethod(lambda *a, **k: object())}))
+    monkeypatch.setattr(S.O, "load_orient", lambda: object())
+    monkeypatch.setattr(S.scriptclf, "load_clf", lambda: object())
+    monkeypatch.setattr(S, "HandwritingReader", lambda **kw: object())
+    assert S.Scanner().flag_misread_digits is True
+    assert S.Scanner(flag_misread_digits=False).flag_misread_digits is False
+    page = np.full((200, 600, 3), 235, np.uint8)
+    printed = [("Metformin SOO my", 0.9, [20, 20, 400, 60]), ("Review in clinic", 0.9, [20, 100, 400, 140])]
+
+    def run(setting="unset"):
+        sc = object.__new__(S.Scanner)
+        sc.ocr, sc.hw = _FakeOcr(page, printed), _FakeHw([])
+        sc.orient, sc.do_deskew, sc.flip_check, sc.clf, sc.postcorrect = None, False, True, object(), False
+        sc.mask_neighbours = False
+        if setting != "unset":
+            sc.flag_misread_digits = setting
+        monkeypatch.setattr(S.scriptclf, "handwritten_prob", lambda clf, crops: np.zeros(len(crops)))
+        r = sc.run(Image.new("RGB", (600, 200), "white"))
+        assert [ln["text"] for ln in r["lines"]] == ["Metformin SOO my", "Review in clinic"]
+        return [ln["confirm_numbers"] for ln in r["lines"]]
+
+    assert run() == [True, False] and run(True) == [True, False] and run(False) == [False, False]
+    monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
+    assert run() == [False, False] and S.Scanner().flag_misread_digits is False

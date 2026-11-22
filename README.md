@@ -32,12 +32,14 @@ A basic web app that works as a personal health diary. Each user keeps their
   well ("Handwriting and rotated pages" below) it also reads handwriting, turns
   pages that lie on their side or upside down upright (and says so), and offers
   "Straighten tilted text". Handwritten numbers and doses are misread easily,
-  so every handwritten line with a number or unit (and any line where a unit
-  lost its number, such as "Omeprazole mg") gets a "Check the numbers" warning
+  so every handwritten line with a number or unit (and any line where a dose
+  unit has no number of its own, such as "Omeprazole mg", "1. Omeprazole mg" or
+  "Amlodipine 5 mg and Omeprazole mg") gets a "Check the numbers" warning
   that lists those lines, whatever the confidence. Printed numbers get a quieter
   one-line note instead ("Numbers were read on 12 printed lines"); without the
   handwriting models nothing tells print from handwriting, so every line with a
-  number gets the warning. The warning is saved
+  number gets the warning. With or without them, so does a line whose digits
+  look misread as letters next to a unit ("Metformin SOO my"). The warning is saved
   with the document and shown again in View; after the text is corrected by hand
   it becomes a shorter reminder, and it goes only when the page is read again
   without such lines.
@@ -186,8 +188,9 @@ clients ignore it);
 `deskew_requested` and `deskew_applied`. The models load on the first request (v2 takes about 1.3 GB
 of memory) and one page is read at a time. It answers 503 with a reason when the packages or weights
 are missing; it never downloads anything. Fully transparent parts of PNG / WebP pages are put on
-white (partly transparent ones keep their colour) and 16-bit grey PNGs are scaled to 8 bits before
-reading (the same in `/api/scan`).
+white, pixels at least a quarter opaque keep their colour and fainter ones fade towards white (decided
+pixel by pixel, see docs/scanner.md), and 16-bit grey PNGs are scaled to 8 bits before reading (the
+same in `/api/scan`).
 
 `result.json` holds: `text`; `lines` (`text`, `box`, `confidence`, `words` as indices); `words`
 (`text`, `confidence`, `detection_score`, `box` on the processed page, `source_quad` in the pixels of
@@ -262,15 +265,38 @@ result = Scanner().run(pil_image)         # lines with box, script, confidence, 
 ```
 
 `confirm_numbers` is true when the line went to the handwriting reader and any of its readings
-contains a digit, percentage or unit; when a unit stands without a number in a printed line
-("Omeprazole mg", "Insulin glargine IZ Units": the number was probably lost); and for every line with a
+contains a digit, percentage or unit; when a unit in a printed line has no number of its own right
+before it ("Omeprazole mg", "Insulin glargine IZ Units": the number was probably lost); and for every line with a
 number or unit when no printed / handwritten routing ran (`Scanner(handwriting=False)`). Printed lines
 with numbers get only `has_numbers`, which the app shows as a quieter note. A unit word counts when it
 follows a number (or letters a reader made of one: "O Units", "S ML") or is spelt in its usual case
 ("mg", "mL", "tabs", "od"); so "Dr L Example", "BD Diagnostics" and "Test Result Units" are not
-flagged, and "ML" next to a number still counts as millilitres. `Scanner(flag_misread_digits=True)`
-also flags printed lines whose digits look misread as letters before a unit ("Metformin SOO my"); it is
-off by default because it was measured only on invented lines (see "Measured on synthetic data only").
+flagged, and "ML" next to a number still counts as millilitres. Each unit needs its own quantity:
+the token right before it is a number with a real digit ("20 mg", "2.5 mg", ".5 mg", "1-2 tabs"), or
+the number is written with it ("20mg"), or it follows a unit that has one ("5 mmol/L", "1 tab od").
+A list number ("1. Omeprazole mg"), a duration ("Omeprazole mg for 7 days") or another medicine's dose
+on the same line ("Amlodipine 5 mg and Omeprazole mg") does not count, so those lines get the
+warning; "1. Omeprazole 20 mg" gets only `has_numbers`. Some words need no number: frequency words
+("Apply the cream bd", "Eye drops nocte"; but a frequency right after a capitalised name, "Amitriptyline
+nocte", is a dose that went missing); a count unit with a number word or "a" ("Take one tablet at
+night", "Half a tablet"); a plural form ("Paracetamol tablets as needed"); a form word starting the line
+("tab Metformin 500 mg"); and a unit written before its value in a lab table ("Glucose (mmol/L) 5.4",
+not when the number belongs to a duration: "Omeprazole mg 7 days"). A capitalised name made of
+look-alike letters ("Bo Tab and Sons Chemists", "So my doctor said", "So units were checked twice") is
+not a misread number, but one right before a unit in a dose is ("Insulin Io units", "Insulin Il units":
+10, 11). A unit after header words only ("Analyte (mmol/L)", "Result (mmol/L) Reference range") is a
+column header; "Result mmol/L" or "Glucose (mmol/L)" is a value that went missing. The text itself is
+never changed.
+The misread-digit check is on by default, for v2 (`ocr.scan.Scanner`) and v1 alike: it also flags lines
+whose digits look misread as letters before a unit ("Metformin SOO my") or whose digits stand before a
+misread unit ("50 mcq", "10 mI", "11.8 q/dL"), in any of their readings (the shown text,
+`handwriting_text` and `printed_text`). Such a line holds no digit (or a wrong unit), so without the
+check it gets no flag at all. It was measured only on invented lines (see "Measured on synthetic data
+only"). One switch turns it off everywhere: `ocr.common.FLAG_MISREAD_DIGITS = False` (or
+`Scanner(flag_misread_digits=False)` for one scanner, `ocr.api._line(..., flag_misread_digits=False)` for
+v1 lines). The per-line decision is `ocr.scan.confirm_numbers(ln, script_known=...,
+flag_misread_digits=...)` (torch-free as `ocr.common.line_confirm_numbers`); there the keyword defaults
+to False, so a caller always says which setting it means.
 Documents categorized as prescriptions also show a reminder to
 compare every medicine, dose and unit against the image and check for missing lines, even if OCR
 missed every numeric cue. Handwritten doses are misread with high confidence (2.5 mg read as 25 mg), so such a line
@@ -360,6 +386,25 @@ misses every digit. Training validation reports the same metric. Full-page summa
 lines sent to the handwriting reader from lines where its prediction was selected. In the older
 committed summaries, `lines_routed_to_handwriting` counted selections.
 
+### Handwriting decoding (experiment)
+
+`Scanner(hw_beams=2)` (or `HandwritingReader(num_beams=2)`) decodes handwriting with beam search instead of
+greedy decoding. Off by default (1). Measured only on invented lines rendered with the training fonts
+(`benchmarks/run_handwriting.py`, 2 threads); chosen on the validation pages, scored once on the test pages:
+
+| Test pages, 167 lines | greedy (default) | 2 beams |
+|---|---|---|
+| shipped reading: line CER / WER | 0.0177 / 0.077 | 0.0171 / 0.0755 |
+| shipped reading: lines exact | 121 | 122 |
+| shipped reading: numeric lines exact (133) | 93 | 94 |
+| shipped reading: drug / value / unit all right (104) | 88 | 87 |
+| handwriting reader alone: lines exact | 106 | 113 |
+| wrong decimals among accepted, conf >= 0.90 (11) | 2 | 2 |
+| handwriting reader, ms per line | 339 | 431 |
+
+The printed readings are identical. The gain is one line in 167 and decimals dropped at high confidence
+("1.25 mg" read as "125 mg") are not fixed by it, so it stays off.
+
 ## Measured on synthetic data only
 
 The fixes below were measured on invented text and on the synthetic photos in `data/synthetic/`, not on
@@ -375,7 +420,7 @@ this was done). Before = commit `4bd35c0`, after = this version; app scanner mod
 | Invented lines with a number flagged by either flag (39) | 37 | 37 |
 | Unit-like words without a number ("Dr L Example", "BD Diagnostics") flagged (15) | 15 | 0 |
 | v1 lab report / prescription, "Check the numbers" (30 / 20) | 22 / 12 | 21 / 12 |
-| Opt-in `flag_misread_digits`: invented misread dose lines found (200) | - | 179 (precision 0.95 on 238 invented lines without numbers) |
+| Misread-digit check (on by default since 2026-11): invented misread dose lines found (200) | - | 179 (precision 0.95 on 238 invented lines without numbers) |
 | Synthetic test photos: found, mean IoU, IoU >= 0.9 (200) | 189, 0.887, 0.755 | identical, photo for photo |
 | Synthetic ood photos: found, mean IoU, IoU >= 0.9 (80) | 46, 0.673, 0.375 | identical, photo for photo |
 | Test photos, alpha 128 outside the page: found, mean IoU, IoU >= 0.9 (20) | 0.90, 0.856, 0.40 | 0.95, 0.907, 0.75 |

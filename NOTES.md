@@ -201,7 +201,9 @@ This was found after the first recognition run (Step 4). Consequences:
   synthetic word crops (seed 2026, 32 fonts) "mL" was read as "ML" in 2 of 4 crops and "x10^9/L" as
   "x10/9/L" in 3 of 3 (all other unit crops, 22, exact; all 177 numeric crops exact). The number flag
   (`ocr.common.has_number_or_unit`) therefore accepts any case of a unit next to a number ("5 ML",
-  "S ML"), and only the usual spelling ("mL", "mg") of a unit on its own.
+  "S ML"), and only the usual spelling ("mL", "mg") of a unit on its own. Since 2026-11 a unit also
+  needs its own number right before it (`ocr.common.units_without_quantity`): a list number, a duration
+  or another medicine's dose elsewhere on the line no longer hides a lost dose ("1. Omeprazole mg").
 
 ### Detector (`ocr/train_det.py`, `configs/ocr/det.json`): not fine-tuned
 

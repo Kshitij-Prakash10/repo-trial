@@ -218,7 +218,8 @@ def test_to_rgb_composites_transparency_on_white():
 def test_to_rgb_keeps_the_colour_of_partly_transparent_pixels():
     """A photo whose surroundings are partly see-through keeps their colour (compositing them on white
     hid the page edge: 20 synthetic test photos, IoU >= 0.9 fell from 0.75 to 0.40). Fully transparent
-    pixels still become white, and a layer with no opaque pixel at all is still shown over white."""
+    pixels still become white. A layer with no opaque pixel at all follows the same rule (it used to be
+    composited on white, so one opaque pixel anywhere changed every other pixel)."""
     from scanner.convert import to_rgb
     a = np.zeros((6, 6, 4), np.uint8)
     a[..., :3] = (40, 50, 60)  # a dark desk ...
@@ -232,7 +233,93 @@ def test_to_rgb_keeps_the_colour_of_partly_transparent_pixels():
     la[..., 0], la[..., 1] = 30, 100
     la[1, 1] = (250, 255)
     assert to_rgb(Image.fromarray(la, "LA")).getpixel((3, 3)) == (30, 30, 30)
-    assert to_rgb(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (127, 127, 127)  # no opaque pixel
+    assert to_rgb(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (0, 0, 0)  # no opaque pixel: the same rule
+
+
+def _text_layer(peak=160, w=300, h=90):
+    """Antialiased black text whose shape is in the alpha channel (peak alpha `peak`), nothing opaque."""
+    from PIL import ImageDraw, ImageFilter
+    m = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(m).rectangle((20, 30, 280, 60), fill=255)
+    for x in range(30, 280, 25):
+        ImageDraw.Draw(m).line((x, 20, x + 8, 70), fill=255, width=3)
+    al = (np.asarray(m.filter(ImageFilter.GaussianBlur(1.2)), float) * peak / 255).astype(np.uint8)
+    return np.dstack([np.zeros((h, w, 3), np.uint8), al])
+
+
+@pytest.mark.parametrize("which", ["to_rgb", "to_rgb8"])
+def test_one_distant_opaque_pixel_changes_nothing_else(which):
+    """Two images that differ by one opaque pixel in a corner convert to (nearly) the same pixels, by
+    direct input (scanner.convert.to_rgb) and on the upload path (scanner.api.to_rgb8). They used to differ
+    by up to 160 grey levels: with no opaque pixel everything was composited on white."""
+    from scanner.api import to_rgb8
+    from scanner.convert import to_rgb
+    fn = to_rgb if which == "to_rgb" else to_rgb8
+    photo = np.dstack([np.random.default_rng(2026).integers(0, 256, (60, 80, 3), dtype=np.uint8),
+                       np.full((60, 80), 128, np.uint8)])  # a whole half see-through photo
+    for a in (_text_layer(), photo):
+        b = a.copy()
+        b[-1, -1] = (255, 255, 255, 255)
+        x = np.asarray(fn(Image.fromarray(a, "RGBA")), float)
+        y = np.asarray(fn(Image.fromarray(b, "RGBA")), float)
+        d = np.abs(x - y).max(-1)
+        d[-1, -1] = 0  # the changed pixel itself
+        assert d.max() <= 1 and d.mean() <= 0.01, (d.max(), d.mean())
+
+
+def test_antialiased_text_keeps_its_contrast():
+    from scanner.convert import to_rgb
+    a = _text_layer()
+    g = np.asarray(to_rgb(Image.fromarray(a, "RGBA")).convert("L"), float)
+    al = a[..., 3]
+    assert g[al == 0].min() == 255  # paper
+    assert g[al >= 120].max() <= 5  # the text strokes are dark
+    edge = (al > 0) & (al < 64)
+    assert edge.any() and np.all(np.diff(g[edge][np.argsort(al[edge])]) <= 1)  # fainter is lighter, smoothly
+    ramp = np.dstack([np.zeros((1, 256, 3), np.uint8), np.arange(256, dtype=np.uint8)[None]])
+    out = np.asarray(to_rgb(Image.fromarray(ramp, "RGBA")))[0, :, 0].astype(int)
+    assert out[0] == 255 and out[64] == 0 and np.all(np.abs(np.diff(out)) <= 4)  # no jump anywhere in alpha
+
+
+def test_semi_transparent_overlay_keeps_its_content():
+    """A whole page saved half see-through (alpha 128 everywhere): its own colours, so the text keeps
+    its contrast (compositing on white halved it)."""
+    from scanner.convert import to_rgb
+    a = np.zeros((40, 60, 4), np.uint8)
+    a[..., :3], a[..., 3] = 245, 128
+    a[15:25, 10:50, :3] = 20
+    out = np.asarray(to_rgb(Image.fromarray(a, "RGBA")).convert("L"))
+    assert out[5, 5] == 245 and out[20, 30] == 20
+
+
+def test_cut_out_and_16_bit_grey_are_unchanged():
+    from scanner.api import to_rgb8
+    from scanner.convert import to_rgb
+    cut = np.zeros((20, 30, 4), np.uint8)  # black under alpha 0, an opaque page in the middle
+    cut[5:15, 5:25] = (230, 225, 220, 255)
+    cut[8:10, 8:20, :3] = 15
+    for fn in (to_rgb, to_rgb8):
+        out = np.asarray(fn(Image.fromarray(cut, "RGBA")))
+        assert (out[0, 0] == 255).all() and tuple(out[6, 6]) == (230, 225, 220) and tuple(out[9, 10]) == (15, 15, 15)
+        im16 = Image.fromarray(np.tile(np.linspace(0, 65535, 256).astype(np.uint16), (4, 1)))
+        g = np.asarray(fn(im16))[0, :, 0]
+        assert g[0] == 0 and g[-1] == 255 and 126 <= g[128] <= 130
+
+
+def test_direct_input_and_upload_convert_transparency_the_same():
+    from scanner.api import to_rgb8
+    from scanner.convert import to_rgb
+    rng = np.random.default_rng(2026)
+    a = rng.integers(0, 256, (30, 40, 4), dtype=np.uint8)
+    la = rng.integers(0, 256, (30, 40, 2), dtype=np.uint8)
+    rgb_key = Image.new("RGB", (8, 8), (10, 20, 30))
+    rgb_key.info["transparency"] = (10, 20, 30)
+    p = Image.new("P", (8, 8), 0)
+    p.putpalette([0, 0, 0, 50, 60, 70] + [0] * 762)
+    p.info["transparency"] = 0
+    for im in (Image.fromarray(a, "RGBA"), Image.fromarray(la, "LA"), rgb_key, p):
+        assert np.array_equal(np.asarray(to_rgb(im)), np.asarray(to_rgb8(im))), im.mode
+    assert to_rgb(rgb_key).getpixel((0, 0)) == (255, 255, 255)  # the transparent colour is paper
 
 
 def test_to_rgb_scales_16_bit_and_keeps_negative_floats():
@@ -357,3 +444,28 @@ def test_api_status(client):
     assert j["available"] == HAS_MODEL
     if HAS_MODEL:
         assert j["metrics"]["data"].startswith("synthetic")
+
+
+@needs_model
+def test_one_distant_opaque_pixel_leaves_the_outline_alone(client, sample):
+    """A photo saved half see-through (alpha 128 everywhere), with and without one opaque pixel in a
+    corner: the same outline, by direct input (infer.scan) and through /api/scan. With the old rule the
+    first was composited on white and the second kept its colours."""
+    a = np.dstack([np.asarray(sample.image.convert("RGB")), np.full(sample.image.size[::-1], 128, np.uint8)])
+    b = a.copy()
+    b[-1, -1] = (255, 255, 255, 255)
+    pair = [Image.fromarray(x, "RGBA") for x in (a, b)]
+    direct = [infer.scan(im, "gray") for im in pair]
+    assert direct[0]["page_found"] == direct[1]["page_found"]
+    assert np.abs(np.array(direct[0]["corners"]) - np.array(direct[1]["corners"])).max() <= 1.0
+    assert geo.corner_error(np.array(direct[0]["corners"]), sample.corners) < 3.0  # the page is still found
+    uploaded = []
+    for im in pair:
+        buf = io.BytesIO()
+        im.save(buf, "PNG")
+        buf.seek(0)
+        r = client.post("/api/scan", data={"image": (buf, "page.png"), "mode": "gray"}, content_type="multipart/form-data")
+        assert r.status_code == 200, r.get_json()
+        uploaded.append(r.get_json())
+    assert uploaded[0]["page_found"] == uploaded[1]["page_found"] == direct[0]["page_found"]
+    assert np.abs(np.array(uploaded[0]["corners"]) - np.array(uploaded[1]["corners"])).max() <= 1.0

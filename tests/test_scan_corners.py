@@ -319,7 +319,8 @@ def test_to_rgb8_values():
     assert to_rgb8(rgb) is rgb  # nothing to do
     assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 0))).getpixel((0, 0)) == (255, 255, 255)
     assert to_rgb8(Image.new("RGBA", (4, 4), (200, 0, 0, 255))).getpixel((0, 0)) == (200, 0, 0)
-    assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (127, 127, 127)  # half see-through black
+    assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 128))).getpixel((0, 0)) == (0, 0, 0)  # half see-through black keeps its colour
+    assert to_rgb8(Image.new("RGBA", (4, 4), (0, 0, 0, 32))).getpixel((0, 0)) == (128, 128, 128)  # faint: halfway to white
     assert to_rgb8(Image.new("L", (4, 4), 77)).getpixel((0, 0)) == (77, 77, 77)
     assert to_rgb8(Image.new("1", (4, 4), 1)).getpixel((0, 0)) == (255, 255, 255)
     for value, grey in [(0, 0), (65535, 255), (32768, 128), (257, 1)]:

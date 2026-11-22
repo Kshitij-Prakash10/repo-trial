@@ -22,7 +22,7 @@ import numpy as np
 from scanner import enhance as enh
 from scanner import geometry as geo
 from scanner import infer
-from scanner.convert import alpha_to_rgb
+from scanner.convert import alpha_to_rgb, has_alpha
 
 scan_bp = Blueprint("scan", __name__)
 
@@ -94,14 +94,16 @@ def to_rgb8(im: Image.Image) -> Image.Image:
 
     A plain convert("RGB") drops the alpha channel, so a transparent page turns black and dark text
     on it disappears; and it clamps 16-bit grey values instead of scaling them, so the page turns one
-    flat colour. Here transparent areas become white paper (partly transparent ones keep their colour,
-    as in scanner.convert.alpha_to_rgb) and deep greys are scaled to 0..255.
+    flat colour. Here transparency is handled exactly as in scanner.convert.to_rgb (has_alpha, then
+    alpha_to_rgb: transparent areas become white paper, pixels at least a quarter opaque keep their
+    colour, fainter ones fade towards white), and deep greys are scaled to 0..255. Only the scaling of
+    32-bit integer and float grey differs from to_rgb (judged by 8-bit / 16-bit / 0..1 ranges here).
     """
     mode = im.mode
-    if mode == "RGB" and "transparency" not in im.info:
-        return im
-    if mode in ("RGBA", "LA", "PA", "RGBa", "La") or "transparency" in im.info:
+    if has_alpha(im):
         return alpha_to_rgb(im)
+    if mode == "RGB":
+        return im
     if mode.startswith("I;16") or mode in ("I", "F"):
         a = np.asarray(im, dtype=np.float64)
         top = float(a.max()) if a.size else 0.0

@@ -6,7 +6,7 @@
 `scan` returns the page text and one confidence (0 to 1) per text line. `Scanner.run` returns the
 full result: every line with its box, script (printed or handwritten), confidence, a
 low-confidence flag, a confirm-numbers flag (a number or unit in a line that went to the
-handwriting reader, or a unit whose number was lost: always to be checked by a person), a
+handwriting reader, or a unit without a number of its own: always to be checked by a person), a
 has-numbers flag (the shown text holds a number or unit; quieter, for printed lines), plus what the
 orientation and deskew steps did.
 
@@ -26,7 +26,8 @@ from PIL import Image, ImageOps
 
 from ocr import orientation as O
 from ocr import scriptclf
-from ocr.common import has_misread_number, has_number_or_unit, number_lost
+from ocr import common
+from ocr.common import has_misread_number, has_number_or_unit, line_confirm_numbers, number_lost  # noqa: F401
 from ocr.handwriting import HandwritingReader
 from ocr.hwdata import rect_crop
 from ocr.pipeline import OcrPipeline, to_rgb
@@ -45,7 +46,8 @@ class Scanner:
 
     def __init__(self, orientation: bool = True, deskew: bool = False, handwriting: bool = True,
                  page_scanner: bool = True, postcorrect: bool = False, weights: str = "finetuned",
-                 flip_check: bool = True, mask_neighbours: bool = False, flag_misread_digits: bool = False):
+                 flip_check: bool = True, mask_neighbours: bool = False, flag_misread_digits: bool | None = None,
+                 hw_beams: int = 1):
         if postcorrect:
             # Withdrawn: on medical text it rewrites drug names and units (digoxin -> dioxin,
             # mmol -> mol), and the evaluation found no gain from it (reports/final_report.md).
@@ -55,14 +57,17 @@ class Scanner:
         self.do_deskew = deskew
         self.flip_check = flip_check
         self.clf = scriptclf.load_clf() if handwriting else None
-        self.hw = HandwritingReader() if handwriting else None
+        # hw_beams: beam width of the handwriting decoder (1: greedy, the default). Experiment, README
+        # "Handwriting decoding (experiment)"; it changes only what the handwriting reader reads.
+        self.hw = HandwritingReader(num_beams=hw_beams) if handwriting else None
         self.postcorrect = postcorrect
         # Paint out words of neighbouring lines inside a handwriting line's crop (ocr.hwdata.rect_crop).
         # Off by default: its effect on real handwriting (GNHK) has not been measured yet.
         self.mask_neighbours = mask_neighbours
-        # Also flag printed lines whose digits look misread as letters ("Metformin SOO my"). Off by default:
-        # measured only on invented lines, not on real pages (README, "Measured on synthetic data only").
-        self.flag_misread_digits = flag_misread_digits
+        # Also flag lines whose digits look misread as letters ("Metformin SOO my"), in any of their readings.
+        # On by default (None: ocr.common.FLAG_MISREAD_DIGITS, the same switch as v1 in /api/ocr); measured
+        # only on invented lines, not on real pages (README, "Measured on synthetic data only").
+        self.flag_misread_digits = common.FLAG_MISREAD_DIGITS if flag_misread_digits is None else bool(flag_misread_digits)
 
     def run(self, image: Image.Image) -> dict:
         t0 = time.perf_counter()
@@ -116,10 +121,11 @@ class Scanner:
                     lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
                                     text=text, confidence=round(conf, 4), script="handwritten")
         routed = self.clf is not None and self.hw is not None  # else "printed" only means "not checked"
-        misread = getattr(self, "flag_misread_digits", False)
+        misread = getattr(self, "flag_misread_digits", None)
+        misread = common.FLAG_MISREAD_DIGITS if misread is None else misread
         for ln in lines:
             ln["low_confidence"] = bool(ln["confidence"] < LOW_CONFIDENCE)
-            ln["confirm_numbers"] = confirm_numbers(ln, script_known=routed, misread_digits=misread)
+            ln["confirm_numbers"] = confirm_numbers(ln, script_known=routed, flag_misread_digits=misread)
             ln["has_numbers"] = has_number_or_unit(ln["text"])
         lines = [ln for ln in lines if ln["text"].strip()]
         return {"text": "\n".join(ln["text"] for ln in lines), "confidences": [ln["confidence"] for ln in lines],
@@ -129,23 +135,17 @@ class Scanner:
                 "seconds": round(time.perf_counter() - t0, 3)}
 
 
-def confirm_numbers(ln: dict, script_known: bool | None = None, misread_digits: bool = False) -> bool:
+def confirm_numbers(ln: dict, script_known: bool | None = None, misread_digits: bool = False, *,
+                    flag_misread_digits: bool | None = None) -> bool:
     """Must a person check this line's numbers against the page, whatever its confidence?
 
-    Yes when the line went to the handwriting reader (or is handwritten) and any of its readings holds a
-    number or unit: handwritten doses are misread with high confidence (2.5 mg read as 25 mg), and either
-    reader can be the one that kept the digits. Yes also when the script is unknown (no printed /
-    handwritten routing ran, script_known False; None: known when the line has a "script"), since the
-    line may be handwriting. A printed line that never went to the handwriting reader is flagged only
-    when a unit stands without its number ("Omeprazole mg"), or, with misread_digits, when letters look
-    like misread digits before a unit ("Metformin SOO my"); its numbers get the quieter has_numbers flag.
+    The decision is ocr.common.line_confirm_numbers (torch-free; see there). flag_misread_digits (the
+    Scanner option of the same name, on in Scanner by default) also flags letters that look like misread
+    digits before a unit ("Metformin SOO my") in any of the line's readings; misread_digits is its older
+    name. Here both default to False: say which setting you mean (Scanner passes its own).
     """
-    if script_known is None:
-        script_known = "script" in ln
-    if not script_known or "handwriting_text" in ln or ln.get("script") == "handwritten":
-        return any(has_number_or_unit(ln.get(k) or "") for k in ("text", "handwriting_text", "printed_text"))
-    text = ln.get("text") or ""
-    return number_lost(text) or (misread_digits and has_misread_number(text))
+    flag = misread_digits if flag_misread_digits is None else flag_misread_digits
+    return line_confirm_numbers(ln, script_known=script_known, flag_misread_digits=flag)
 
 
 def looks_like_rule(crop: np.ndarray) -> bool:
