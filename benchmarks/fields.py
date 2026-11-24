@@ -65,7 +65,7 @@ def tokens(text: str) -> list[str]:
     return out
 
 
-def parse_fields(text: str) -> list[dict]:
+def parse_fields(text: str, *, preserve_unit_case: bool = False) -> list[dict]:
     toks = tokens(text)
     low = [t.lower() for t in toks]
     starts = []  # (index, name, length)
@@ -89,7 +89,7 @@ def parse_fields(text: str) -> list[dict]:
             value = toks[j]
             j += 1
         if j < end and low[j] in UNITS:
-            unit = low[j]
+            unit = toks[j] if preserve_unit_case else low[j]
             if value is None and j + 1 < end and _NUM.match(toks[j + 1]):  # "Glucose (mmol/L) 5.4"
                 value = toks[j + 1]
         fields.append({"drug": name, "value": value, "unit": unit})
