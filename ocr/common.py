@@ -420,11 +420,31 @@ _NOT_A_NUMBER = frozenset(("so", "is", "os", "sos", "oz"))  # words made of look
 _DOSE_UNITS = frozenset(("mcg", "µg", "ug", "mg", "g", "kg", "ml", "l", "dl", "mmol", "mol", "miu", "iu"))
 
 
+# Split only whole dose tokens. A unit suffix inside an identifier is not a separate unit.
+_JOINED_DOSE = re.compile(rf"({_NUM})((?i:{'|'.join(sorted(_UNIT_WORDS, key=len, reverse=True))}))")
+
+
+def _misread_parts(text: str) -> list[str]:
+    parts = []
+    for token in _parts(text):
+        match = _JOINED_DOSE.fullmatch(token)
+        if match:
+            quantity, unit = match.groups()
+            # All-letter words can end in a short unit ("Blog"). Require stronger evidence
+            # than a single letter unless the amount has a digit or decimal separator.
+            if (any(c.isdigit() or c in ".," for c in quantity)
+                    or (len(unit) > 1 and (unit.islower() or unit in _USUAL_SPELLING))):
+                parts.extend((quantity, unit))
+                continue
+        parts.append(token)
+    return parts
+
+
 def has_misread_number(text: str) -> bool:
     """True when a token of look-alike letters, with no real digit or with digits mixed with look-alike
     letters, stands right before a unit or a misread unit ("Metformin SOO my", "Atorvastatin ZO mg").
     Used when the misread-digit check is on (FLAG_MISREAD_DIGITS, on by default in Scanner and /api/ocr)."""
-    parts = _parts(text)
+    parts = _misread_parts(text)
     for i, (a, b) in enumerate(zip(parts, parts[1:])):
         # "Insulin So units": 50; not "So units were checked twice"
         before_unit = not a.isupper() and _before_dose_unit(b) and not _sentence_start(parts, i)
