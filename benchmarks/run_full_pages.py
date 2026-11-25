@@ -121,6 +121,9 @@ def run(root, seeds, threads):
     from scanner.infer import MODEL_PATH
 
     C.check_imported_from(scan, str(root))
+    git = C.git_info(str(root))
+    runner_sha256 = C.file_sha256(__file__)
+    generator_sha256 = C.file_sha256(hw.__file__)
     torch.set_num_threads(threads)
     torch.manual_seed(C.SEED)
     cache = Path(os.getenv("DOCTR_CACHE_DIR", Path.home() / ".cache/doctr")) / "models"
@@ -136,6 +139,7 @@ def run(root, seeds, threads):
     mods = dict(torch=torch, models=models, scriptclf=scriptclf, hwdata=hwdata, scan=scan,
                 hw=scanner.hw, rec=scanner.ocr.rec, clf=scanner.clf, read_kw={})
     fonts = hw.font_files(str(root))
+    font_sha256 = {Path(f).name: C.file_sha256(f) for f in fonts}
     trace, geometry = [], Counter()
     for seed in seeds:
         pg = hw.render_page(seed, fonts)
@@ -156,13 +160,14 @@ def run(root, seeds, threads):
                           alignment=align(ref, pred), annotated=[ln["shipped"] for ln in annotated],
                           annotated_readers=annotated, layout=layout, preprocessing=result["preprocessing"],
                           scanner=result["scanner"], elapsed_s=elapsed))
-    return dict(git=C.git_info(str(root)), model_sha256=hashes, device="cpu", threads=threads,
-                font_sha256={Path(f).name: C.file_sha256(f) for f in fonts},
+    return dict(git=git, model_sha256=hashes, device="cpu", threads=threads,
+                font_sha256=font_sha256,
                 settings="Scanner() defaults, RGB, seed 2026", seeds=list(seeds),
-                runner_sha256=C.file_sha256(__file__), generator_sha256=C.file_sha256(hw.__file__),
+                runner_sha256=runner_sha256, generator_sha256=generator_sha256,
                 versions={p: importlib.metadata.version(p) for p in
                           ("torch", "torchvision", "python-doctr", "transformers", "numpy", "scipy", "pillow")},
-                paired_line_outcomes=paired_outcomes(trace), layout=dict(geometry), scores={k: score(trace, k) for k in ("annotated", "detected")}, pages=trace)
+                paired_line_outcomes=paired_outcomes(trace), layout=dict(geometry),
+                scores={k: score(trace, k) for k in ("annotated", "detected")}, pages=trace)
 
 
 if __name__ == "__main__":
