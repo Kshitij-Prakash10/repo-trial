@@ -1,0 +1,543 @@
+{
+ "validation_source_sha256": "50af6cdbcd503cfc95cbcee49ec936731b0445310d02861160101114090c0aef",
+ "paired_holdout_sha256": "527d00d5b4f5a9cb2cd6f19170af1fe441da61f98d08377f5ee45d749c9124f9",
+ "printed_control_sha256": "68a083860cf5b9d48dd0161b0421b8dcb19a0c8d9675bc02e9d942efd9dfe0cb",
+ "validation": {
+  "0": {
+   "baseline": {
+    "cer": 0.0225,
+    "wer": 0.0744,
+    "char_errors": 54,
+    "chars": 2397,
+    "word_errors": 34,
+    "words": 457,
+    "n": 113,
+    "exact": 86,
+    "fields": {
+     "drug": {
+      "num": 66,
+      "den": 76,
+      "rate": 0.8684
+     },
+     "value": {
+      "num": 65,
+      "den": 76,
+      "rate": 0.8553
+     },
+     "unit": {
+      "num": 64,
+      "den": 76,
+      "rate": 0.8421
+     },
+     "exact": {
+      "num": 63,
+      "den": 76,
+      "rate": 0.8289
+     }
+    },
+    "numeric_line_exact": {
+     "num": 71,
+     "den": 96,
+     "rate": 0.7396
+    },
+    "numeric_sequences_on_decimal_lines": {
+     "num": 20,
+     "den": 21,
+     "rate": 0.9524
+    }
+   },
+   "experiment": {
+    "cer": 0.0221,
+    "wer": 0.0722,
+    "char_errors": 53,
+    "chars": 2397,
+    "word_errors": 33,
+    "words": 457,
+    "n": 113,
+    "exact": 87,
+    "fields": {
+     "drug": {
+      "num": 66,
+      "den": 76,
+      "rate": 0.8684
+     },
+     "value": {
+      "num": 65,
+      "den": 76,
+      "rate": 0.8553
+     },
+     "unit": {
+      "num": 64,
+      "den": 76,
+      "rate": 0.8421
+     },
+     "exact": {
+      "num": 63,
+      "den": 76,
+      "rate": 0.8289
+     }
+    },
+    "numeric_line_exact": {
+     "num": 72,
+     "den": 96,
+     "rate": 0.75
+    },
+    "numeric_sequences_on_decimal_lines": {
+     "num": 20,
+     "den": 21,
+     "rate": 0.9524
+    }
+   },
+   "changed": [
+    {
+     "page": 17,
+     "line": 3,
+     "before": "BP 163178",
+     "after": "BP 163/78",
+     "reference": "BP 163/78"
+    }
+   ],
+   "selector_ms_per_line": 0.002800734493205637
+  },
+  "1": {
+   "baseline": {
+    "cer": 0.0225,
+    "wer": 0.0744,
+    "char_errors": 54,
+    "chars": 2397,
+    "word_errors": 34,
+    "words": 457,
+    "n": 113,
+    "exact": 86,
+    "fields": {
+     "drug": {
+      "num": 66,
+      "den": 76,
+      "rate": 0.8684
+     },
+     "value": {
+      "num": 65,
+      "den": 76,
+      "rate": 0.8553
+     },
+     "unit": {
+      "num": 64,
+      "den": 76,
+      "rate": 0.8421
+     },
+     "exact": {
+      "num": 63,
+      "den": 76,
+      "rate": 0.8289
+     }
+    },
+    "numeric_line_exact": {
+     "num": 71,
+     "den": 96,
+     "rate": 0.7396
+    },
+    "numeric_sequences_on_decimal_lines": {
+     "num": 20,
+     "den": 21,
+     "rate": 0.9524
+    }
+   },
+   "experiment": {
+    "cer": 0.0217,
+    "wer": 0.07,
+    "char_errors": 52,
+    "chars": 2397,
+    "word_errors": 32,
+    "words": 457,
+    "n": 113,
+    "exact": 87,
+    "fields": {
+     "drug": {
+      "num": 66,
+      "den": 76,
+      "rate": 0.8684
+     },
+     "value": {
+      "num": 65,
+      "den": 76,
+      "rate": 0.8553
+     },
+     "unit": {
+      "num": 64,
+      "den": 76,
+      "rate": 0.8421
+     },
+     "exact": {
+      "num": 63,
+      "den": 76,
+      "rate": 0.8289
+     }
+    },
+    "numeric_line_exact": {
+     "num": 72,
+     "den": 96,
+     "rate": 0.75
+    },
+    "numeric_sequences_on_decimal_lines": {
+     "num": 20,
+     "den": 21,
+     "rate": 0.9524
+    }
+   },
+   "changed": [
+    {
+     "page": 9,
+     "line": 6,
+     "before": "BX 101769",
+     "after": "Bp 101/69",
+     "reference": "BP 101/69"
+    },
+    {
+     "page": 17,
+     "line": 3,
+     "before": "BP 163178",
+     "after": "BP 163/78",
+     "reference": "BP 163/78"
+    }
+   ],
+   "selector_ms_per_line": 0.0020991504734250164
+  }
+ },
+ "chosen_context_edits": 1,
+ "fixed_old_regression": {
+  "baseline": {
+   "cer": 0.0177,
+   "wer": 0.077,
+   "char_errors": 61,
+   "chars": 3446,
+   "word_errors": 51,
+   "words": 662,
+   "n": 167,
+   "exact": 121,
+   "fields": {
+    "drug": {
+     "num": 93,
+     "den": 104,
+     "rate": 0.8942
+    },
+    "value": {
+     "num": 91,
+     "den": 104,
+     "rate": 0.875
+    },
+    "unit": {
+     "num": 90,
+     "den": 104,
+     "rate": 0.8654
+    },
+    "exact": {
+     "num": 88,
+     "den": 104,
+     "rate": 0.8462
+    }
+   },
+   "numeric_line_exact": {
+    "num": 93,
+    "den": 133,
+    "rate": 0.6992
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 23,
+    "den": 27,
+    "rate": 0.8519
+   }
+  },
+  "experiment": {
+   "cer": 0.0168,
+   "wer": 0.0725,
+   "char_errors": 58,
+   "chars": 3446,
+   "word_errors": 48,
+   "words": 662,
+   "n": 167,
+   "exact": 124,
+   "fields": {
+    "drug": {
+     "num": 93,
+     "den": 104,
+     "rate": 0.8942
+    },
+    "value": {
+     "num": 92,
+     "den": 104,
+     "rate": 0.8846
+    },
+    "unit": {
+     "num": 90,
+     "den": 104,
+     "rate": 0.8654
+    },
+    "exact": {
+     "num": 89,
+     "den": 104,
+     "rate": 0.8558
+    }
+   },
+   "numeric_line_exact": {
+    "num": 96,
+    "den": 133,
+    "rate": 0.7218
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 24,
+    "den": 27,
+    "rate": 0.8889
+   }
+  },
+  "changed": [
+   {
+    "page": 1005,
+    "line": 0,
+    "before": "5. Salbutamol 125 mg after meals",
+    "after": "5. Salbutamol 1.25 mg after meals",
+    "reference": "5. Salbutamol 1.25 mg after meals"
+   },
+   {
+    "page": 1007,
+    "line": 1,
+    "before": "BP 138778",
+    "after": "BP 138/78",
+    "reference": "BP 138/78"
+   },
+   {
+    "page": 1008,
+    "line": 3,
+    "before": "BP 152193",
+    "after": "BP 152/93",
+    "reference": "BP 152/93"
+   }
+  ],
+  "selector_ms_per_line": 0.0019999042161723633
+ },
+ "handwriting_holdout": {
+  "baseline": {
+   "cer": 0.0239,
+   "wer": 0.1077,
+   "char_errors": 76,
+   "chars": 3176,
+   "word_errors": 66,
+   "words": 613,
+   "n": 161,
+   "exact": 110,
+   "fields": {
+    "drug": {
+     "num": 78,
+     "den": 97,
+     "rate": 0.8041
+    },
+    "value": {
+     "num": 77,
+     "den": 97,
+     "rate": 0.7938
+    },
+    "unit": {
+     "num": 74,
+     "den": 97,
+     "rate": 0.7629
+    },
+    "exact": {
+     "num": 74,
+     "den": 97,
+     "rate": 0.7629
+    }
+   },
+   "numeric_line_exact": {
+    "num": 85,
+    "den": 134,
+    "rate": 0.6343
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 24,
+    "den": 30,
+    "rate": 0.8
+   }
+  },
+  "experiment": {
+   "cer": 0.0249,
+   "wer": 0.1093,
+   "char_errors": 79,
+   "chars": 3176,
+   "word_errors": 67,
+   "words": 613,
+   "n": 161,
+   "exact": 109,
+   "fields": {
+    "drug": {
+     "num": 78,
+     "den": 97,
+     "rate": 0.8041
+    },
+    "value": {
+     "num": 77,
+     "den": 97,
+     "rate": 0.7938
+    },
+    "unit": {
+     "num": 74,
+     "den": 97,
+     "rate": 0.7629
+    },
+    "exact": {
+     "num": 74,
+     "den": 97,
+     "rate": 0.7629
+    }
+   },
+   "numeric_line_exact": {
+    "num": 84,
+    "den": 134,
+    "rate": 0.6269
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 24,
+    "den": 30,
+    "rate": 0.8
+   }
+  },
+  "changed": [
+   {
+    "page": 4108,
+    "line": 2,
+    "before": "Review on 14/0512026",
+    "after": "Review OW 14/05/2026",
+    "reference": "Review on 14/05/2026"
+   },
+   {
+    "page": 4109,
+    "line": 3,
+    "before": "BP 139/96",
+    "after": "BP 13,9/96",
+    "reference": "BP 139/96"
+   },
+   {
+    "page": 4123,
+    "line": 2,
+    "before": "Review on 19/0812026",
+    "after": "Review OV 19/08/2026",
+    "reference": "Review on 19/08/2026"
+   }
+  ],
+  "selector_ms_per_line": 0.002599857105462818
+ },
+ "printed_holdout": {
+  "baseline": {
+   "cer": 0.0,
+   "wer": 0.0,
+   "char_errors": 0,
+   "chars": 2333,
+   "word_errors": 0,
+   "words": 445,
+   "n": 107,
+   "exact": 107,
+   "fields": {
+    "drug": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "value": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "unit": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "exact": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    }
+   },
+   "numeric_line_exact": {
+    "num": 96,
+    "den": 96,
+    "rate": 1.0
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 26,
+    "den": 26,
+    "rate": 1.0
+   }
+  },
+  "experiment": {
+   "cer": 0.0,
+   "wer": 0.0,
+   "char_errors": 0,
+   "chars": 2333,
+   "word_errors": 0,
+   "words": 445,
+   "n": 107,
+   "exact": 107,
+   "fields": {
+    "drug": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "value": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "unit": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    },
+    "exact": {
+     "num": 75,
+     "den": 75,
+     "rate": 1.0
+    }
+   },
+   "numeric_line_exact": {
+    "num": 96,
+    "den": 96,
+    "rate": 1.0
+   },
+   "numeric_sequences_on_decimal_lines": {
+    "num": 26,
+    "den": 26,
+    "rate": 1.0
+   }
+  },
+  "changed": [],
+  "selector_ms_per_line": 0.00033284119704616406
+ },
+ "full_page_holdout": {
+  "baseline": {
+   "cer": 0.0266,
+   "wer": 0.1175,
+   "char_errors": 88,
+   "chars": 3307,
+   "word_errors": 72,
+   "words": 613,
+   "n": 30
+  },
+  "experiment": {
+   "cer": 0.0266,
+   "wer": 0.1175,
+   "char_errors": 88,
+   "chars": 3307,
+   "word_errors": 72,
+   "words": 613,
+   "n": 30
+  },
+  "changed_lines": [
+   {
+    "seed": 4122,
+    "line": 4,
+    "before": "Review on 03/0512026",
+    "after": "Reviel on 03/05/2026"
+   }
+  ]
+ }
+}
