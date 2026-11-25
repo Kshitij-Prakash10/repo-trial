@@ -526,7 +526,7 @@ async function main() {
   const PY_LINES = [
     "import json, sys",
     "from ocr.api import _line",
-    "from ocr.common import has_number_or_unit",
+    "from ocr.common import FLAG_MISREAD_DIGITS, has_number_or_unit",
     "try:",
     "    from ocr.scan import confirm_numbers",
     "except ImportError:",
@@ -534,7 +534,7 @@ async function main() {
     "out = []",
     "for i, t in enumerate(json.loads(sys.argv[1])):",
     "    ln = {'text': t, 'box': [10, 10 + 30 * i, 400, 30 + 30 * i], 'confidence': 0.95, 'script': 'printed'}",
-    "    ln['confirm_numbers'] = confirm_numbers(ln, script_known=True)",
+    "    ln['confirm_numbers'] = confirm_numbers(ln, script_known=True, flag_misread_digits=FLAG_MISREAD_DIGITS)",
     "    ln['has_numbers'] = has_number_or_unit(t)",
     "    out.append(_line(ln))",
     "print(json.dumps(out))"].join("\n");
@@ -921,9 +921,9 @@ async function main() {
     await unmockScanner(page);
   });
 
-  await step("read text (mocked v2): a printed dose unit without its own number gets the numbers warning, kept after save and reopen", async () => {
+  await step("read text (mocked v2): printed missing and misread doses get the numbers warning, kept after save and reopen", async () => {
     const quietTexts = ["SYNTHETIC CLINIC", "1. Omeprazole 20 mg"];
-    const doseTexts = ["SYNTHETIC CLINIC", "1. Omeprazole mg", "2. Amlodipine 5 mg"];
+    const doseTexts = ["SYNTHETIC CLINIC", "1. Omeprazole mg", "2. Amlodipine 5 mg", "3. Metformin 5OOmg"];
     const quiet = serverLines(quietTexts);
     const dose = serverLines(doseTexts);
     try {
@@ -944,7 +944,7 @@ async function main() {
       assert(await page.isHidden("#scan-ocr-confirm"), "no numbers warning for 1. Omeprazole 20 mg: " + JSON.stringify(quiet));
       const q = await page.textContent("#scan-ocr-numbers");
       assert(await page.isVisible("#scan-ocr-numbers") && /Numbers were read on 1 printed line\./.test(q), q);
-      // "1. Omeprazole mg": the list number is not its dose, so the warning names that line (and only it).
+      // "1. Omeprazole mg": the list number is not its dose, so the warning names the missing dose and the joined misread dose.
       doseLines = dose;
       await page.click("#scan-ocr-read");
       await page.waitForFunction(() => !document.querySelector("#scan-ocr-confirm").hidden, null, { timeout: 5000 })
@@ -952,12 +952,12 @@ async function main() {
       const read = doseTexts.join("\n");
       assert((await page.inputValue("#scan-ocr-text")) === read, "text as read, not corrected");
       const warn = await page.textContent("#scan-ocr-confirm");
-      assert(/Check the numbers\./.test(warn) && warn.includes("1. Omeprazole mg") && !warn.includes("Amlodipine") && !/more/.test(warn), warn);
+      assert(/Check the numbers\./.test(warn) && warn.includes("1. Omeprazole mg") && warn.includes("3. Metformin 5OOmg") && !warn.includes("Amlodipine") && !/more/.test(warn), warn);
       assert(await page.isHidden("#scan-ocr-numbers"), "the quiet note gives way to the warning");
       await page.click("#scan-next");
       await page.waitForSelector("#scan-save:not([hidden])");
       const saveText = await page.textContent("#scan-save-text");
-      assert(/numbers or doses \(1 line\)/.test(saveText), saveText);
+      assert(/numbers or doses \(2 lines\)/.test(saveText), saveText);
       await page.selectOption("#scan-category", "prescription");
       assert((await page.textContent("#scan-save-text")).includes("Check for any missing lines."), "prescription reminder on save");
       await page.fill("#scan-title", "Printed dose without number");
@@ -967,12 +967,12 @@ async function main() {
       await page.waitForSelector('.doc-card .doc-title:text("Printed dose without number")');
       const rec = await page.evaluate(() => Documents.list().find((d) => d.title === "Printed dose without number"));
       assert(rec.text === read && rec.ocr.edited === false, "stored text equals the read text: " + JSON.stringify(rec.text));
-      assert(rec.ocr.confirmNumbers && rec.ocr.confirmNumbers.count === 1 && rec.ocr.confirmNumbers.lines[0] === "1. Omeprazole mg", JSON.stringify(rec.ocr));
+      assert(rec.ocr.confirmNumbers && rec.ocr.confirmNumbers.count === 2 && rec.ocr.confirmNumbers.lines[0] === "1. Omeprazole mg" && rec.ocr.confirmNumbers.lines[1] === "3. Metformin 5OOmg", JSON.stringify(rec.ocr));
       await page.locator(".doc-card", { hasText: "Printed dose without number" }).locator('.card-actions [data-act="view"]').click();
       await page.waitForSelector("#viewer[open] #viewer-ocr-text");
       await page.waitForSelector("#viewer-ocr-confirm:not([hidden])");
       const vw = await page.textContent("#viewer-ocr-confirm");
-      assert(/Check the numbers\./.test(vw) && vw.includes("1. Omeprazole mg") && vw.includes("Check for any missing lines."), vw);
+      assert(/Check the numbers\./.test(vw) && vw.includes("1. Omeprazole mg") && vw.includes("3. Metformin 5OOmg") && vw.includes("Check for any missing lines."), vw);
       assert((await page.inputValue("#viewer-ocr-text")) === read, "viewer text equals the read text");
       await page.keyboard.press("Escape");
       await page.waitForSelector("#viewer:not([open])", { state: "attached" });

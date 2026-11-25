@@ -116,6 +116,18 @@ def test_prep_line_returns_grey_rgb_of_same_size():
     assert out.shape[:2] == (48, 160)
 
 
+def test_prep_line_preserves_white_paper_with_sparse_ink():
+    from ocr.handwriting import prep_line
+
+    blank = np.full((25, 140), 240, dtype=np.uint8)
+    assert np.all(prep_line(blank) == 255)
+    crop = blank.copy()
+    crop[8:17, 31:36] = 40
+    prepared = prep_line(crop)
+    assert np.all(prepared[0, 0] == 255)
+    assert np.all(prepared[12, 33] < prepared[0, 0])
+
+
 # ---------------------------------------------------------------- post-correction
 
 def test_postcorrect_fixes_one_typo_and_leaves_numbers():
