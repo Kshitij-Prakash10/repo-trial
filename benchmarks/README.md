@@ -122,3 +122,29 @@ The historical drug/value/unit score folds case and matches known names. Additio
 case agreement, exact decimal values for reference drugs with a decimal dose, missing drug names, and
 incomplete fields on recognised drugs. Neither parser checks all medical instructions. Each JSON includes
 input hashes, model hashes, inference settings, software versions, per-page timings and aligned predictions.
+
+### Handwriting preprocessing comparison
+
+Use the paired full-page runner's annotated trace to replay handwriting recognition with alternate
+image preparation. The comparison keeps the crops, printed readings and routing fixed. It compares
+the current preprocessing, Lanczos resizing to the same processor input size, and light ink
+strengthening. The experiment retains the existing printed fallback and scores the selected
+transcriptions as well as the handwriting reader alone.
+
+```sh
+python -m benchmarks.run_full_pages --root . --split validation --out /tmp/ocr-review
+python -m benchmarks.run_handwriting_preprocessing \
+  --trace /tmp/ocr-review/full_pages_validation.json --out /tmp/ocr-review/preprocessing_validation.json
+
+python -m benchmarks.run_full_pages --root . --split holdout --out /tmp/ocr-review
+python -m benchmarks.run_handwriting_preprocessing \
+  --trace /tmp/ocr-review/full_pages_holdout.json --variant baseline --variant lanczos \
+  --out /tmp/ocr-review/preprocessing_holdout.json
+```
+
+The runner verifies that the regenerated pixels match the paired trace. It can also read the legacy
+annotated validation results in `reports/review_2026-11/after_ce56e17/handwriting.json`, which stores
+transcriptions but lacks image hashes. Use the matching validation and holdout generator settings.
+Results include exact numeric lines, parsed drug/value/unit, number sequences on decimal lines and
+per-line CPU timing for the handwriting reader. Timing includes image preparation and decoding and
+excludes page detection, routing and printed OCR.
