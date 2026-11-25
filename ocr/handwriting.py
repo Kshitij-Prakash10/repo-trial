@@ -36,8 +36,11 @@ def prep_line(crop: np.ndarray) -> np.ndarray:
     bg = cv2.morphologyEx(cv2.medianBlur(g, 5), cv2.MORPH_CLOSE, np.ones((k, k), np.uint8)).astype(np.float32)
     n = np.clip(g.astype(np.float32) / np.maximum(bg, 1) * 255, 0, 255)
     lo = float(np.percentile(n, 2))
-    n = np.clip((n - lo) / max(255 - lo, 1) * 255, 0, 255).astype(np.uint8)
-    return np.repeat(n[..., None], 3, 2)
+    # With very sparse ink, the low percentile can already be white.
+    # Skip stretching in that case so the paper and sparse marks remain visible.
+    if lo < 255:
+        n = np.clip((n - lo) / max(255 - lo, 1) * 255, 0, 255)
+    return np.repeat(n.astype(np.uint8)[..., None], 3, 2)
 
 
 class HandwritingReader:
