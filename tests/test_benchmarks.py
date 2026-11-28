@@ -368,3 +368,14 @@ def test_round5_set_mixes_prose_doses_and_headers(recs):
         sub = [r for r in r5 if r["category"] == cat]
         assert {r["path"] for r in sub} == {"v1", "v2"}
         assert any(r["dose_incorrect_or_lost"] for r in sub) and any(not r["warning_warranted"] for r in sub)
+
+
+def test_an_empty_cached_detector_file_is_not_usable(tmp_path, monkeypatch):
+    from benchmarks import run_handwriting as RH
+    models = tmp_path / "models"
+    models.mkdir()
+    monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path))
+    (models / "fast_base-688a8b34.pt").write_bytes(b"")  # left by a failed download
+    assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")).startswith("BLOCKED")
+    (models / "fast_base-688a8b34.pt").write_bytes(b"x" * 2048)
+    assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")) is None

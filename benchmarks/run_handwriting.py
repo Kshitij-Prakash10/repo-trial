@@ -276,11 +276,14 @@ def detected_lines(detect, group_lines, union, image) -> list:
 
 def detector_prerequisite(root: str, det_ckpt: str) -> str | None:
     cache = os.environ.get("DOCTR_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "doctr")
-    if os.path.exists(det_ckpt) or glob.glob(os.path.join(cache, "models", "fast_base-*.pt")):
+    # A file under 1 kB is what a failed download leaves behind, not weights (same rule as ocr/api.py).
+    usable = [p for p in [det_ckpt, *glob.glob(os.path.join(cache, "models", "fast_base-*.pt"))]
+              if os.path.isfile(p) and os.path.getsize(p) >= 1024]
+    if usable:
         return None
     return (f"BLOCKED: docTR fast_base text-detector weights are missing: neither {os.path.relpath(det_ckpt, root)} "
-            f"nor {os.path.join(cache, 'models', 'fast_base-*.pt')} exists (download host doctr-static.mindee.com "
-            "is blocked here)")
+            f"nor {os.path.join(cache, 'models', 'fast_base-*.pt')} exists with at least 1 kB (download host "
+            "doctr-static.mindee.com is blocked here)")
 
 
 # ------------------------------------------------------------------ decoding options passed through to the reader

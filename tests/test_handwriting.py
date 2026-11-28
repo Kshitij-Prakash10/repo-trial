@@ -598,3 +598,12 @@ def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_
     (line,) = s.run(Image.fromarray(page))["lines"]
     assert row["shipped"] == line["text"] == chosen
     assert row["routed"] == routed
+
+
+def test_shipped_selection_keeps_a_blood_pressure_reading():
+    """Regression case from PR #15: the shipped rule must not turn a correct "BP 139/96" into "BP 13,9/96".
+    The handwriting reading wins on confidence; separators are never used to pick a reading."""
+    from ocr import scan
+    assert scan.choose_reading("BP 13,9/96", 0.62, "BP 139/96", 0.91) == (True, "")
+    assert scan.choose_reading("BP 139/96", 0.97, "BP 13,9/96", 0.60) == (False, "")
+    assert "separator" not in open(scan.__file__).read().lower()
