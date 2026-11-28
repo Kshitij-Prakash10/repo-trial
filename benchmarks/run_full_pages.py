@@ -14,7 +14,7 @@ from PIL import Image
 
 from benchmarks import common as C
 from benchmarks import run_handwriting as hw
-from benchmarks.fields import parse_fields
+from benchmarks.fields import field_match_scores, is_decimal, match_fields, parse_fields
 
 
 def align(reference, prediction):
@@ -69,12 +69,38 @@ def score(pages, key):
         line_pairs.extend((preds[j] if j is not None else "", refs[i] if i is not None else "")
                           for i, j in indices)
         page_pairs.append((hw.norm(" ".join(preds)), hw.norm(" ".join(refs))))
-    refs = [(p, r) for p, r in line_pairs if r]
+    refs = [(p, r) for p, r in line_pairs if r]  # line-level metrics: reference lines only
+    # Field metrics use every aligned pair, so fields on inserted output lines count as extras. Each
+    # predicted occurrence matches at most one reference occurrence (benchmarks.fields.match_fields).
+    decimals = []
+    case_correct = missing = incomplete = 0
+    for pred, ref in line_pairs:
+        m = match_fields(parse_fields(pred, preserve_unit_case=True), parse_fields(ref, preserve_unit_case=True))
+        for f, got, kind in m["pairs"]:
+            missing += kind == "omission"
+            incomplete += got is not None and (got["value"] is None or got["unit"] is None)
+            case_correct += got is not None and got["unit"] == f["unit"]
+            if is_decimal(f["value"] or ""):
+                decimals.append(got is not None and got["value"] == f["value"])
+    fields = field_match_scores(line_pairs)
+    return {"page": hw.cer_wer(page_pairs), "line": hw.cer_wer(line_pairs),
+            "exact_pages": C.frac(sum(p == r for p, r in page_pairs), len(pages)),
+            "exact_lines": C.frac(sum(hw.norm(p) == hw.norm(r) for p, r in refs), len(refs)),
+            "numeric_lines": hw.numeric_line(refs), "fields": fields,
+            "case_sensitive_unit": C.frac(case_correct, fields["counts"]["ref_fields"]), "missing_drug": missing,
+            "incomplete_fields_with_recognised_drug": incomplete,
+            "exact_decimal_value": C.frac(sum(decimals), len(decimals)),
+            "legacy": legacy_field_metrics(refs)}
+
+
+def legacy_field_metrics(refs):
+    """The field metrics before the occurrence matcher (kept to rescore saved predictions): reference lines
+    only, predicted fields looked up by name (a repeated name collapses), decimals by "." only."""
     decimals = []
     case_correct = missing = incomplete = fields = 0
     for pred, ref in refs:
-        by_name = {f["drug"]: f for f in parse_fields(pred, preserve_unit_case=True)}
-        for f in parse_fields(ref, preserve_unit_case=True):
+        by_name = {f["drug"]: f for f in parse_fields(pred, preserve_unit_case=True, legacy_punctuation=True)}
+        for f in parse_fields(ref, preserve_unit_case=True, legacy_punctuation=True):
             fields += 1
             got = by_name.get(f["drug"], {})
             missing += not got
@@ -82,10 +108,7 @@ def score(pages, key):
             case_correct += bool(got) and got["unit"] == f["unit"]
             if "." in (f["value"] or ""):
                 decimals.append(got.get("value") == f["value"])
-    return {"page": hw.cer_wer(page_pairs), "line": hw.cer_wer(line_pairs),
-            "exact_pages": C.frac(sum(p == r for p, r in page_pairs), len(pages)),
-            "exact_lines": C.frac(sum(hw.norm(p) == hw.norm(r) for p, r in refs), len(refs)),
-            "numeric_lines": hw.numeric_line(refs), "fields": hw.field_scores(refs),
+    return {"fields": hw.field_scores_legacy(refs),
             "case_sensitive_unit": C.frac(case_correct, fields), "missing_drug": missing,
             "incomplete_fields_with_recognised_drug": incomplete,
             "exact_decimal_value": C.frac(sum(decimals), len(decimals))}

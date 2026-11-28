@@ -36,7 +36,7 @@ import time
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from benchmarks import common as C  # noqa: E402
-from benchmarks.fields import numbers, parse_fields  # noqa: E402
+from benchmarks.fields import field_match_scores, has_decimal, numbers, parse_fields  # noqa: E402
 
 import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
@@ -155,10 +155,20 @@ def norm(s: str) -> str:
 
 
 def field_scores(pairs) -> dict:
+    """Field occurrence scores (benchmarks.fields.field_match_scores): each predicted occurrence matches at
+    most one reference occurrence; extras, omissions and substitutions are counted, with precision and
+    recall. "exact", "drug", "value" and "unit" keep their earlier names and reference-field denominators."""
+    return field_match_scores(pairs)
+
+
+def field_scores_legacy(pairs) -> dict:
+    """The metric before the occurrence matcher, kept to rescore saved predictions: predicted fields are
+    looked up by name, so a repeated name collapses to one prediction that can be credited to every
+    reference occurrence, and extra predicted fields are never counted."""
     tot = {"fields": 0, "drug": 0, "value": 0, "unit": 0, "exact": 0}
     for pred, ref in pairs:
-        pf = {f["drug"]: f for f in parse_fields(pred)}
-        for f in parse_fields(ref):
+        pf = {f["drug"]: f for f in parse_fields(pred, legacy_punctuation=True)}
+        for f in parse_fields(ref, legacy_punctuation=True):
             tot["fields"] += 1
             g = pf.get(f["drug"])
             if g is None:
@@ -177,8 +187,9 @@ def numeric_line(pairs) -> dict:
 
 
 def wrong_decimal(pred: str, ref: str) -> bool:
-    """The reference holds a decimal number and the reading does not have the same numbers."""
-    return any("." in n for n in numbers(ref)) and numbers(pred) != numbers(ref)
+    """The reference holds a decimal number (benchmarks.fields.is_decimal: point or comma) and the reading
+    does not have the same numbers, written exactly the same way."""
+    return has_decimal(ref) and numbers(pred) != numbers(ref)
 
 
 def calibration(rows, key_text, key_conf) -> dict:
@@ -199,7 +210,7 @@ def calibration(rows, key_text, key_conf) -> dict:
                                                        if re.search(r"\d", r["truth"])),
                                                    sum(bool(re.search(r"\d", r["truth"])) for r in sub)),
             "wrong_decimals_among_accepted": C.frac(sum(wrong_decimal(r[key_text], r["truth"]) for r in sub),
-                                                    sum(any("." in n for n in numbers(r["truth"])) for r in sub)),
+                                                    sum(has_decimal(r["truth"]) for r in sub)),
             "wrong_decimal_examples": [f"{r['truth']} -> {r[key_text]} ({r[key_conf]:.2f})" for r in sub
                                        if wrong_decimal(r[key_text], r["truth"])][:8]}
     return {"reliability": table, "by_threshold": acc}
@@ -358,6 +369,7 @@ def score(rows, texts=None) -> dict:
             pages[r["page"]][1].append(t)
         out[k] = {"line": cer_wer(pairs), "page": cer_wer([("\n".join(a), "\n".join(b)) for a, b in pages.values()]),
                   "numeric_line_accuracy": numeric_line(pairs), "fields": field_scores(pairs),
+                  "fields_legacy": field_scores_legacy(pairs),
                   "line_exact": C.frac(sum(norm(p) == norm(t) for p, t in pairs), len(pairs)),
                   "line_exact_ignoring_case": C.frac(sum(norm(p).lower() == norm(t).lower() for p, t in pairs), len(pairs))}
     return out

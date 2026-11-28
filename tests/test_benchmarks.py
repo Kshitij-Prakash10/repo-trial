@@ -105,6 +105,36 @@ def test_numbers():
     assert numbers("Lorazepam .5 mg") == [".5"]
 
 
+@pytest.mark.parametrize("text, value, unit", [
+    ("Metformin ,5 mg", ",5", "mg"),    # a leading decimal comma is part of the number, not punctuation
+    ("Metformin 0,5 mg", "0,5", "mg"),
+    ("Metformin .5 mg", ".5", "mg"),
+    ("Metformin 0.5mg", "0.5", "mg"),   # glued to its unit
+    ("Metformin ,5mg", ",5", "mg"),
+    ("Metformin 500 mg, then stop", "500", "mg"),  # a word-final comma is prose punctuation
+    ("Metformin 500, twice daily", "500", None),
+])
+def test_parse_fields_keeps_decimal_spelling(text, value, unit):
+    assert parse_fields(text) == [{"drug": "metformin", "value": value, "unit": unit}]
+
+
+def test_a_dropped_leading_decimal_comma_is_a_field_error():
+    from benchmarks.fields import field_match_scores
+    s = field_match_scores([("Metformin 5 mg", "Metformin ,5 mg")])
+    assert s["exact"] == {"num": 0, "den": 1, "rate": 0.0} and s["counts"]["substitutions"] == 1
+    assert s["value"]["num"] == 0
+
+
+def test_decimal_definition():
+    from benchmarks.fields import has_decimal, is_decimal
+    assert all(is_decimal(n) for n in (".5", ",5", "0,5", "2.5", "0,125", "13.2"))
+    assert not any(is_decimal(n) for n in ("5", "500", "1,000", "12,500", ""))
+    assert has_decimal("Metformin ,5 mg") and has_decimal("Lorazepam 0,5 mg")
+    assert not has_decimal("Review 12/04/2026") and not has_decimal("BP 139/96")
+    assert not has_decimal("Metformin 500 mg, then stop")
+    assert numbers("Review 12/04/2026") == ["12", "04", "2026"]
+
+
 # ------------------------------------------------------------------ common helpers
 def test_results_are_deterministic_apart_from_volatile_fields(tmp_path):
     res = {"b": [1, 2.0000001], "a": {"x_ms": 3.0, "latency": {"m": 1}, "y": 1}}
@@ -180,6 +210,67 @@ def test_handwriting_metrics():
     cal = RH.calibration(rows, "handwriting", "handwriting_conf")
     assert cal["by_threshold"]["0.95"]["wrong_decimals_among_accepted"] == {"num": 1, "den": 1, "rate": 1.0}
     assert cal["by_threshold"]["0.50"]["accepted"]["num"] == 2
+    # decimal commas count as decimals too, with the same exact spelling required
+    assert RH.wrong_decimal("Lorazepam 5 mg", "Lorazepam 0,5 mg") and RH.wrong_decimal("Lorazepam 5 mg", "Lorazepam ,5 mg")
+    assert RH.wrong_decimal("Lorazepam 0.5 mg", "Lorazepam 0,5 mg")
+    assert not RH.wrong_decimal("Review 12/04/2026", "Review 12/04/2026") and not RH.wrong_decimal("BP 139/9", "BP 139/96")
+    rows = [{"truth": "Lorazepam 0,5 mg", "handwriting": "Lorazepam 5 mg", "handwriting_conf": 0.97}]
+    cal = RH.calibration(rows, "handwriting", "handwriting_conf")
+    assert cal["by_threshold"]["0.95"]["wrong_decimals_among_accepted"] == {"num": 1, "den": 1, "rate": 1.0}
+
+
+def _counts(pred, ref):
+    from benchmarks import run_handwriting as RH
+    s = RH.field_scores([(pred, ref)])
+    return s, s["counts"]
+
+
+def test_field_occurrences_are_matched_at_most_once():
+    # a. a repeated reference name against one prediction: one exact, one omission
+    s, c = _counts("Metformin 500 mg", "Metformin 500 mg and Metformin 500 mg")
+    assert (c["exact"], c["omissions"], c["extras"], c["substitutions"]) == (1, 1, 0, 0)
+    assert s["precision"] == {"num": 1, "den": 1, "rate": 1.0} and s["recall"] == {"num": 1, "den": 2, "rate": 0.5}
+    assert s["exact"] == s["recall"]
+    # b. reversed: one exact match, one extra, no omission
+    s, c = _counts("Metformin 500 mg and Metformin 500 mg", "Metformin 500 mg")
+    assert (c["exact"], c["omissions"], c["extras"]) == (1, 0, 1)
+    assert s["precision"] == {"num": 1, "den": 2, "rate": 0.5} and s["recall"] == {"num": 1, "den": 1, "rate": 1.0}
+
+
+def test_same_name_with_different_values():
+    # c. one value changed: the other occurrence is still exact, the changed one is a substitution
+    s, c = _counts("Insulin 10 units then Insulin 12 units", "Insulin 10 units then Insulin 20 units")
+    assert (c["exact"], c["substitutions"], c["omissions"], c["extras"]) == (1, 1, 0, 0)
+    assert s["value"]["num"] == 1 and s["drug"]["num"] == 2
+    # swapping the two occurrences: both exact without order, one in order
+    s, c = _counts("Insulin 20 units then Insulin 10 units", "Insulin 10 units then Insulin 20 units")
+    assert c["exact"] == 2 and s["exact_in_order"] == {"num": 1, "den": 2, "rate": 0.5}
+    s, _ = _counts("Insulin 10 units then Insulin 20 units", "Insulin 10 units then Insulin 20 units")
+    assert s["exact_in_order"]["num"] == 2
+
+
+def test_field_scores_with_empty_text_and_missing_units():
+    # d. empty output: every reference field is an omission; precision undefined (rate None), recall 0
+    s, c = _counts("", "Metformin 500 mg")
+    assert c["omissions"] == 1 and s["precision"] == {"num": 0, "den": 0, "rate": None}
+    assert s["recall"] == {"num": 0, "den": 1, "rate": 0.0}
+    # empty reference: every predicted field is an extra; recall undefined, precision 0
+    s, c = _counts("Metformin 500 mg", "")
+    assert c["extras"] == 1 and s["recall"]["rate"] is None and s["precision"] == {"num": 0, "den": 1, "rate": 0.0}
+    # both empty: nothing to score, both undefined
+    s, c = _counts("", "")
+    assert s["precision"]["rate"] is None and s["recall"]["rate"] is None and not any(c.values())
+    # a recognised name with its unit missing: substitution, value right, unit wrong
+    s, c = _counts("Metformin 500", "Metformin 500 mg")
+    assert (c["exact"], c["substitutions"]) == (0, 1) and s["value"]["num"] == 1 and s["unit"]["num"] == 0
+
+
+def test_legacy_field_metric_is_kept_for_rescoring():
+    from benchmarks import run_handwriting as RH
+    pairs = [("Metformin 500 mg", "Metformin 500 mg and Metformin 500 mg"), ("Lorazepam 5 mg", "Lorazepam ,5 mg")]
+    legacy = RH.field_scores_legacy(pairs)
+    assert legacy["exact"] == {"num": 3, "den": 3, "rate": 1.0}  # the old answer: duplicates and ",5" collapse
+    assert RH.field_scores(pairs)["exact"] == {"num": 1, "den": 3, "rate": 0.3333}
 
 
 # ------------------------------------------------------------------ page and alpha runner pieces (base environment)

@@ -64,7 +64,7 @@ def evaluate(rows, fonts, reader, variant, image_hashes):
     results = h.score(scored)
     print(variant, "hands", results["handwriting"]["line"], "selected", results["shipped"]["line"],
           "fields", results["shipped"]["fields"]["exact"], flush=True)
-    decimal_lines = [r for r in scored if any("." in num for num in h.numbers(r["truth"]))]
+    decimal_lines = [r for r in scored if h.has_decimal(r["truth"])]
     decimal_exact = {
         key: C.frac(sum(h.numbers(r[key]) == h.numbers(r["truth"]) for r in decimal_lines), len(decimal_lines))
         for key in ("handwriting", "shipped")
