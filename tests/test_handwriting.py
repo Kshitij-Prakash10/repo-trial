@@ -522,7 +522,7 @@ def test_scanner_checks_misread_digits_by_default_and_can_be_told_not_to(monkeyp
 
 
 # ---------------------------------------------------------------- benchmark / production selection parity
-class _FakeRec:
+class _ParityRec:
     """Printed recogniser stand-in: returns fixed (text, confidence) per word crop, in order."""
 
     def __init__(self, words):
@@ -533,7 +533,7 @@ class _FakeRec:
         return list(self.words)
 
 
-class _FakeHw:
+class _ParityHw:
     name = "fake-handwriting"
 
     def __init__(self, reading):
@@ -572,7 +572,7 @@ def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_
     # benchmark path
     pg = {"seed": 0, "image": page, "lines": [{"text": chosen, "words": [{"quad": q} for q in quads]}]}
     mods = dict(torch=None, models=None, scriptclf=scan.scriptclf, hwdata=hwdata, scan=scan,
-                hw=_FakeHw(hw_reading), rec=_FakeRec(printed_words), clf=object(), read_kw={})
+                hw=_ParityHw(hw_reading), rec=_ParityRec(printed_words), clf=object(), read_kw={})
     (row,) = RH.read_pages([pg], mods, {k: [] for k in ("printed_ms", "route_ms", "handwriting_ms")})
     # production path: Scanner.run with the same printed words, boxes and readers (no orientation)
 
@@ -593,7 +593,7 @@ def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_
 
     s = scan.Scanner.__new__(scan.Scanner)
     s.ocr, s.orient, s.do_deskew, s.flip_check = FakeOcr(), None, False, False
-    s.clf, s.hw, s.postcorrect, s.mask_neighbours, s.flag_misread_digits = object(), _FakeHw(hw_reading), False, False, True
+    s.clf, s.hw, s.postcorrect, s.mask_neighbours, s.flag_misread_digits = object(), _ParityHw(hw_reading), False, False, True
     from PIL import Image
     (line,) = s.run(Image.fromarray(page))["lines"]
     assert row["shipped"] == line["text"] == chosen
