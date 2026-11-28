@@ -379,3 +379,72 @@ def test_an_empty_cached_detector_file_is_not_usable(tmp_path, monkeypatch):
     assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")).startswith("BLOCKED")
     (models / "fast_base-688a8b34.pt").write_bytes(b"x" * 2048)
     assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")) is None
+
+
+# ------------------------------------------------------------------ annotated-crop failure diagnosis
+ANNOTATED = os.path.join(ROOT, "reports", "review_2026-11", "e2e_ocr_2026-11-28")
+
+
+def _diagnose(tmp_path, rows):
+    """Run benchmarks/diagnose_annotated.py (the published command) on validation rows; its output."""
+    import subprocess
+    import sys
+    src, out = tmp_path / "result.json", tmp_path / "diagnosis.json"
+    src.write_text(json.dumps({"validation": {"rows": rows}, "test": {"rows": []}}))
+    subprocess.run([sys.executable, os.path.join(ROOT, "benchmarks", "diagnose_annotated.py"), ROOT, str(src),
+                    str(out)], check=True, capture_output=True, cwd=str(tmp_path))
+    return json.loads(out.read_text())["validation"]
+
+
+def _row(truth, shown, *, flagged):
+    """A run_handwriting row showing `shown`. flagged: routed, with a handwriting reading that holds the
+    shown text (ocr.common.line_confirm_numbers warns); otherwise a printed line, not routed (no warning
+    unless a unit lost its number)."""
+    return {"truth": truth, "shipped": shown, "printed": shown if not flagged else "Review tomorrow",
+            "handwriting": shown, "routed": flagged, "shipped_conf": 0.9}
+
+
+@pytest.mark.parametrize("truth, shown, wrong, with_reference_number", [
+    ("Review tomorrow", "Review 7 tomorrow", 1, 0),  # number invented on a line without one
+    ("Review in 7 days", "Review in days", 1, 1),
+    ("Review in 7 days", "Review in 2 days", 1, 1),
+    ("Review in 7 days", "Review in 7 days", 0, 1),
+    ("Review tomorrow", "Review tomorrow", 0, 0),
+])
+def test_diagnosis_compares_numbers_on_every_line(tmp_path, truth, shown, wrong, with_reference_number):
+    num = (d := _diagnose(tmp_path, [_row(truth, shown, flagged=False)]))["numbers"]
+    assert num["number_wrong"] == wrong
+    assert num["lines_with_reference_number"] == with_reference_number
+    assert num["number_wrong"] == num["number_wrong_flagged"] + num["number_wrong_silent"]
+    assert num["number_wrong_silent"] == wrong and num["number_wrong_flagged"] == 0
+    assert [s["shown"] for s in d["silent_numeric_errors"]] == [shown] * wrong
+    # the reference-number-only count never includes an invented number
+    assert num["number_wrong_where_reference_has_number"] == wrong * with_reference_number
+    assert num["number_invented_where_reference_has_none"] == wrong * (1 - with_reference_number)
+
+
+def test_invented_number_is_flagged_or_silent_by_the_warning(tmp_path):
+    silent = _diagnose(tmp_path, [_row("Review tomorrow", "Review 7 tomorrow", flagged=False)])
+    assert silent["numbers"]["number_wrong_silent"] == 1 and silent["numbers"]["number_wrong_flagged"] == 0
+    assert silent["silent_numeric_errors"] == [{"truth": "Review tomorrow", "shown": "Review 7 tomorrow",
+                                                "printed": "Review 7 tomorrow", "handwriting": "Review 7 tomorrow",
+                                                "routed": False, "shipped_conf": 0.9}]
+    flagged = _diagnose(tmp_path, [_row("Review tomorrow", "Review 7 tomorrow", flagged=True)])
+    num = flagged["numbers"]
+    assert num["number_wrong"] == 1 and num["number_wrong_flagged"] == 1 and num["number_wrong_silent"] == 0
+    assert flagged["silent_numeric_errors"] == []
+    assert num["lines_with_reference_number"] == 0 and num["number_invented_where_reference_has_none"] == 1
+
+
+def test_diagnosis_totals_over_mixed_lines(tmp_path):
+    rows = [_row("Review tomorrow", "Review 7 tomorrow", flagged=True),
+            _row("Review tomorrow", "Review 7 tomorrow", flagged=False),
+            _row("Review in 7 days", "Review in days", flagged=False),
+            _row("Review in 7 days", "Review in 2 days", flagged=True),
+            _row("Review in 7 days", "Review in 7 days", flagged=False),
+            _row("Review tomorrow", "Review tomorrow", flagged=False)]
+    num = _diagnose(tmp_path, rows)["numbers"]
+    assert (num["number_wrong"], num["number_wrong_flagged"], num["number_wrong_silent"]) == (4, 2, 2)
+    assert num["lines_with_reference_number"] == 3
+    assert (num["number_wrong_where_reference_has_number"], num["number_invented_where_reference_has_none"]) == (2, 2)
+
