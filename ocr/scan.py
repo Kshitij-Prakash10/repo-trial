@@ -30,7 +30,7 @@ from ocr import common
 from ocr.common import has_misread_number, has_number_or_unit, line_confirm_numbers, number_lost  # noqa: F401
 from ocr.handwriting import HandwritingReader
 from ocr.hwdata import rect_crop
-from ocr.pipeline import OcrPipeline, to_rgb
+from ocr.pipeline import OcrPipeline, line_confidence, to_rgb  # noqa: F401 (line_confidence: benchmarks)
 
 LOW_CONFIDENCE = 0.5  # lines below this are flagged
 ORIENT_MIN_CONF = 0.6  # a turn is applied only when the classifier is at least this sure
@@ -101,10 +101,10 @@ class Scanner:
             p_hw = scriptclf.handwritten_prob(self.clf, crops)
         lines, hw_idx, hw_crops = [], [], []
         for ln in base["lines"]:
-            share = float(np.mean(p_hw[ln["words"]])) if ln["words"] else 0.0
+            share = route_share(p_hw[ln["words"]])
             entry = {"text": ln["text"], "box": ln["box"], "confidence": ln["confidence"], "script": "printed",
                      "handwritten_share": round(share, 3), "words": ln["words"]}
-            if self.hw is not None and share >= HW_LINE_SHARE:
+            if self.hw is not None and is_routed(share):
                 b = boxes[ln["words"]]
                 quads = np.stack([b[:, [0, 1]], b[:, [2, 1]], b[:, [2, 3]], b[:, [0, 3]]], 1)  # (n, 4, 2)
                 hw_idx.append(len(lines))
@@ -114,10 +114,10 @@ class Scanner:
         if hw_crops:
             for i, crop, (text, conf) in zip(hw_idx, hw_crops, self.hw.read(hw_crops)):
                 lines[i].update(handwriting_text=text, handwriting_confidence=round(conf, 4))
-                keep, why = keep_printed(lines[i]["text"], text, crop)
-                if keep:
+                use_hw, why = choose_reading(lines[i]["text"], lines[i]["confidence"], text, conf, crop)
+                if why:
                     lines[i]["handwriting_rejected"] = why
-                elif conf > lines[i]["confidence"]:  # keep the reading the readers are surer of (chosen on val)
+                elif use_hw:
                     lines[i].update(printed_text=lines[i]["text"], printed_confidence=lines[i]["confidence"],
                                     text=text, confidence=round(conf, 4), script="handwritten")
         routed = self.clf is not None and self.hw is not None  # else "printed" only means "not checked"
@@ -133,6 +133,35 @@ class Scanner:
                 "scanner": base["scanner"], "models": {**(base["models"] if isinstance(base["models"], dict) else {}),
                                                        "handwriting": getattr(self.hw, "name", None)},
                 "seconds": round(time.perf_counter() - t0, 3)}
+
+
+def route_share(word_handwritten_probs) -> float:
+    """A line's handwriting share: the mean P(handwritten) of its words (0 for a line without words).
+
+    The mean is taken in the input's dtype (float32 from the script classifier) and only then converted
+    to a Python float, as Scanner.run did before this helper: averaging in float64 instead moves some
+    lines from exactly 0.5 to just below it, so they would skip the handwriting reader."""
+    p = np.asarray(word_handwritten_probs)
+    return float(np.mean(p)) if p.size else 0.0
+
+
+def is_routed(share: float) -> bool:
+    """Is the line also read by the handwriting reader?"""
+    return share >= HW_LINE_SHARE
+
+
+def choose_reading(printed_text: str, printed_confidence: float, handwriting_text: str,
+                   handwriting_confidence: float, crop: np.ndarray | None = None) -> tuple[bool, str]:
+    """For a routed line: (use the handwriting reading?, why it was rejected or "").
+
+    The handwriting reading is rejected when keep_printed says the printed reading must stay (rules and
+    dashes); otherwise it is used when its confidence is strictly higher than the printed line's
+    confidence (ocr.pipeline.line_confidence; chosen on validation). Scanner.run and the annotated-crop
+    benchmark (benchmarks/run_handwriting.read_pages) both call this, so they cannot diverge."""
+    keep, why = keep_printed(printed_text, handwriting_text, crop)
+    if keep:
+        return False, why
+    return bool(handwriting_confidence > printed_confidence), ""
 
 
 def confirm_numbers(ln: dict, script_known: bool | None = None, misread_digits: bool = False, *,

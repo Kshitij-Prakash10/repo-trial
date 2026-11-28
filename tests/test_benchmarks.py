@@ -105,6 +105,36 @@ def test_numbers():
     assert numbers("Lorazepam .5 mg") == [".5"]
 
 
+@pytest.mark.parametrize("text, value, unit", [
+    ("Metformin ,5 mg", ",5", "mg"),    # a leading decimal comma is part of the number, not punctuation
+    ("Metformin 0,5 mg", "0,5", "mg"),
+    ("Metformin .5 mg", ".5", "mg"),
+    ("Metformin 0.5mg", "0.5", "mg"),   # glued to its unit
+    ("Metformin ,5mg", ",5", "mg"),
+    ("Metformin 500 mg, then stop", "500", "mg"),  # a word-final comma is prose punctuation
+    ("Metformin 500, twice daily", "500", None),
+])
+def test_parse_fields_keeps_decimal_spelling(text, value, unit):
+    assert parse_fields(text) == [{"drug": "metformin", "value": value, "unit": unit}]
+
+
+def test_a_dropped_leading_decimal_comma_is_a_field_error():
+    from benchmarks.fields import field_match_scores
+    s = field_match_scores([("Metformin 5 mg", "Metformin ,5 mg")])
+    assert s["exact"] == {"num": 0, "den": 1, "rate": 0.0} and s["counts"]["substitutions"] == 1
+    assert s["value"]["num"] == 0
+
+
+def test_decimal_definition():
+    from benchmarks.fields import has_decimal, is_decimal
+    assert all(is_decimal(n) for n in (".5", ",5", "0,5", "2.5", "0,125", "13.2"))
+    assert not any(is_decimal(n) for n in ("5", "500", "1,000", "12,500", ""))
+    assert has_decimal("Metformin ,5 mg") and has_decimal("Lorazepam 0,5 mg")
+    assert not has_decimal("Review 12/04/2026") and not has_decimal("BP 139/96")
+    assert not has_decimal("Metformin 500 mg, then stop")
+    assert numbers("Review 12/04/2026") == ["12", "04", "2026"]
+
+
 # ------------------------------------------------------------------ common helpers
 def test_results_are_deterministic_apart_from_volatile_fields(tmp_path):
     res = {"b": [1, 2.0000001], "a": {"x_ms": 3.0, "latency": {"m": 1}, "y": 1}}
@@ -180,6 +210,67 @@ def test_handwriting_metrics():
     cal = RH.calibration(rows, "handwriting", "handwriting_conf")
     assert cal["by_threshold"]["0.95"]["wrong_decimals_among_accepted"] == {"num": 1, "den": 1, "rate": 1.0}
     assert cal["by_threshold"]["0.50"]["accepted"]["num"] == 2
+    # decimal commas count as decimals too, with the same exact spelling required
+    assert RH.wrong_decimal("Lorazepam 5 mg", "Lorazepam 0,5 mg") and RH.wrong_decimal("Lorazepam 5 mg", "Lorazepam ,5 mg")
+    assert RH.wrong_decimal("Lorazepam 0.5 mg", "Lorazepam 0,5 mg")
+    assert not RH.wrong_decimal("Review 12/04/2026", "Review 12/04/2026") and not RH.wrong_decimal("BP 139/9", "BP 139/96")
+    rows = [{"truth": "Lorazepam 0,5 mg", "handwriting": "Lorazepam 5 mg", "handwriting_conf": 0.97}]
+    cal = RH.calibration(rows, "handwriting", "handwriting_conf")
+    assert cal["by_threshold"]["0.95"]["wrong_decimals_among_accepted"] == {"num": 1, "den": 1, "rate": 1.0}
+
+
+def _counts(pred, ref):
+    from benchmarks import run_handwriting as RH
+    s = RH.field_scores([(pred, ref)])
+    return s, s["counts"]
+
+
+def test_field_occurrences_are_matched_at_most_once():
+    # a. a repeated reference name against one prediction: one exact, one omission
+    s, c = _counts("Metformin 500 mg", "Metformin 500 mg and Metformin 500 mg")
+    assert (c["exact"], c["omissions"], c["extras"], c["substitutions"]) == (1, 1, 0, 0)
+    assert s["precision"] == {"num": 1, "den": 1, "rate": 1.0} and s["recall"] == {"num": 1, "den": 2, "rate": 0.5}
+    assert s["exact"] == s["recall"]
+    # b. reversed: one exact match, one extra, no omission
+    s, c = _counts("Metformin 500 mg and Metformin 500 mg", "Metformin 500 mg")
+    assert (c["exact"], c["omissions"], c["extras"]) == (1, 0, 1)
+    assert s["precision"] == {"num": 1, "den": 2, "rate": 0.5} and s["recall"] == {"num": 1, "den": 1, "rate": 1.0}
+
+
+def test_same_name_with_different_values():
+    # c. one value changed: the other occurrence is still exact, the changed one is a substitution
+    s, c = _counts("Insulin 10 units then Insulin 12 units", "Insulin 10 units then Insulin 20 units")
+    assert (c["exact"], c["substitutions"], c["omissions"], c["extras"]) == (1, 1, 0, 0)
+    assert s["value"]["num"] == 1 and s["drug"]["num"] == 2
+    # swapping the two occurrences: both exact without order, one in order
+    s, c = _counts("Insulin 20 units then Insulin 10 units", "Insulin 10 units then Insulin 20 units")
+    assert c["exact"] == 2 and s["exact_in_order"] == {"num": 1, "den": 2, "rate": 0.5}
+    s, _ = _counts("Insulin 10 units then Insulin 20 units", "Insulin 10 units then Insulin 20 units")
+    assert s["exact_in_order"]["num"] == 2
+
+
+def test_field_scores_with_empty_text_and_missing_units():
+    # d. empty output: every reference field is an omission; precision undefined (rate None), recall 0
+    s, c = _counts("", "Metformin 500 mg")
+    assert c["omissions"] == 1 and s["precision"] == {"num": 0, "den": 0, "rate": None}
+    assert s["recall"] == {"num": 0, "den": 1, "rate": 0.0}
+    # empty reference: every predicted field is an extra; recall undefined, precision 0
+    s, c = _counts("Metformin 500 mg", "")
+    assert c["extras"] == 1 and s["recall"]["rate"] is None and s["precision"] == {"num": 0, "den": 1, "rate": 0.0}
+    # both empty: nothing to score, both undefined
+    s, c = _counts("", "")
+    assert s["precision"]["rate"] is None and s["recall"]["rate"] is None and not any(c.values())
+    # a recognised name with its unit missing: substitution, value right, unit wrong
+    s, c = _counts("Metformin 500", "Metformin 500 mg")
+    assert (c["exact"], c["substitutions"]) == (0, 1) and s["value"]["num"] == 1 and s["unit"]["num"] == 0
+
+
+def test_legacy_field_metric_is_kept_for_rescoring():
+    from benchmarks import run_handwriting as RH
+    pairs = [("Metformin 500 mg", "Metformin 500 mg and Metformin 500 mg"), ("Lorazepam 5 mg", "Lorazepam ,5 mg")]
+    legacy = RH.field_scores_legacy(pairs)
+    assert legacy["exact"] == {"num": 3, "den": 3, "rate": 1.0}  # the old answer: duplicates and ",5" collapse
+    assert RH.field_scores(pairs)["exact"] == {"num": 1, "den": 3, "rate": 0.3333}
 
 
 # ------------------------------------------------------------------ page and alpha runner pieces (base environment)
@@ -277,3 +368,94 @@ def test_round5_set_mixes_prose_doses_and_headers(recs):
         sub = [r for r in r5 if r["category"] == cat]
         assert {r["path"] for r in sub} == {"v1", "v2"}
         assert any(r["dose_incorrect_or_lost"] for r in sub) and any(not r["warning_warranted"] for r in sub)
+
+
+def test_an_empty_cached_detector_file_is_not_usable(tmp_path, monkeypatch):
+    from benchmarks import run_handwriting as RH
+    models = tmp_path / "models"
+    models.mkdir()
+    monkeypatch.setenv("DOCTR_CACHE_DIR", str(tmp_path))
+    (models / "fast_base-688a8b34.pt").write_bytes(b"")  # left by a failed download
+    assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")).startswith("BLOCKED")
+    (models / "fast_base-688a8b34.pt").write_bytes(b"x" * 2048)
+    assert RH.detector_prerequisite(str(tmp_path), str(tmp_path / "missing.pt")) is None
+
+
+# ------------------------------------------------------------------ annotated-crop failure diagnosis
+ANNOTATED = os.path.join(ROOT, "reports", "review_2026-11", "e2e_ocr_2026-11-28")
+
+
+def _diagnose(tmp_path, rows):
+    """Run benchmarks/diagnose_annotated.py (the published command) on validation rows; its output."""
+    import subprocess
+    import sys
+    src, out = tmp_path / "result.json", tmp_path / "diagnosis.json"
+    src.write_text(json.dumps({"validation": {"rows": rows}, "test": {"rows": []}}))
+    subprocess.run([sys.executable, os.path.join(ROOT, "benchmarks", "diagnose_annotated.py"), ROOT, str(src),
+                    str(out)], check=True, capture_output=True, cwd=str(tmp_path))
+    return json.loads(out.read_text())["validation"]
+
+
+def _row(truth, shown, *, flagged):
+    """A run_handwriting row showing `shown`. flagged: routed, with a handwriting reading that holds the
+    shown text (ocr.common.line_confirm_numbers warns); otherwise a printed line, not routed (no warning
+    unless a unit lost its number)."""
+    return {"truth": truth, "shipped": shown, "printed": shown if not flagged else "Review tomorrow",
+            "handwriting": shown, "routed": flagged, "shipped_conf": 0.9}
+
+
+@pytest.mark.parametrize("truth, shown, wrong, with_reference_number", [
+    ("Review tomorrow", "Review 7 tomorrow", 1, 0),  # number invented on a line without one
+    ("Review in 7 days", "Review in days", 1, 1),
+    ("Review in 7 days", "Review in 2 days", 1, 1),
+    ("Review in 7 days", "Review in 7 days", 0, 1),
+    ("Review tomorrow", "Review tomorrow", 0, 0),
+])
+def test_diagnosis_compares_numbers_on_every_line(tmp_path, truth, shown, wrong, with_reference_number):
+    num = (d := _diagnose(tmp_path, [_row(truth, shown, flagged=False)]))["numbers"]
+    assert num["number_wrong"] == wrong
+    assert num["lines_with_reference_number"] == with_reference_number
+    assert num["number_wrong"] == num["number_wrong_flagged"] + num["number_wrong_silent"]
+    assert num["number_wrong_silent"] == wrong and num["number_wrong_flagged"] == 0
+    assert [s["shown"] for s in d["silent_numeric_errors"]] == [shown] * wrong
+    # the reference-number-only count never includes an invented number
+    assert num["number_wrong_where_reference_has_number"] == wrong * with_reference_number
+    assert num["number_invented_where_reference_has_none"] == wrong * (1 - with_reference_number)
+
+
+def test_invented_number_is_flagged_or_silent_by_the_warning(tmp_path):
+    silent = _diagnose(tmp_path, [_row("Review tomorrow", "Review 7 tomorrow", flagged=False)])
+    assert silent["numbers"]["number_wrong_silent"] == 1 and silent["numbers"]["number_wrong_flagged"] == 0
+    assert silent["silent_numeric_errors"] == [{"truth": "Review tomorrow", "shown": "Review 7 tomorrow",
+                                                "printed": "Review 7 tomorrow", "handwriting": "Review 7 tomorrow",
+                                                "routed": False, "shipped_conf": 0.9}]
+    flagged = _diagnose(tmp_path, [_row("Review tomorrow", "Review 7 tomorrow", flagged=True)])
+    num = flagged["numbers"]
+    assert num["number_wrong"] == 1 and num["number_wrong_flagged"] == 1 and num["number_wrong_silent"] == 0
+    assert flagged["silent_numeric_errors"] == []
+    assert num["lines_with_reference_number"] == 0 and num["number_invented_where_reference_has_none"] == 1
+
+
+def test_diagnosis_totals_over_mixed_lines(tmp_path):
+    rows = [_row("Review tomorrow", "Review 7 tomorrow", flagged=True),
+            _row("Review tomorrow", "Review 7 tomorrow", flagged=False),
+            _row("Review in 7 days", "Review in days", flagged=False),
+            _row("Review in 7 days", "Review in 2 days", flagged=True),
+            _row("Review in 7 days", "Review in 7 days", flagged=False),
+            _row("Review tomorrow", "Review tomorrow", flagged=False)]
+    num = _diagnose(tmp_path, rows)["numbers"]
+    assert (num["number_wrong"], num["number_wrong_flagged"], num["number_wrong_silent"]) == (4, 2, 2)
+    assert num["lines_with_reference_number"] == 3
+    assert (num["number_wrong_where_reference_has_number"], num["number_invented_where_reference_has_none"]) == (2, 2)
+
+
+def test_saved_diagnosis_is_what_the_diagnostic_writes(tmp_path):
+    """annotated_diagnosis.json is diagnose_annotated.py run on the committed annotated_branch.json."""
+    import subprocess
+    import sys
+    out = tmp_path / "diagnosis.json"
+    subprocess.run([sys.executable, os.path.join(ROOT, "benchmarks", "diagnose_annotated.py"), ROOT,
+                    os.path.join(ANNOTATED, "annotated_branch.json"), str(out)], check=True, capture_output=True,
+                   cwd=str(tmp_path))
+    with open(os.path.join(ANNOTATED, "annotated_diagnosis.json")) as f:
+        assert json.loads(out.read_text()) == json.load(f)

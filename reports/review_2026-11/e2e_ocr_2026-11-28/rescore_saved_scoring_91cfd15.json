@@ -1,0 +1,608 @@
+{
+ "data_root": "/tmp/claude-0/-home-user-repo-trial/aab1d323-54ba-58c1-877b-55ee24394209/scratchpad/review-wt",
+ "scoring_root_commit": "91cfd152b256f0fe0ee42589d0d561f27490f682",
+ "sources": [
+  {
+   "file": "reports/review_2026-11/baseline_0c71106/handwriting.json",
+   "lines": 113,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 65,
+       "rate": 0.8553
+      },
+      "exact": {
+       "den": 76,
+       "num": 62,
+       "rate": 0.8158
+      },
+      "unit": {
+       "den": 76,
+       "num": 64,
+       "rate": 0.8421
+      },
+      "value": {
+       "den": 76,
+       "num": 63,
+       "rate": 0.8289
+      }
+     },
+     "wrong_decimal_lines": 2
+    },
+    "printed": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 45,
+       "rate": 0.5921
+      },
+      "exact": {
+       "den": 76,
+       "num": 37,
+       "rate": 0.4868
+      },
+      "unit": {
+       "den": 76,
+       "num": 37,
+       "rate": 0.4868
+      },
+      "value": {
+       "den": 76,
+       "num": 42,
+       "rate": 0.5526
+      }
+     },
+     "wrong_decimal_lines": 1
+    },
+    "shipped": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 66,
+       "rate": 0.8684
+      },
+      "exact": {
+       "den": 76,
+       "num": 63,
+       "rate": 0.8289
+      },
+      "unit": {
+       "den": 76,
+       "num": 64,
+       "rate": 0.8421
+      },
+      "value": {
+       "den": 76,
+       "num": 65,
+       "rate": 0.8553
+      }
+     },
+     "wrong_decimal_lines": 1
+    }
+   },
+   "sha256": "0c4d8787150dec4d111971c3c1bfc92b4dc9c9e5e993dd75f9f1c4bdb2b880f3",
+   "split": "validation"
+  },
+  {
+   "file": "reports/review_2026-11/baseline_0c71106/handwriting.json",
+   "lines": 167,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 87,
+       "rate": 0.8365
+      },
+      "exact": {
+       "den": 104,
+       "num": 80,
+       "rate": 0.7692
+      },
+      "unit": {
+       "den": 104,
+       "num": 83,
+       "rate": 0.7981
+      },
+      "value": {
+       "den": 104,
+       "num": 83,
+       "rate": 0.7981
+      }
+     },
+     "wrong_decimal_lines": 5
+    },
+    "printed": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 70,
+       "rate": 0.6731
+      },
+      "exact": {
+       "den": 104,
+       "num": 56,
+       "rate": 0.5385
+      },
+      "unit": {
+       "den": 104,
+       "num": 57,
+       "rate": 0.5481
+      },
+      "value": {
+       "den": 104,
+       "num": 67,
+       "rate": 0.6442
+      }
+     },
+     "wrong_decimal_lines": 6
+    },
+    "shipped": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 93,
+       "rate": 0.8942
+      },
+      "exact": {
+       "den": 104,
+       "num": 88,
+       "rate": 0.8462
+      },
+      "unit": {
+       "den": 104,
+       "num": 90,
+       "rate": 0.8654
+      },
+      "value": {
+       "den": 104,
+       "num": 91,
+       "rate": 0.875
+      }
+     },
+     "wrong_decimal_lines": 4
+    }
+   },
+   "sha256": "0c4d8787150dec4d111971c3c1bfc92b4dc9c9e5e993dd75f9f1c4bdb2b880f3",
+   "split": "test"
+  },
+  {
+   "file": "reports/review_2026-11/after_ce56e17/handwriting.json",
+   "lines": 113,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 65,
+       "rate": 0.8553
+      },
+      "exact": {
+       "den": 76,
+       "num": 62,
+       "rate": 0.8158
+      },
+      "unit": {
+       "den": 76,
+       "num": 64,
+       "rate": 0.8421
+      },
+      "value": {
+       "den": 76,
+       "num": 63,
+       "rate": 0.8289
+      }
+     },
+     "wrong_decimal_lines": 2
+    },
+    "printed": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 45,
+       "rate": 0.5921
+      },
+      "exact": {
+       "den": 76,
+       "num": 37,
+       "rate": 0.4868
+      },
+      "unit": {
+       "den": 76,
+       "num": 37,
+       "rate": 0.4868
+      },
+      "value": {
+       "den": 76,
+       "num": 42,
+       "rate": 0.5526
+      }
+     },
+     "wrong_decimal_lines": 1
+    },
+    "shipped": {
+     "decimal_reference_lines": 21,
+     "fields": {
+      "drug": {
+       "den": 76,
+       "num": 66,
+       "rate": 0.8684
+      },
+      "exact": {
+       "den": 76,
+       "num": 63,
+       "rate": 0.8289
+      },
+      "unit": {
+       "den": 76,
+       "num": 64,
+       "rate": 0.8421
+      },
+      "value": {
+       "den": 76,
+       "num": 65,
+       "rate": 0.8553
+      }
+     },
+     "wrong_decimal_lines": 1
+    }
+   },
+   "sha256": "50af6cdbcd503cfc95cbcee49ec936731b0445310d02861160101114090c0aef",
+   "split": "validation"
+  },
+  {
+   "file": "reports/review_2026-11/after_ce56e17/handwriting.json",
+   "lines": 167,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 87,
+       "rate": 0.8365
+      },
+      "exact": {
+       "den": 104,
+       "num": 80,
+       "rate": 0.7692
+      },
+      "unit": {
+       "den": 104,
+       "num": 83,
+       "rate": 0.7981
+      },
+      "value": {
+       "den": 104,
+       "num": 83,
+       "rate": 0.7981
+      }
+     },
+     "wrong_decimal_lines": 5
+    },
+    "printed": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 70,
+       "rate": 0.6731
+      },
+      "exact": {
+       "den": 104,
+       "num": 56,
+       "rate": 0.5385
+      },
+      "unit": {
+       "den": 104,
+       "num": 57,
+       "rate": 0.5481
+      },
+      "value": {
+       "den": 104,
+       "num": 67,
+       "rate": 0.6442
+      }
+     },
+     "wrong_decimal_lines": 6
+    },
+    "shipped": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 93,
+       "rate": 0.8942
+      },
+      "exact": {
+       "den": 104,
+       "num": 88,
+       "rate": 0.8462
+      },
+      "unit": {
+       "den": 104,
+       "num": 90,
+       "rate": 0.8654
+      },
+      "value": {
+       "den": 104,
+       "num": 91,
+       "rate": 0.875
+      }
+     },
+     "wrong_decimal_lines": 4
+    }
+   },
+   "sha256": "50af6cdbcd503cfc95cbcee49ec936731b0445310d02861160101114090c0aef",
+   "split": "test"
+  },
+  {
+   "file": "reports/review_2026-11/after_ce56e17/handwriting_beams2.json",
+   "lines": 167,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 88,
+       "rate": 0.8462
+      },
+      "exact": {
+       "den": 104,
+       "num": 82,
+       "rate": 0.7885
+      },
+      "unit": {
+       "den": 104,
+       "num": 85,
+       "rate": 0.8173
+      },
+      "value": {
+       "den": 104,
+       "num": 85,
+       "rate": 0.8173
+      }
+     },
+     "wrong_decimal_lines": 5
+    },
+    "printed": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 70,
+       "rate": 0.6731
+      },
+      "exact": {
+       "den": 104,
+       "num": 56,
+       "rate": 0.5385
+      },
+      "unit": {
+       "den": 104,
+       "num": 57,
+       "rate": 0.5481
+      },
+      "value": {
+       "den": 104,
+       "num": 67,
+       "rate": 0.6442
+      }
+     },
+     "wrong_decimal_lines": 6
+    },
+    "shipped": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 92,
+       "rate": 0.8846
+      },
+      "exact": {
+       "den": 104,
+       "num": 87,
+       "rate": 0.8365
+      },
+      "unit": {
+       "den": 104,
+       "num": 89,
+       "rate": 0.8558
+      },
+      "value": {
+       "den": 104,
+       "num": 90,
+       "rate": 0.8654
+      }
+     },
+     "wrong_decimal_lines": 4
+    }
+   },
+   "sha256": "8bbe92c4970b9f47d2951cdaa49bc6b9ac8c43cec974d79f5a6a24965f784011",
+   "split": "test"
+  },
+  {
+   "file": "reports/review_2026-11/after_ce56e17/handwriting_beams4.json",
+   "lines": 167,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 88,
+       "rate": 0.8462
+      },
+      "exact": {
+       "den": 104,
+       "num": 83,
+       "rate": 0.7981
+      },
+      "unit": {
+       "den": 104,
+       "num": 86,
+       "rate": 0.8269
+      },
+      "value": {
+       "den": 104,
+       "num": 85,
+       "rate": 0.8173
+      }
+     },
+     "wrong_decimal_lines": 5
+    },
+    "printed": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 70,
+       "rate": 0.6731
+      },
+      "exact": {
+       "den": 104,
+       "num": 56,
+       "rate": 0.5385
+      },
+      "unit": {
+       "den": 104,
+       "num": 57,
+       "rate": 0.5481
+      },
+      "value": {
+       "den": 104,
+       "num": 67,
+       "rate": 0.6442
+      }
+     },
+     "wrong_decimal_lines": 6
+    },
+    "shipped": {
+     "decimal_reference_lines": 27,
+     "fields": {
+      "drug": {
+       "den": 104,
+       "num": 92,
+       "rate": 0.8846
+      },
+      "exact": {
+       "den": 104,
+       "num": 88,
+       "rate": 0.8462
+      },
+      "unit": {
+       "den": 104,
+       "num": 90,
+       "rate": 0.8654
+      },
+      "value": {
+       "den": 104,
+       "num": 90,
+       "rate": 0.8654
+      }
+     },
+     "wrong_decimal_lines": 4
+    }
+   },
+   "sha256": "adba28c514f50708741b67326e03ca7f6e742feaf67ca5f91257919c0b9a3a2c",
+   "split": "test"
+  },
+  {
+   "file": "reports/review_2026-11/pr14_followup/printed-selector-control.json",
+   "lines": 107,
+   "readings": {
+    "handwriting": {
+     "decimal_reference_lines": 26,
+     "fields": {
+      "drug": {
+       "den": 75,
+       "num": 68,
+       "rate": 0.9067
+      },
+      "exact": {
+       "den": 75,
+       "num": 66,
+       "rate": 0.88
+      },
+      "unit": {
+       "den": 75,
+       "num": 66,
+       "rate": 0.88
+      },
+      "value": {
+       "den": 75,
+       "num": 67,
+       "rate": 0.8933
+      }
+     },
+     "wrong_decimal_lines": 1
+    },
+    "printed": {
+     "decimal_reference_lines": 26,
+     "fields": {
+      "drug": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "exact": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "unit": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "value": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      }
+     },
+     "wrong_decimal_lines": 0
+    },
+    "shipped": {
+     "decimal_reference_lines": 26,
+     "fields": {
+      "drug": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "exact": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "unit": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      },
+      "value": {
+       "den": 75,
+       "num": 75,
+       "rate": 1.0
+      }
+     },
+     "wrong_decimal_lines": 0
+    }
+   },
+   "sha256": "68a083860cf5b9d48dd0161b0421b8dcb19a0c8d9675bc02e9d942efd9dfe0cb",
+   "split": null
+  }
+ ]
+}

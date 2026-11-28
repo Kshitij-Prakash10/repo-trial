@@ -34,6 +34,18 @@ SCAN_MIN_CONF_GAIN = 0.02  # ... and its mean recognition confidence must beat t
 MIN_BOX = 3  # px
 
 
+def word_confidence(conf: float) -> float:
+    """A word's confidence as the pipeline stores it (4 decimals)."""
+    return round(float(conf), 4)
+
+
+def line_confidence(word_confidences) -> float:
+    """A line's confidence as the pipeline reports it: the mean of its stored word confidences, rounded to
+    4 decimals. ocr.scan.choose_reading compares the handwriting confidence against this value, so the
+    annotated-crop benchmark uses this function too (benchmarks/run_handwriting.read_pages)."""
+    return round(float(np.mean([word_confidence(c) for c in word_confidences])), 4)
+
+
 def _mean_conf(rec: list[tuple[str, float]]) -> float:
     return float(np.mean([c for _, c in rec])) if rec else 0.0
 
@@ -152,7 +164,7 @@ class OcrPipeline:
             if to_source is not None:
                 hq = np.hstack([quad, np.ones((4, 1))]) @ to_source.T
                 quad = hq[:, :2] / hq[:, 2:]
-            words.append({"text": text, "confidence": round(conf, 4), "detection_score": round(float(sc), 4),
+            words.append({"text": text, "confidence": word_confidence(conf), "detection_score": round(float(sc), 4),
                           "box": [round(float(v), 1) for v in (x0, y0, x1, y1)],
                           "source_quad": (quad / s).round(1).tolist()})
         lines = []
@@ -161,7 +173,7 @@ class OcrPipeline:
                 words[w]["line"] = len(lines)
             lines.append({"text": " ".join(words[w]["text"] for w in ln), "words": ln,
                           "box": [round(v, 1) for v in union(boxes[ln])],
-                          "confidence": round(float(np.mean([words[w]["confidence"] for w in ln])), 4)})
+                          "confidence": line_confidence([words[w]["confidence"] for w in ln])})
         extra = {"first_pass_boxes": first_pass, "first_pass_text": first_text} if keep_first_pass else {}
         if keep_page:
             extra["page_image"] = arr

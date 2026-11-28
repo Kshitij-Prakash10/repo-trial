@@ -36,7 +36,7 @@ import time
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from benchmarks import common as C  # noqa: E402
-from benchmarks.fields import numbers, parse_fields  # noqa: E402
+from benchmarks.fields import field_match_scores, has_decimal, numbers, parse_fields  # noqa: E402
 
 import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
@@ -155,10 +155,20 @@ def norm(s: str) -> str:
 
 
 def field_scores(pairs) -> dict:
+    """Field occurrence scores (benchmarks.fields.field_match_scores): each predicted occurrence matches at
+    most one reference occurrence; extras, omissions and substitutions are counted, with precision and
+    recall. "exact", "drug", "value" and "unit" keep their earlier names and reference-field denominators."""
+    return field_match_scores(pairs)
+
+
+def field_scores_legacy(pairs) -> dict:
+    """The metric before the occurrence matcher, kept to rescore saved predictions: predicted fields are
+    looked up by name, so a repeated name collapses to one prediction that can be credited to every
+    reference occurrence, and extra predicted fields are never counted."""
     tot = {"fields": 0, "drug": 0, "value": 0, "unit": 0, "exact": 0}
     for pred, ref in pairs:
-        pf = {f["drug"]: f for f in parse_fields(pred)}
-        for f in parse_fields(ref):
+        pf = {f["drug"]: f for f in parse_fields(pred, legacy_punctuation=True)}
+        for f in parse_fields(ref, legacy_punctuation=True):
             tot["fields"] += 1
             g = pf.get(f["drug"])
             if g is None:
@@ -177,8 +187,9 @@ def numeric_line(pairs) -> dict:
 
 
 def wrong_decimal(pred: str, ref: str) -> bool:
-    """The reference holds a decimal number and the reading does not have the same numbers."""
-    return any("." in n for n in numbers(ref)) and numbers(pred) != numbers(ref)
+    """The reference holds a decimal number (benchmarks.fields.is_decimal: point or comma) and the reading
+    does not have the same numbers, written exactly the same way."""
+    return has_decimal(ref) and numbers(pred) != numbers(ref)
 
 
 def calibration(rows, key_text, key_conf) -> dict:
@@ -199,7 +210,7 @@ def calibration(rows, key_text, key_conf) -> dict:
                                                        if re.search(r"\d", r["truth"])),
                                                    sum(bool(re.search(r"\d", r["truth"])) for r in sub)),
             "wrong_decimals_among_accepted": C.frac(sum(wrong_decimal(r[key_text], r["truth"]) for r in sub),
-                                                    sum(any("." in n for n in numbers(r["truth"])) for r in sub)),
+                                                    sum(has_decimal(r["truth"]) for r in sub)),
             "wrong_decimal_examples": [f"{r['truth']} -> {r[key_text]} ({r[key_conf]:.2f})" for r in sub
                                        if wrong_decimal(r[key_text], r["truth"])][:8]}
     return {"reliability": table, "by_threshold": acc}
@@ -265,11 +276,14 @@ def detected_lines(detect, group_lines, union, image) -> list:
 
 def detector_prerequisite(root: str, det_ckpt: str) -> str | None:
     cache = os.environ.get("DOCTR_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "doctr")
-    if os.path.exists(det_ckpt) or glob.glob(os.path.join(cache, "models", "fast_base-*.pt")):
+    # A file under 1 kB is what a failed download leaves behind, not weights (same rule as ocr/api.py).
+    usable = [p for p in [det_ckpt, *glob.glob(os.path.join(cache, "models", "fast_base-*.pt"))]
+              if os.path.isfile(p) and os.path.getsize(p) >= 1024]
+    if usable:
         return None
     return (f"BLOCKED: docTR fast_base text-detector weights are missing: neither {os.path.relpath(det_ckpt, root)} "
-            f"nor {os.path.join(cache, 'models', 'fast_base-*.pt')} exists (download host doctr-static.mindee.com "
-            "is blocked here)")
+            f"nor {os.path.join(cache, 'models', 'fast_base-*.pt')} exists with at least 1 kB (download host "
+            "doctr-static.mindee.com is blocked here)")
 
 
 # ------------------------------------------------------------------ decoding options passed through to the reader
@@ -320,11 +334,13 @@ def read_pages(pages, mods, latency):
             latency["route_ms"].append((t2 - t1) * 1000)
             latency["handwriting_ms"].append((t3 - t2) * 1000)
             printed = " ".join(t for t, _ in pr)
-            p_conf = float(np.mean([c for _, c in pr])) if pr else 0.0
-            share = float(np.mean(p_hw)) if len(p_hw) else 0.0
-            keep, why = oscan.keep_printed(printed, hw_text, crop)
-            choose_hw = (not keep) and hw_conf > p_conf
-            routed = share >= oscan.HW_LINE_SHARE
+            # The same decision functions as Scanner.run (ocr.scan), with the printed line confidence
+            # computed as the pipeline reports it (ocr.pipeline.line_confidence: rounded word confidences).
+            p_conf = oscan.line_confidence([c for _, c in pr]) if pr else 0.0
+            share = oscan.route_share(p_hw)
+            choose_hw, why = oscan.choose_reading(printed, p_conf, hw_text, hw_conf, crop)
+            keep = bool(why)
+            routed = oscan.is_routed(share)
             rows.append({"page": pg["seed"], "line": li, "truth": ln["text"], "printed": printed,
                          "printed_conf": round(p_conf, 4), "handwriting": hw_text, "handwriting_conf": round(hw_conf, 4),
                          "hw_share": round(share, 4), "routed": routed, "keep_printed": keep,
@@ -358,6 +374,7 @@ def score(rows, texts=None) -> dict:
             pages[r["page"]][1].append(t)
         out[k] = {"line": cer_wer(pairs), "page": cer_wer([("\n".join(a), "\n".join(b)) for a, b in pages.values()]),
                   "numeric_line_accuracy": numeric_line(pairs), "fields": field_scores(pairs),
+                  "fields_legacy": field_scores_legacy(pairs),
                   "line_exact": C.frac(sum(norm(p) == norm(t) for p, t in pairs), len(pairs)),
                   "line_exact_ignoring_case": C.frac(sum(norm(p).lower() == norm(t).lower() for p, t in pairs), len(pairs))}
     return out

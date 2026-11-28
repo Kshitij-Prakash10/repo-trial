@@ -148,3 +148,25 @@ transcriptions but lacks image hashes. Use the matching validation and holdout g
 Results include exact numeric lines, parsed drug/value/unit, number sequences on decimal lines and
 per-line CPU timing for the handwriting reader. Timing includes image preparation and decoding and
 excludes page detection, routing and printed OCR.
+
+### Field occurrences, decimals and saved predictions
+
+`benchmarks.fields.match_fields` scores field occurrences for both `run_handwriting` and `run_full_pages`.
+Each predicted occurrence matches at most one reference occurrence. Results give raw counts (exact,
+substitutions, omissions, extras, exact_in_order) and precision / recall; a zero denominator gives rate
+`None`. Field metrics cover only the names in `fields.NAMES`. Decimals are numbers with a point or comma
+(`is_decimal`; "1,000" is a thousands separator) and keep their exact spelling (",5" is not "5").
+The earlier metrics stay under `fields_legacy` / `legacy`. To rescore committed predictions with the
+scoring code of any checkout:
+
+```sh
+python benchmarks/rescore_saved.py --root <checkout> --data-root . --out /tmp/rescore.json
+python benchmarks/diagnose_annotated.py . <run_handwriting result.json> /tmp/diagnosis.json
+```
+
+`run_full_pages.py --page-scanner off` reads like the app does (`/api/ocr` without `scanner`); the
+default `on` matches `Scanner()` and earlier published runs.
+Partial field scores (`value`, `unit`, `case_sensitive_unit`) pair repeated names in reading order and can
+credit a value and a unit from different predicted occurrences; judge whole fields with exact precision /
+recall. The "1,000" thousands rule in `is_decimal` is a synthetic-benchmark convention, not a locale rule
+for real documents.

@@ -75,7 +75,7 @@ def measure(rows, context_edits):
     elapsed = (perf_counter() - start) * 1000 / len(rows)
 
     def scores(pairs):
-        decimals = [(p, t) for p, t in pairs if any("." in x for x in hw.numbers(t))]
+        decimals = [(p, t) for p, t in pairs if hw.has_decimal(t)]
         return {**hw.cer_wer(pairs), "exact": sum(p == t for p, t in pairs),
                 "fields": hw.field_scores(pairs), "numeric_line_exact": hw.numeric_line(pairs),
                 "numeric_sequences_on_decimal_lines": C.frac(sum(hw.numbers(p) == hw.numbers(t) for p, t in decimals),
