@@ -72,14 +72,18 @@ def score(pages, key):
     refs = [(p, r) for p, r in line_pairs if r]  # line-level metrics: reference lines only
     # Field metrics use every aligned pair, so fields on inserted output lines count as extras. Each
     # predicted occurrence matches at most one reference occurrence (benchmarks.fields.match_fields).
+    # Omissions, incomplete fields and decimal credit use the case-insensitive pairing of the field
+    # scores; case_sensitive_unit pairs with case-preserved units (unit_case=True), so "5 ml" and "5 mL"
+    # twice in swapped order are both credited.
     decimals = []
     case_correct = missing = incomplete = 0
     for pred, ref in line_pairs:
-        m = match_fields(parse_fields(pred, preserve_unit_case=True), parse_fields(ref, preserve_unit_case=True))
+        pf, rf = parse_fields(pred, preserve_unit_case=True), parse_fields(ref, preserve_unit_case=True)
+        case_correct += match_fields(pf, rf, unit_case=True)["unit_correct"]
+        m = match_fields(pf, rf)
         for f, got, kind in m["pairs"]:
             missing += kind == "omission"
             incomplete += got is not None and (got["value"] is None or got["unit"] is None)
-            case_correct += got is not None and got["unit"] == f["unit"]
             if is_decimal(f["value"] or ""):
                 decimals.append(got is not None and got["value"] == f["value"])
     fields = field_match_scores(line_pairs)
