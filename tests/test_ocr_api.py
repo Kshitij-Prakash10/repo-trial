@@ -726,3 +726,107 @@ def test_the_misread_digit_check_ships_on_with_one_switch(monkeypatch):
     monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
     assert api._line(dict(ln))["confirm_numbers"] is False
     assert api._line(dict(ln), flag_misread_digits=True)["confirm_numbers"] is True
+
+
+# ---------------------------------------------------------------- upload path vs direct Scanner.run
+def _real_scanner(monkeypatch, image_size):
+    """A real ocr.scan.Scanner whose models are stand-ins: its run() (orientation off, routing, selection,
+    warnings) is the production code; the detector + printed reader return fixed words."""
+    pytest.importorskip("torch")
+    pytest.importorskip("cv2")
+    import hashlib
+
+    import numpy as np
+    from ocr import scan
+    from ocr.pipeline import line_confidence
+    W, H = image_size
+    texts = [("Metformin 500 mg", 0.97, 0.05), ("Ramipril Z.S my", 0.40, 0.92), ("Omeprazole mg", 0.96, 0.05),
+             ("Review 12/04/2026", 0.95, 0.05)]
+
+    class FakeOcr:
+        name = {"detector": "fake", "recogniser": "fake"}
+        rec = None
+
+        def __init__(self):
+            self.use_scanner = True
+            self.seen = []
+
+        def run(self, image, keep_page=False):
+            arr = np.asarray(image)
+            self.seen.append({"mode": image.mode, "size": image.size, "use_scanner": self.use_scanner,
+                              "sha256": hashlib.sha256(arr.tobytes()).hexdigest()})
+            words, lines = [], []
+            for li, (text, conf, _) in enumerate(texts):
+                idx = []
+                for k, t in enumerate(text.split()):
+                    idx.append(len(words))
+                    words.append({"text": t, "confidence": conf, "line": li,
+                                  "box": [10.0 + 40 * k, 10.0 + 25 * li, 45.0 + 40 * k, 30.0 + 25 * li]})
+                lines.append({"text": text, "words": idx, "confidence": line_confidence([conf] * len(idx)),
+                              "box": [10.0, 10.0 + 25 * li, 45.0 + 40 * (len(idx) - 1), 30.0 + 25 * li]})
+            return {"text": "\n".join(t for t, _, _ in texts), "lines": lines, "words": words,
+                    "page": {"width": arr.shape[1], "height": arr.shape[0], "is_scanner_crop": False},
+                    "source": {"width": W, "height": H}, "scanner": {"used": False}, "models": self.name,
+                    "seconds": 0.0, "page_image": arr}
+
+    class FakeHw:
+        name = "fake-handwriting"
+
+        def read(self, crops, **kw):
+            return [("Ramipril 2.5 mg", 0.95) for _ in crops]
+
+    share = {w: hw for w, hw in enumerate([s for t, _, s in texts for _ in t.split()])}
+    monkeypatch.setattr(scan.scriptclf, "handwritten_prob",
+                        lambda clf, crops: np.array([share[i] for i in range(len(crops))]))
+    s = scan.Scanner.__new__(scan.Scanner)
+    s.ocr, s.orient, s.do_deskew, s.flip_check = FakeOcr(), None, False, False
+    s.clf, s.hw, s.postcorrect, s.mask_neighbours, s.flag_misread_digits = object(), FakeHw(), False, False, None
+    return s
+
+
+@pytest.mark.parametrize("mode", ["RGB", "RGBA"])
+@pytest.mark.parametrize("scanner_flag, deskew_flag", [("0", "0"), ("1", "0"), ("0", "1")])
+def test_upload_matches_direct_scanner_run_with_the_same_settings(client, monkeypatch, tmp_path, mode,
+                                                                  scanner_flag, deskew_flag):
+    """The same image bytes through POST /api/ocr and through Scanner.run, with matched settings, give the
+    same text, line order, numbers, warnings and preprocessing, and the reader sees the same pixels."""
+    size = (240, 140)
+    s = _real_scanner(monkeypatch, size)
+    v2_ready(monkeypatch, tmp_path)
+    v1_ready(monkeypatch)
+    monkeypatch.setattr(api, "_load_v2", lambda: s)
+    im = Image.new(mode, size, "white" if mode == "RGB" else (255, 255, 255, 255))
+    ImageDraw.Draw(im).rectangle([10, 10, 200, 120], fill=(20, 20, 20) if mode == "RGB" else (20, 20, 20, 200))
+    data = _upload(im)
+    body = post(client, data, scanner=scanner_flag, deskew=deskew_flag).get_json()
+    api_seen = s.ocr.seen[-1]
+    # direct: decode the same bytes as the API does (EXIF transpose), same flags on the same object
+    from PIL import ImageOps
+    direct_im = ImageOps.exif_transpose(Image.open(io.BytesIO(data)))
+    s.ocr.use_scanner, s.do_deskew = scanner_flag == "1", deskew_flag == "1"
+    direct = s.run(direct_im)
+    direct_seen = s.ocr.seen[-1]
+    assert api_seen == direct_seen  # same pixels, size, mode and page-scanner setting reach the reader
+    assert body["text"] == direct["text"]
+    assert [ln["text"] for ln in body["lines"]] == [ln["text"] for ln in direct["lines"]]
+    for a, d in zip(body["lines"], direct["lines"]):
+        for k in ("confirm_numbers", "has_numbers", "script", "low_confidence", "confidence"):
+            assert a[k] == d[k], (k, a, d)
+    assert body["preprocessing"]["quarter_turns"] == direct["preprocessing"]["quarter_turns"]
+    assert body["preprocessing"]["deskew_degrees"] == direct["preprocessing"]["deskew_degrees"]
+    assert body["preprocessing"]["deskew_applied"] == (deskew_flag == "1")
+    # the routed line took the handwriting reading in both; the lost dose and the routed line are flagged
+    assert body["lines"][1]["text"] == "Ramipril 2.5 mg" and body["lines"][1]["script"] == "handwritten"
+    assert [ln["confirm_numbers"] for ln in body["lines"]] == [False, True, True, False]
+
+
+def test_the_app_request_runs_without_the_page_scanner_stage(client, monkeypatch, tmp_path):
+    """js/ocr.js sends only `image` (and `deskew=1` when ticked): the page-scanner stage is off for the app,
+    while Scanner() and benchmarks/run_full_pages.py default it on (--page-scanner chooses there)."""
+    s = _real_scanner(monkeypatch, (240, 140))
+    v2_ready(monkeypatch, tmp_path)
+    v1_ready(monkeypatch)
+    monkeypatch.setattr(api, "_load_v2", lambda: s)
+    assert post(client, _upload(Image.new("RGB", (240, 140), "white"))).status_code == 200
+    assert s.ocr.seen[-1]["use_scanner"] is False
+    assert s.ocr.use_scanner is False and s.do_deskew is False  # put back after the request

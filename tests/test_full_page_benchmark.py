@@ -59,3 +59,12 @@ def test_geometry_tracks_clockwise_orientation_in_edge_coordinates():
     assert rotated_bounds(quad, 10, 8, 1) == [4, 2, 7, 6]
     assert rotated_bounds(quad, 10, 8, 2) == [4, 4, 8, 7]
     assert rotated_bounds(quad, 10, 8, 3) == [1, 4, 4, 8]
+
+
+def test_settings_record_the_equivalent_app_request():
+    from benchmarks.run_full_pages import APP_SETTINGS, scanner_settings
+    assert APP_SETTINGS == {"page_scanner": False, "deskew": False}
+    on = scanner_settings(True, False)
+    assert on["api_request"] == {"scanner": "1", "deskew": "0"} and on["matches_app_default"] is False
+    off = scanner_settings(False, False)
+    assert off["api_request"] == {"scanner": "0", "deskew": "0"} and off["matches_app_default"] is True

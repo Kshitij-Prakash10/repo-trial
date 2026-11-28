@@ -135,7 +135,19 @@ def paired_outcomes(pages):
     return dict(counts)
 
 
-def run(root, seeds, threads):
+# What the app sends: js/ocr.js posts only `image` (plus deskew=1 when "Straighten tilted text" is ticked),
+# so /api/ocr reads with the page-scanner stage off (ocr/api.py read_page(use_scanner=False)).
+APP_SETTINGS = {"page_scanner": False, "deskew": False}
+
+
+def scanner_settings(page_scanner: bool, deskew: bool) -> dict:
+    """The flags Scanner.run is given here, in the form of the /api/ocr request that reads the same way."""
+    return {"page_scanner": bool(page_scanner), "deskew": bool(deskew),
+            "api_request": {"scanner": "1" if page_scanner else "0", "deskew": "1" if deskew else "0"},
+            "matches_app_default": {"page_scanner": bool(page_scanner), "deskew": bool(deskew)} == APP_SETTINGS}
+
+
+def run(root, seeds, threads, page_scanner=True, deskew=False):
     root = Path(C.use_root(root))
     import torch
     from ocr import common, hwdata, models, scan, scriptclf
@@ -155,10 +167,16 @@ def run(root, seeds, threads):
         detector = cache / "fast_base-688a8b34.pt"
     weights = [detector, Path(models.REC_CKPT), Path(ORIENT_CKPT), Path(scriptclf.CKPT), Path(MODEL_PATH)]
     weights.extend(sorted(Path(HW_DIR).glob("*.safetensors")))
-    if not detector.is_file() or not any(p.suffix == ".safetensors" for p in weights):
-        raise SystemExit("Full-page benchmark needs the local FAST detector and handwriting checkpoint.")
+    from ocr.api import weights_file_ok  # a file under 1 kB is a failed download, not weights
+    if not weights_file_ok(str(detector)) or not any(p.suffix == ".safetensors" for p in weights):
+        raise SystemExit("Full-page benchmark needs the local FAST detector and handwriting checkpoint: "
+                         f"{common.DET_CKPT} or {cache / 'fast_base-688a8b34.pt'} (at least 1 kB), and "
+                         "checkpoints/handwriting_v1/*.safetensors.")
     hashes = {p.name: C.file_sha256(p) for p in weights}
     scanner = scan.Scanner()
+    # Per-request settings, set the way ocr/api.py read_page sets them on the shared Scanner.
+    scanner.ocr.use_scanner = bool(page_scanner)
+    scanner.do_deskew = bool(deskew)
     mods = dict(torch=torch, models=models, scriptclf=scriptclf, hwdata=hwdata, scan=scan,
                 hw=scanner.hw, rec=scanner.ocr.rec, clf=scanner.clf, read_kw={})
     fonts = hw.font_files(str(root))
@@ -186,6 +204,7 @@ def run(root, seeds, threads):
     return dict(git=git, model_sha256=hashes, device="cpu", threads=threads,
                 font_sha256=font_sha256,
                 settings="Scanner() defaults, RGB, seed 2026", seeds=list(seeds),
+                scanner_settings=scanner_settings(page_scanner, deskew),
                 runner_sha256=runner_sha256, generator_sha256=generator_sha256,
                 versions={p: importlib.metadata.version(p) for p in
                           ("torch", "torchvision", "python-doctr", "transformers", "numpy", "scipy", "pillow")},
@@ -200,10 +219,15 @@ if __name__ == "__main__":
     ap.add_argument("--split", choices=["validation", "regression", "holdout"], default="regression")
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--page-scanner", choices=["on", "off"], default="on",
+                    help="page-scanner stage (default on, as Scanner() and earlier published runs; the app "
+                         "sends scanner=0, i.e. off)")
+    ap.add_argument("--deskew", choices=["on", "off"], default="off")
     a = ap.parse_args()
     if a.threads < 1 or (a.limit is not None and a.limit < 1):
         ap.error("threads and limit must be positive")
     splits = dict(validation=hw.VAL_SEEDS, regression=hw.TEST_SEEDS, holdout=range(4100, 4130))
     C.limit_threads(a.threads)
-    report = run(a.root, splits[a.split][:a.limit], a.threads)
-    print(C.write_result(a.out, C.out_name("full_pages_" + a.split, a.limit), report))
+    report = run(a.root, splits[a.split][:a.limit], a.threads, a.page_scanner == "on", a.deskew == "on")
+    suffix = "" if (a.page_scanner, a.deskew) == ("on", "off") else f"_scanner-{a.page_scanner}_deskew-{a.deskew}"
+    print(C.write_result(a.out, C.out_name("full_pages_" + a.split + suffix, a.limit), report))
