@@ -16,7 +16,9 @@
    "decimal_wrong": 1,
    "decimal_wrong_silent": 0,
    "false_warning_on_exact_line": 58,
-   "exact_lines_shown": 86
+   "exact_lines_shown": 86,
+   "number_wrong_where_reference_has_number": 12,
+   "number_invented_where_reference_has_none": 0
   },
   "silent_numeric_errors": []
  },
@@ -37,7 +39,9 @@
    "decimal_wrong": 4,
    "decimal_wrong_silent": 0,
    "false_warning_on_exact_line": 75,
-   "exact_lines_shown": 121
+   "exact_lines_shown": 121,
+   "number_wrong_where_reference_has_number": 21,
+   "number_invented_where_reference_has_none": 0
   },
   "silent_numeric_errors": []
  }

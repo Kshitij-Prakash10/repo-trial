@@ -448,3 +448,14 @@ def test_diagnosis_totals_over_mixed_lines(tmp_path):
     assert num["lines_with_reference_number"] == 3
     assert (num["number_wrong_where_reference_has_number"], num["number_invented_where_reference_has_none"]) == (2, 2)
 
+
+def test_saved_diagnosis_is_what_the_diagnostic_writes(tmp_path):
+    """annotated_diagnosis.json is diagnose_annotated.py run on the committed annotated_branch.json."""
+    import subprocess
+    import sys
+    out = tmp_path / "diagnosis.json"
+    subprocess.run([sys.executable, os.path.join(ROOT, "benchmarks", "diagnose_annotated.py"), ROOT,
+                    os.path.join(ANNOTATED, "annotated_branch.json"), str(out)], check=True, capture_output=True,
+                   cwd=str(tmp_path))
+    with open(os.path.join(ANNOTATED, "annotated_diagnosis.json")) as f:
+        assert json.loads(out.read_text()) == json.load(f)

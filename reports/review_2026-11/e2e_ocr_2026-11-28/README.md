@@ -16,6 +16,7 @@ training, so they are optimistic. **No real pages were scored.**
 | Decimals (`benchmarks/fields.py`) | A leading decimal comma is kept (",5" was read as "5"). `is_decimal` / `has_decimal` replace the dot-only checks in every benchmark path. | None (evaluator only) |
 | Selection parity (`ocr/scan.py`, `ocr/pipeline.py`) | `choose_reading`, `route_share`, `is_routed` and `line_confidence` are shared by `Scanner.run` and the annotated benchmark. | `Scanner.run` unchanged; the benchmark now matches it on near-ties |
 | Upload / direct parity (`tests/test_ocr_api.py`) | Same bytes through `POST /api/ocr` and through `Scanner.run`, with matched flags: same pixels, text, order, numbers, warnings and preprocessing. | None: no divergence found |
+| Review fixes (after `ac3ac30`) | `route_share` averages in the classifier's float32, as `Scanner.run` did before this branch (a float64 mean put a line at exactly 0.5 just below it). `diagnose_annotated.py` compares numbers on every line, so a number invented on a line without one is an error. `case_sensitive_unit` pairs repeated fields with case-preserved units. | Routing: back to the earlier decision at the 0.5 boundary; no saved line is that close (nearest 0.4989 / 0.5011). Diagnosis and scoring: evaluator only, no published number changed |
 | `run_full_pages.py` | `--page-scanner on/off` and `--deskew on/off`, recorded with the equivalent `/api/ocr` request. A zero-byte cached detector no longer passes the prerequisite check. | None |
 
 ## Defects reproduced on 91cfd15
@@ -85,13 +86,15 @@ From `annotated_diagnosis.json`, regression split, 167 lines:
 | Handwriting right but not routed | 1 |
 
 **Numbers:**
-- 21 of 133 lines with a number show a wrong number. All 21 get the "Check the numbers" warning, so there is no silent numeric error.
+- 21 of the 133 lines whose reference holds a number show a wrong number (`number_wrong_where_reference_has_number`).
+- 0 of the 34 lines whose reference holds no number show an invented one (`number_invented_where_reference_has_none`).
+- So 21 of all 167 lines show a wrong number (`number_wrong`). All 21 get the "Check the numbers" warning, so there is no silent numeric error.
 - Of the 27 decimal lines, 4 are wrong, all of them warned.
 - The warning also appears on 75 of the 121 lines read exactly. This is by design: every handwritten line with a number is flagged.
 
 **Validation split, 113 lines:**
 - categories: exact 86, both readers wrong 23, selection 4, routing 0;
-- numbers: 12 wrong, all warned.
+- numbers: 12 of 96 lines with a reference number wrong, 0 of 17 lines without one with an invented number; all 12 warned.
 
 **Conclusion.** With correct crops, recognition errors dominate. Beam search, alternative preprocessing and separator-based selection were all tried before and did not help on fresh pages. No model, threshold or decoder change is supported by this evidence, so none was made.
 
