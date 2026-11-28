@@ -166,3 +166,7 @@ python benchmarks/diagnose_annotated.py . <run_handwriting result.json> /tmp/dia
 
 `run_full_pages.py --page-scanner off` reads like the app does (`/api/ocr` without `scanner`); the
 default `on` matches `Scanner()` and earlier published runs.
+Partial field scores (`value`, `unit`, `case_sensitive_unit`) pair repeated names in reading order and can
+credit a value and a unit from different predicted occurrences; judge whole fields with exact precision /
+recall. The "1,000" thousands rule in `is_decimal` is a synthetic-benchmark convention, not a locale rule
+for real documents.

@@ -207,7 +207,10 @@ def run(root, seeds, threads, page_scanner=True, deskew=False):
                           scanner=result["scanner"], elapsed_s=elapsed))
     return dict(git=git, model_sha256=hashes, device="cpu", threads=threads,
                 font_sha256=font_sha256,
-                settings="Scanner() defaults, RGB, seed 2026", seeds=list(seeds),
+                settings=("Scanner() defaults, RGB, seed 2026" if (page_scanner, deskew) == (True, False) else
+                          f"Scanner() defaults except page_scanner={'on' if page_scanner else 'off'}, "
+                          f"deskew={'on' if deskew else 'off'}; RGB, seed 2026"),
+                seeds=list(seeds),
                 scanner_settings=scanner_settings(page_scanner, deskew),
                 runner_sha256=runner_sha256, generator_sha256=generator_sha256,
                 versions={p: importlib.metadata.version(p) for p in

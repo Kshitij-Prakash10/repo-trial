@@ -142,7 +142,11 @@ _DECIMAL = re.compile(r"^(\d*)[.,](\d+)$")
 
 def is_decimal(number: str) -> bool:
     """True for a number written with a decimal separator: ".5", ",5", "0,5", "2.5". A comma followed by
-    exactly three digits after a non-zero whole part ("1,000") is a thousands separator, not a decimal."""
+    exactly three digits after a non-zero whole part ("1,000") is a thousands separator, not a decimal.
+
+    This three-digit rule is a convention for the synthetic benchmarks only. On real documents it is
+    ambiguous across locales ("1,125" can be 1125 or 1.125): use the reference annotation or the document's
+    known locale for a decimal-specific metric there. Exact transcription keeps the source spelling either way."""
     m = _DECIMAL.match(number or "")
     if not m:
         return False
@@ -185,6 +189,11 @@ def match_fields(pred: list[dict], ref: list[dict], *, unit_case: bool = False) 
 
     The counts do not depend on order (swapping two occurrences of one name keeps both exact);
     `exact_in_order` (longest common subsequence of exact fields) does, so a swap is visible there.
+
+    Tie-break: substitutions pair the remaining occurrences of a name in reading order (first unused
+    prediction). With several differing occurrences of one name this choice can change the partial credit
+    in `value_correct` and `unit_correct`; exact counts, precision and recall do not depend on it. Use exact
+    precision / recall, not the partial scores, to select a model or to judge whole drug/value/unit fields.
     Returns counts plus "pairs": [(reference field, matched predicted field or None, kind)]."""
     P = [_key(f, unit_case) for f in pred]
     R = [_key(f, unit_case) for f in ref]
