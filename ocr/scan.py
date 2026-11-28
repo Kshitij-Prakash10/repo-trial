@@ -136,9 +136,13 @@ class Scanner:
 
 
 def route_share(word_handwritten_probs) -> float:
-    """A line's handwriting share: the mean P(handwritten) of its words (0 for a line without words)."""
-    p = np.asarray(word_handwritten_probs, float)
-    return float(p.mean()) if p.size else 0.0
+    """A line's handwriting share: the mean P(handwritten) of its words (0 for a line without words).
+
+    The mean is taken in the input's dtype (float32 from the script classifier) and only then converted
+    to a Python float, as Scanner.run did before this helper: averaging in float64 instead moves some
+    lines from exactly 0.5 to just below it, so they would skip the handwriting reader."""
+    p = np.asarray(word_handwritten_probs)
+    return float(np.mean(p)) if p.size else 0.0
 
 
 def is_routed(share: float) -> bool:

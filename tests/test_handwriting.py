@@ -560,6 +560,55 @@ class _ParityHw:
 def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_reading, routed, chosen):
     """benchmarks/run_handwriting.read_pages must pick the reading Scanner.run picks from identical reader
     outputs and confidences; both call ocr.scan.route_share / is_routed / choose_reading."""
+    share = 0.9 if routed else 0.1
+    row, line = _benchmark_and_scanner_line(monkeypatch, printed_words, hw_reading,
+                                            lambda n: np.full(n, share), chosen)
+    assert row["shipped"] == line["text"] == chosen
+    assert row["routed"] == routed
+
+
+def _boundary_probs():
+    return np.array([np.float32(0.5), np.nextafter(np.float32(0.5), np.float32(0.0))], dtype=np.float32)
+
+
+def test_route_share_keeps_the_classifier_dtype_at_the_threshold():
+    """The classifier returns float32; the scanner took the mean in float32 before PR #16. Converting to
+    float64 first gives a mean just below 0.5 for this line, which skipped the handwriting reader."""
+    from ocr.scan import HW_LINE_SHARE, is_routed, route_share
+    assert HW_LINE_SHARE == 0.5
+    probs = _boundary_probs()
+    # This is how the scanner computed the share before PR #16.
+    expected = float(np.mean(probs))
+    assert expected == 0.5
+    assert route_share(probs) == expected
+    assert is_routed(route_share(probs))
+    assert type(route_share(probs)) is float
+
+
+def test_route_share_controls():
+    """Unambiguous lines route the same way whatever the dtype; an empty line has share 0."""
+    from ocr.scan import is_routed, route_share
+    below = np.array([0.2, 0.3], dtype=np.float32)
+    above = np.array([0.6, 0.9], dtype=np.float32)
+    assert route_share(below) == pytest.approx(0.25) and not is_routed(route_share(below))
+    assert route_share(above) == pytest.approx(0.75) and is_routed(route_share(above))
+    assert route_share(np.zeros(0, dtype=np.float32)) == 0.0 and route_share([]) == 0.0
+    assert not is_routed(route_share([]))
+
+
+def test_scanner_and_benchmark_route_the_float32_boundary_line(monkeypatch):
+    """Scanner.run and read_pages both use route_share: the boundary line is routed on both paths."""
+    words = [("Ramipril", 0.41), ("Z.S", 0.30)]
+    row, line = _benchmark_and_scanner_line(monkeypatch, words, ("Ramipril 2.5", 0.95),
+                                            lambda n: _boundary_probs()[:n], "Ramipril 2.5")
+    assert row["routed"] is True and row["hw_share"] == 0.5
+    assert line["handwritten_share"] == 0.5 and line["handwriting_text"] == "Ramipril 2.5"
+    assert row["shipped"] == line["text"] == "Ramipril 2.5"
+
+
+def _benchmark_and_scanner_line(monkeypatch, printed_words, hw_reading, probs, chosen):
+    """One line through benchmarks/run_handwriting.read_pages and through Scanner.run, with the same
+    printed words, boxes, readers and per-word P(handwritten) probs(n_words). Returns (row, line)."""
     from benchmarks import run_handwriting as RH
     from ocr import hwdata, scan
     H, W = 60, 40 + 60 * len(printed_words)
@@ -567,8 +616,7 @@ def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_
     page[20:40, 20:W - 20] = 0  # some ink so crops are not empty
     quads = [np.array([[20 + 60 * k, 20], [70 + 60 * k, 20], [70 + 60 * k, 40], [20 + 60 * k, 40]], float)
              for k in range(len(printed_words))]
-    share = 0.9 if routed else 0.1
-    monkeypatch.setattr(scan.scriptclf, "handwritten_prob", lambda clf, crops: np.full(len(crops), share))
+    monkeypatch.setattr(scan.scriptclf, "handwritten_prob", lambda clf, crops: probs(len(crops)))
     # benchmark path
     pg = {"seed": 0, "image": page, "lines": [{"text": chosen, "words": [{"quad": q} for q in quads]}]}
     mods = dict(torch=None, models=None, scriptclf=scan.scriptclf, hwdata=hwdata, scan=scan,
@@ -596,8 +644,7 @@ def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_
     s.clf, s.hw, s.postcorrect, s.mask_neighbours, s.flag_misread_digits = object(), _ParityHw(hw_reading), False, False, True
     from PIL import Image
     (line,) = s.run(Image.fromarray(page))["lines"]
-    assert row["shipped"] == line["text"] == chosen
-    assert row["routed"] == routed
+    return row, line
 
 
 def test_shipped_selection_keeps_a_blood_pressure_reading():
