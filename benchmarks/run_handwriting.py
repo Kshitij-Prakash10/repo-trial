@@ -331,11 +331,13 @@ def read_pages(pages, mods, latency):
             latency["route_ms"].append((t2 - t1) * 1000)
             latency["handwriting_ms"].append((t3 - t2) * 1000)
             printed = " ".join(t for t, _ in pr)
-            p_conf = float(np.mean([c for _, c in pr])) if pr else 0.0
-            share = float(np.mean(p_hw)) if len(p_hw) else 0.0
-            keep, why = oscan.keep_printed(printed, hw_text, crop)
-            choose_hw = (not keep) and hw_conf > p_conf
-            routed = share >= oscan.HW_LINE_SHARE
+            # The same decision functions as Scanner.run (ocr.scan), with the printed line confidence
+            # computed as the pipeline reports it (ocr.pipeline.line_confidence: rounded word confidences).
+            p_conf = oscan.line_confidence([c for _, c in pr]) if pr else 0.0
+            share = oscan.route_share(p_hw)
+            choose_hw, why = oscan.choose_reading(printed, p_conf, hw_text, hw_conf, crop)
+            keep = bool(why)
+            routed = oscan.is_routed(share)
             rows.append({"page": pg["seed"], "line": li, "truth": ln["text"], "printed": printed,
                          "printed_conf": round(p_conf, 4), "handwriting": hw_text, "handwriting_conf": round(hw_conf, 4),
                          "hw_share": round(share, 4), "routed": routed, "keep_printed": keep,

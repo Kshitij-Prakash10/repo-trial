@@ -519,3 +519,82 @@ def test_scanner_checks_misread_digits_by_default_and_can_be_told_not_to(monkeyp
     assert run() == [True, False] and run(True) == [True, False] and run(False) == [False, False]
     monkeypatch.setattr(common, "FLAG_MISREAD_DIGITS", False)
     assert run() == [False, False] and S.Scanner().flag_misread_digits is False
+
+
+# ---------------------------------------------------------------- benchmark / production selection parity
+class _FakeRec:
+    """Printed recogniser stand-in: returns fixed (text, confidence) per word crop, in order."""
+
+    def __init__(self, words):
+        self.words = words
+
+    def __call__(self, crops):
+        assert len(crops) == len(self.words)
+        return list(self.words)
+
+
+class _FakeHw:
+    name = "fake-handwriting"
+
+    def __init__(self, reading):
+        self.reading = reading
+
+    def read(self, crops, **kw):
+        return [self.reading for _ in crops]
+
+
+@pytest.mark.parametrize("printed_words, hw_reading, routed, chosen", [
+    # handwriting more confident: chosen
+    ([("Ramipril", 0.41), ("Z.S", 0.30), ("my", 0.35)], ("Ramipril 2.5 mg", 0.95), True, "Ramipril 2.5 mg"),
+    # printed more confident: kept
+    ([("Ramipril", 0.99), ("2.5", 0.98), ("mg", 0.99)], ("Ramipril 25 mg", 0.90), True, "Ramipril 2.5 mg"),
+    # near tie: the printed line confidence the pipeline reports is the mean of rounded word confidences
+    # (0.9000); the unrounded mean is 0.90004. A handwriting confidence of 0.90002 beats the former only.
+    ([("Lorazepam", 0.90004), ("0.5", 0.90004), ("mg", 0.90004)], ("Lorazepam .5 mg", 0.90002), True,
+     "Lorazepam .5 mg"),
+    # a row of dashes keeps its printed reading whatever the handwriting confidence
+    ([("-----", 0.40)], ("sentence Valuable", 0.95), True, "-----"),
+    # not routed: printed reading whatever the confidences
+    ([("Ramipril", 0.41), ("Z.S", 0.30), ("my", 0.35)], ("Ramipril 2.5 mg", 0.95), False, "Ramipril Z.S my"),
+])
+def test_benchmark_selection_matches_scanner_run(monkeypatch, printed_words, hw_reading, routed, chosen):
+    """benchmarks/run_handwriting.read_pages must pick the reading Scanner.run picks from identical reader
+    outputs and confidences; both call ocr.scan.route_share / is_routed / choose_reading."""
+    from benchmarks import run_handwriting as RH
+    from ocr import hwdata, scan
+    H, W = 60, 40 + 60 * len(printed_words)
+    page = np.full((H, W, 3), 255, np.uint8)
+    page[20:40, 20:W - 20] = 0  # some ink so crops are not empty
+    quads = [np.array([[20 + 60 * k, 20], [70 + 60 * k, 20], [70 + 60 * k, 40], [20 + 60 * k, 40]], float)
+             for k in range(len(printed_words))]
+    share = 0.9 if routed else 0.1
+    monkeypatch.setattr(scan.scriptclf, "handwritten_prob", lambda clf, crops: np.full(len(crops), share))
+    # benchmark path
+    pg = {"seed": 0, "image": page, "lines": [{"text": chosen, "words": [{"quad": q} for q in quads]}]}
+    mods = dict(torch=None, models=None, scriptclf=scan.scriptclf, hwdata=hwdata, scan=scan,
+                hw=_FakeHw(hw_reading), rec=_FakeRec(printed_words), clf=object(), read_kw={})
+    (row,) = RH.read_pages([pg], mods, {k: [] for k in ("printed_ms", "route_ms", "handwriting_ms")})
+    # production path: Scanner.run with the same printed words, boxes and readers (no orientation)
+
+    class FakeOcr:
+        name = {"detector": "fake", "recogniser": "fake"}
+        use_scanner = False
+        rec = None
+
+        def run(self, image, keep_page=False):
+            words = [{"text": t, "confidence": round(c, 4), "box": [float(v) for v in (*q.min(0), *q.max(0))],
+                      "line": 0} for (t, c), q in zip(printed_words, quads)]
+            from ocr.pipeline import line_confidence
+            line = {"text": " ".join(t for t, _ in printed_words), "words": list(range(len(words))),
+                    "box": [20.0, 20.0, float(W - 20), 40.0], "confidence": line_confidence([c for _, c in printed_words])}
+            return {"text": line["text"], "lines": [line], "words": words, "page": {"width": W, "height": H},
+                    "source": {"width": W, "height": H}, "scanner": {"used": False}, "models": self.name,
+                    "seconds": 0.0, "page_image": page}
+
+    s = scan.Scanner.__new__(scan.Scanner)
+    s.ocr, s.orient, s.do_deskew, s.flip_check = FakeOcr(), None, False, False
+    s.clf, s.hw, s.postcorrect, s.mask_neighbours, s.flag_misread_digits = object(), _FakeHw(hw_reading), False, False, True
+    from PIL import Image
+    (line,) = s.run(Image.fromarray(page))["lines"]
+    assert row["shipped"] == line["text"] == chosen
+    assert row["routed"] == routed
