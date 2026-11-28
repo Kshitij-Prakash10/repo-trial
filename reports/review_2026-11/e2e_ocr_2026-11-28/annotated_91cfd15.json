@@ -1,0 +1,6481 @@
+{
+ "benchmark": "handwriting",
+ "candidate_selector": {
+  "chosen_margin": -0.05,
+  "rule": "handwriting reading when its confidence exceeds the printed one by more than the margin (keep_printed still applies, routing assumed); margin chosen on validation by line CER",
+  "shipped_margin_equivalent": 0.0,
+  "validation_cer_by_margin": {
+   "+0.00": 0.0225,
+   "+0.05": 0.0271,
+   "+0.10": 0.033,
+   "+0.15": 0.0392,
+   "+0.20": 0.0455,
+   "+0.25": 0.0555,
+   "+0.30": 0.0676,
+   "-0.05": 0.0213,
+   "-0.10": 0.0221,
+   "-0.15": 0.0225,
+   "-0.20": 0.0238,
+   "-0.25": 0.0259,
+   "-0.30": 0.0259
+  }
+ },
+ "data": {
+  "fonts": 24,
+  "kind": "synthetic, invented text, rendered with data/raw/fonts (seen in training: optimistic)",
+  "test_seeds": [
+   1000,
+   1029
+  ],
+  "validation_seeds": [
+   0,
+   19
+  ]
+ },
+ "detected_lines": {
+  "status": "BLOCKED: docTR fast_base text-detector weights are missing: neither models/ocr/det_fast_base_ft.pt nor /tmp/claude-0/-home-user-repo-trial/aab1d323-54ba-58c1-877b-55ee24394209/scratchpad/e2e/empty-doctr-cache/models/fast_base-*.pt exists (download host doctr-static.mindee.com is blocked here)"
+ },
+ "generated_at": "2026-11-28T10:47:21+00:00",
+ "git": {
+  "code_dirty": false,
+  "commit": "91cfd152b256f0fe0ee42589d0d561f27490f682",
+  "dirty_files": []
+ },
+ "hw_options": {
+  "constructor": {},
+  "ignored": {},
+  "read": {},
+  "requested": {}
+ },
+ "latency": {
+  "handwriting_ms": {
+   "mean_ms": 334.4,
+   "median_ms": 326.9,
+   "n": 280
+  },
+  "printed_ms": {
+   "mean_ms": 39.4,
+   "median_ms": 36.0,
+   "n": 280
+  },
+  "route_ms": {
+   "mean_ms": 4.4,
+   "median_ms": 4.2,
+   "n": 280
+  }
+ },
+ "readers": {
+  "handwriting": "/tmp/claude-0/-home-user-repo-trial/aab1d323-54ba-58c1-877b-55ee24394209/scratchpad/e2e/main-wt/checkpoints/handwriting_v1",
+  "printed": "models/ocr/rec_crnn_mobilenet_v3_large_ft.pt"
+ },
+ "real_heldout_pages": "BLOCKED: GNHK / IAM need huggingface.co (blocked here)",
+ "root": "/tmp/claude-0/-home-user-repo-trial/aab1d323-54ba-58c1-877b-55ee24394209/scratchpad/e2e/main-wt",
+ "test": {
+  "calibration": {
+   "handwriting_reader": {
+    "by_threshold": {
+     "0.50": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 61,
+       "rate": 0.3653
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 28,
+       "rate": 0.2105
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 5,
+       "rate": 0.1852
+      }
+     },
+     "0.55": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 61,
+       "rate": 0.3653
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 28,
+       "rate": 0.2105
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 5,
+       "rate": 0.1852
+      }
+     },
+     "0.60": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 61,
+       "rate": 0.3653
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 28,
+       "rate": 0.2105
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 5,
+       "rate": 0.1852
+      }
+     },
+     "0.65": {
+      "accepted": {
+       "den": 167,
+       "num": 166,
+       "rate": 0.994
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 166,
+       "num": 60,
+       "rate": 0.3614
+      },
+      "number_errors_among_accepted": {
+       "den": 132,
+       "num": 27,
+       "rate": 0.2045
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 5,
+       "rate": 0.1852
+      }
+     },
+     "0.70": {
+      "accepted": {
+       "den": 167,
+       "num": 163,
+       "rate": 0.976
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 163,
+       "num": 57,
+       "rate": 0.3497
+      },
+      "number_errors_among_accepted": {
+       "den": 129,
+       "num": 25,
+       "rate": 0.1938
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 26,
+       "num": 5,
+       "rate": 0.1923
+      }
+     },
+     "0.75": {
+      "accepted": {
+       "den": 167,
+       "num": 156,
+       "rate": 0.9341
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 156,
+       "num": 51,
+       "rate": 0.3269
+      },
+      "number_errors_among_accepted": {
+       "den": 122,
+       "num": 24,
+       "rate": 0.1967
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 25,
+       "num": 5,
+       "rate": 0.2
+      }
+     },
+     "0.80": {
+      "accepted": {
+       "den": 167,
+       "num": 146,
+       "rate": 0.8743
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 146,
+       "num": 44,
+       "rate": 0.3014
+      },
+      "number_errors_among_accepted": {
+       "den": 112,
+       "num": 23,
+       "rate": 0.2054
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 5,
+       "rate": 0.2381
+      }
+     },
+     "0.85": {
+      "accepted": {
+       "den": 167,
+       "num": 124,
+       "rate": 0.7425
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 124,
+       "num": 31,
+       "rate": 0.25
+      },
+      "number_errors_among_accepted": {
+       "den": 91,
+       "num": 16,
+       "rate": 0.1758
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "Amoxicillin 1.25 mg BD -> Amoxicillin 125 mg BD (0.88)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 16,
+       "num": 5,
+       "rate": 0.3125
+      }
+     },
+     "0.90": {
+      "accepted": {
+       "den": 167,
+       "num": 92,
+       "rate": 0.5509
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 92,
+       "num": 13,
+       "rate": 0.1413
+      },
+      "number_errors_among_accepted": {
+       "den": 61,
+       "num": 4,
+       "rate": 0.0656
+      },
+      "wrong_decimal_examples": [
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 11,
+       "num": 2,
+       "rate": 0.1818
+      }
+     },
+     "0.95": {
+      "accepted": {
+       "den": 167,
+       "num": 45,
+       "rate": 0.2695
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 45,
+       "num": 6,
+       "rate": 0.1333
+      },
+      "number_errors_among_accepted": {
+       "den": 18,
+       "num": 1,
+       "rate": 0.0556
+      },
+      "wrong_decimal_examples": [],
+      "wrong_decimals_among_accepted": {
+       "den": 3,
+       "num": 0,
+       "rate": 0.0
+      }
+     }
+    },
+    "reliability": [
+     {
+      "bin": "[0.6, 0.7)",
+      "line_exact": {
+       "den": 4,
+       "num": 0,
+       "rate": 0.0
+      },
+      "mean_confidence": 0.6767,
+      "n": 4
+     },
+     {
+      "bin": "[0.7, 0.8)",
+      "line_exact": {
+       "den": 17,
+       "num": 4,
+       "rate": 0.2353
+      },
+      "mean_confidence": 0.7567,
+      "n": 17
+     },
+     {
+      "bin": "[0.8, 0.9)",
+      "line_exact": {
+       "den": 54,
+       "num": 23,
+       "rate": 0.4259
+      },
+      "mean_confidence": 0.8545,
+      "n": 54
+     },
+     {
+      "bin": "[0.9, 1.0)",
+      "line_exact": {
+       "den": 92,
+       "num": 79,
+       "rate": 0.8587
+      },
+      "mean_confidence": 0.9488,
+      "n": 92
+     }
+    ]
+   },
+   "shipped": {
+    "by_threshold": {
+     "0.50": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 46,
+       "rate": 0.2754
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 21,
+       "rate": 0.1579
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 4,
+       "rate": 0.1481
+      }
+     },
+     "0.55": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 46,
+       "rate": 0.2754
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 21,
+       "rate": 0.1579
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 4,
+       "rate": 0.1481
+      }
+     },
+     "0.60": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 46,
+       "rate": 0.2754
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 21,
+       "rate": 0.1579
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 4,
+       "rate": 0.1481
+      }
+     },
+     "0.65": {
+      "accepted": {
+       "den": 167,
+       "num": 167,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 167,
+       "num": 46,
+       "rate": 0.2754
+      },
+      "number_errors_among_accepted": {
+       "den": 133,
+       "num": 21,
+       "rate": 0.1579
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 27,
+       "num": 4,
+       "rate": 0.1481
+      }
+     },
+     "0.70": {
+      "accepted": {
+       "den": 167,
+       "num": 165,
+       "rate": 0.988
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 165,
+       "num": 44,
+       "rate": 0.2667
+      },
+      "number_errors_among_accepted": {
+       "den": 131,
+       "num": 20,
+       "rate": 0.1527
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 26,
+       "num": 4,
+       "rate": 0.1538
+      }
+     },
+     "0.75": {
+      "accepted": {
+       "den": 167,
+       "num": 161,
+       "rate": 0.9641
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 161,
+       "num": 41,
+       "rate": 0.2547
+      },
+      "number_errors_among_accepted": {
+       "den": 127,
+       "num": 20,
+       "rate": 0.1575
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 26,
+       "num": 4,
+       "rate": 0.1538
+      }
+     },
+     "0.80": {
+      "accepted": {
+       "den": 167,
+       "num": 153,
+       "rate": 0.9162
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 153,
+       "num": 36,
+       "rate": 0.2353
+      },
+      "number_errors_among_accepted": {
+       "den": 119,
+       "num": 18,
+       "rate": 0.1513
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 24,
+       "num": 4,
+       "rate": 0.1667
+      }
+     },
+     "0.85": {
+      "accepted": {
+       "den": 167,
+       "num": 131,
+       "rate": 0.7844
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 131,
+       "num": 25,
+       "rate": 0.1908
+      },
+      "number_errors_among_accepted": {
+       "den": 100,
+       "num": 14,
+       "rate": 0.14
+      },
+      "wrong_decimal_examples": [
+       "3. Lactulose 2.5 mL OD -> 3. Lactulose 2.5 mL 00 (0.90)",
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "5. Ramipril 12.5 mg twice daily -> 5. R-amipril 125 mg twice daily (0.87)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 19,
+       "num": 4,
+       "rate": 0.2105
+      }
+     },
+     "0.90": {
+      "accepted": {
+       "den": 167,
+       "num": 98,
+       "rate": 0.5868
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 98,
+       "num": 12,
+       "rate": 0.1224
+      },
+      "number_errors_among_accepted": {
+       "den": 69,
+       "num": 5,
+       "rate": 0.0725
+      },
+      "wrong_decimal_examples": [
+       "5. Salbutamol 1.25 mg after meals -> 5. Salbutamol 125 mg after meals (0.91)",
+       "3. Paracetamol 1.25 mg at night -> 3. Paracetamol 125 mg at night (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 12,
+       "num": 2,
+       "rate": 0.1667
+      }
+     },
+     "0.95": {
+      "accepted": {
+       "den": 167,
+       "num": 48,
+       "rate": 0.2874
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 48,
+       "num": 5,
+       "rate": 0.1042
+      },
+      "number_errors_among_accepted": {
+       "den": 25,
+       "num": 1,
+       "rate": 0.04
+      },
+      "wrong_decimal_examples": [],
+      "wrong_decimals_among_accepted": {
+       "den": 4,
+       "num": 0,
+       "rate": 0.0
+      }
+     }
+    },
+    "reliability": [
+     {
+      "bin": "[0.6, 0.7)",
+      "line_exact": {
+       "den": 2,
+       "num": 0,
+       "rate": 0.0
+      },
+      "mean_confidence": 0.6816,
+      "n": 2
+     },
+     {
+      "bin": "[0.7, 0.8)",
+      "line_exact": {
+       "den": 12,
+       "num": 4,
+       "rate": 0.3333
+      },
+      "mean_confidence": 0.7619,
+      "n": 12
+     },
+     {
+      "bin": "[0.8, 0.9)",
+      "line_exact": {
+       "den": 55,
+       "num": 31,
+       "rate": 0.5636
+      },
+      "mean_confidence": 0.8566,
+      "n": 55
+     },
+     {
+      "bin": "[0.9, 1.0)",
+      "line_exact": {
+       "den": 98,
+       "num": 86,
+       "rate": 0.8776
+      },
+      "mean_confidence": 0.9492,
+      "n": 98
+     }
+    ]
+   }
+  },
+  "diagnosis": {
+   "lines_exact_by_either_reader (oracle selection)": {
+    "den": 167,
+    "num": 131,
+    "rate": 0.7844
+   },
+   "lines_exact_shipped": {
+    "den": 167,
+    "num": 121,
+    "rate": 0.7246
+   },
+   "reader_disagreement (numbers)": {
+    "den": 167,
+    "num": 44,
+    "rate": 0.2635
+   },
+   "reader_disagreement (text)": {
+    "den": 167,
+    "num": 110,
+    "rate": 0.6587
+   },
+   "recognition_loss (both readers wrong)": {
+    "den": 167,
+    "num": 36,
+    "rate": 0.2156
+   },
+   "routed_to_handwriting": {
+    "den": 167,
+    "num": 142,
+    "rate": 0.8503
+   },
+   "routing_loss (handwriting right, line not routed)": {
+    "den": 167,
+    "num": 1,
+    "rate": 0.006
+   },
+   "selection_loss (one reader right, shipped wrong)": {
+    "den": 167,
+    "num": 10,
+    "rate": 0.0599
+   }
+  },
+  "n_lines": 167,
+  "n_pages": 30,
+  "rows": [
+   {
+    "handwriting": "stop if rash",
+    "handwriting_conf": 0.9776,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1000,
+    "printed": "Stop if rash",
+    "printed_conf": 0.8925,
+    "routed": true,
+    "shipped": "stop if rash",
+    "shipped_conf": 0.9776,
+    "shipped_if_routed": "stop if rash",
+    "shipped_if_routed_conf": 0.9776,
+    "truth": "Stop if rash"
+   },
+   {
+    "handwriting": "Atorvastatin 500 mg B0",
+    "handwriting_conf": 0.8571,
+    "hw_share": 0.8433,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1000,
+    "printed": "Atorvastatin 500 m9 Bo",
+    "printed_conf": 0.6345,
+    "routed": true,
+    "shipped": "Atorvastatin 500 mg B0",
+    "shipped_conf": 0.8571,
+    "shipped_if_routed": "Atorvastatin 500 mg B0",
+    "shipped_if_routed_conf": 0.8571,
+    "truth": "Atorvastatin 500 mg BD"
+   },
+   {
+    "handwriting": "3. Lactulose 2.5 mL 00",
+    "handwriting_conf": 0.896,
+    "hw_share": 0.9987,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1000,
+    "printed": "3. Lactulose 2.5 ml 00",
+    "printed_conf": 0.8192,
+    "routed": true,
+    "shipped": "3. Lactulose 2.5 mL 00",
+    "shipped_conf": 0.896,
+    "shipped_if_routed": "3. Lactulose 2.5 mL 00",
+    "shipped_if_routed_conf": 0.896,
+    "truth": "3. Lactulose 2.5 mL OD"
+   },
+   {
+    "handwriting": "1. Bisoprolo1 10 mg twice daily",
+    "handwriting_conf": 0.7726,
+    "hw_share": 0.9827,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1000,
+    "printed": "L Bisoprolol 1O mg twice daily",
+    "printed_conf": 0.7045,
+    "routed": true,
+    "shipped": "1. Bisoprolo1 10 mg twice daily",
+    "shipped_conf": 0.7726,
+    "shipped_if_routed": "1. Bisoprolo1 10 mg twice daily",
+    "shipped_if_routed_conf": 0.7726,
+    "truth": "1. Bisoprolol 10 mg twice daily"
+   },
+   {
+    "handwriting": "see me if worse",
+    "handwriting_conf": 0.9972,
+    "hw_share": 0.9983,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1000,
+    "printed": "See me if worse",
+    "printed_conf": 0.895,
+    "routed": true,
+    "shipped": "see me if worse",
+    "shipped_conf": 0.9972,
+    "shipped_if_routed": "see me if worse",
+    "shipped_if_routed_conf": 0.9972,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "Atorvastatin 500 mg TOS",
+    "handwriting_conf": 0.8304,
+    "hw_share": 0.7502,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1000,
+    "printed": "Atorvastatin 500 mg TOS",
+    "printed_conf": 0.8169,
+    "routed": true,
+    "shipped": "Atorvastatin 500 mg TOS",
+    "shipped_conf": 0.8304,
+    "shipped_if_routed": "Atorvastatin 500 mg TOS",
+    "shipped_if_routed_conf": 0.8304,
+    "truth": "Atorvastatin 500 mg TDS"
+   },
+   {
+    "handwriting": "Amlodipine 12.5mg twice daily",
+    "handwriting_conf": 0.819,
+    "hw_share": 0.9995,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1000,
+    "printed": "Amlodipine 12.5 mg twice daily",
+    "printed_conf": 0.6351,
+    "routed": true,
+    "shipped": "Amlodipine 12.5mg twice daily",
+    "shipped_conf": 0.819,
+    "shipped_if_routed": "Amlodipine 12.5mg twice daily",
+    "shipped_if_routed_conf": 0.819,
+    "truth": "Amlodipine 12.5 mg twice daily"
+   },
+   {
+    "handwriting": "Aspirin 5 mg nocte",
+    "handwriting_conf": 0.9705,
+    "hw_share": 0.9911,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1001,
+    "printed": "Aspirin 5 mg nocte",
+    "printed_conf": 0.7918,
+    "routed": true,
+    "shipped": "Aspirin 5 mg nocte",
+    "shipped_conf": 0.9705,
+    "shipped_if_routed": "Aspirin 5 mg nocte",
+    "shipped_if_routed_conf": 0.9705,
+    "truth": "Aspirin 5 mg nocte"
+   },
+   {
+    "handwriting": "2. Insulin 12 units prn",
+    "handwriting_conf": 0.884,
+    "hw_share": 0.9871,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1001,
+    "printed": "2. Isulin 12 unts Pm",
+    "printed_conf": 0.7356,
+    "routed": true,
+    "shipped": "2. Insulin 12 units prn",
+    "shipped_conf": 0.884,
+    "shipped_if_routed": "2. Insulin 12 units prn",
+    "shipped_if_routed_conf": 0.884,
+    "truth": "2. Insulin 12 units prn"
+   },
+   {
+    "handwriting": "stop if rash",
+    "handwriting_conf": 0.8641,
+    "hw_share": 0.6692,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1001,
+    "printed": "Stop f rash",
+    "printed_conf": 0.8458,
+    "routed": true,
+    "shipped": "stop if rash",
+    "shipped_conf": 0.8641,
+    "shipped_if_routed": "stop if rash",
+    "shipped_if_routed_conf": 0.8641,
+    "truth": "Stop if rash"
+   },
+   {
+    "handwriting": "4. Sertraline 5 mg twice daily",
+    "handwriting_conf": 0.9581,
+    "hw_share": 0.9809,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1001,
+    "printed": "4. Sertraline 5 mg twice cady",
+    "printed_conf": 0.8645,
+    "routed": true,
+    "shipped": "4. Sertraline 5 mg twice daily",
+    "shipped_conf": 0.9581,
+    "shipped_if_routed": "4. Sertraline 5 mg twice daily",
+    "shipped_if_routed_conf": 0.9581,
+    "truth": "4. Sertraline 5 mg twice daily"
+   },
+   {
+    "handwriting": "Low salt diet",
+    "handwriting_conf": 0.9695,
+    "hw_share": 0.9814,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1001,
+    "printed": "Low salt diet",
+    "printed_conf": 0.836,
+    "routed": true,
+    "shipped": "Low salt diet",
+    "shipped_conf": 0.9695,
+    "shipped_if_routed": "Low salt diet",
+    "shipped_if_routed_conf": 0.9695,
+    "truth": "Low salt diet"
+   },
+   {
+    "handwriting": "3. Levothyroxine 100 mcg B0",
+    "handwriting_conf": 0.875,
+    "hw_share": 0.6265,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1001,
+    "printed": "3. Levothyrasine 100 meg BD",
+    "printed_conf": 0.76,
+    "routed": true,
+    "shipped": "3. Levothyroxine 100 mcg B0",
+    "shipped_conf": 0.875,
+    "shipped_if_routed": "3. Levothyroxine 100 mcg B0",
+    "shipped_if_routed_conf": 0.875,
+    "truth": "3. Levothyroxine 100 mcg BD"
+   },
+   {
+    "handwriting": "Amoxicillin 10 mg nocte",
+    "handwriting_conf": 0.8855,
+    "hw_share": 0.7542,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1002,
+    "printed": "Amoxicillin 10 mo noute",
+    "printed_conf": 0.6424,
+    "routed": true,
+    "shipped": "Amoxicillin 10 mg nocte",
+    "shipped_conf": 0.8855,
+    "shipped_if_routed": "Amoxicillin 10 mg nocte",
+    "shipped_if_routed_conf": 0.8855,
+    "truth": "Amoxicillin 10 mg nocte"
+   },
+   {
+    "handwriting": "Continue same medicines",
+    "handwriting_conf": 0.9721,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1002,
+    "printed": "Continue SAme medicines",
+    "printed_conf": 0.6211,
+    "routed": true,
+    "shipped": "Continue same medicines",
+    "shipped_conf": 0.9721,
+    "shipped_if_routed": "Continue same medicines",
+    "shipped_if_routed_conf": 0.9721,
+    "truth": "Continue same medicines"
+   },
+   {
+    "handwriting": "Levothyroxine 25 mug nocte",
+    "handwriting_conf": 0.8176,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1002,
+    "printed": "Levothyvovine 25 mco noute",
+    "printed_conf": 0.6154,
+    "routed": true,
+    "shipped": "Levothyroxine 25 mug nocte",
+    "shipped_conf": 0.8176,
+    "shipped_if_routed": "Levothyroxine 25 mug nocte",
+    "shipped_if_routed_conf": 0.8176,
+    "truth": "Levothyroxine 25 mcg nocte"
+   },
+   {
+    "handwriting": "Review in clinic",
+    "handwriting_conf": 0.9812,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1002,
+    "printed": "Review in cinic",
+    "printed_conf": 0.7215,
+    "routed": true,
+    "shipped": "Review in clinic",
+    "shipped_conf": 0.9812,
+    "shipped_if_routed": "Review in clinic",
+    "shipped_if_routed_conf": 0.9812,
+    "truth": "Review in clinic"
+   },
+   {
+    "handwriting": "Signed",
+    "handwriting_conf": 0.989,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1002,
+    "printed": "Sigyned",
+    "printed_conf": 0.4659,
+    "routed": true,
+    "shipped": "Signed",
+    "shipped_conf": 0.989,
+    "shipped_if_routed": "Signed",
+    "shipped_if_routed_conf": 0.989,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "2. Furosemide 50 mg at night",
+    "handwriting_conf": 0.8659,
+    "hw_share": 0.9989,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1003,
+    "printed": "2. qurosemide 50 mer nt nignt",
+    "printed_conf": 0.4571,
+    "routed": true,
+    "shipped": "2. Furosemide 50 mg at night",
+    "shipped_conf": 0.8659,
+    "shipped_if_routed": "2. Furosemide 50 mg at night",
+    "shipped_if_routed_conf": 0.8659,
+    "truth": "2. Furosemide 50 mg at night"
+   },
+   {
+    "handwriting": "Review on 12/08/2026",
+    "handwriting_conf": 0.8429,
+    "hw_share": 0.9991,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1003,
+    "printed": "Review on 17-/08/2-076",
+    "printed_conf": 0.4831,
+    "routed": true,
+    "shipped": "Review on 12/08/2026",
+    "shipped_conf": 0.8429,
+    "shipped_if_routed": "Review on 12/08/2026",
+    "shipped_if_routed_conf": 0.8429,
+    "truth": "Review on 12/08/2026"
+   },
+   {
+    "handwriting": "Lactulose 15 mL twice daily",
+    "handwriting_conf": 0.7822,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1003,
+    "printed": "Lactulose 1s ML twice doilry",
+    "printed_conf": 0.5297,
+    "routed": true,
+    "shipped": "Lactulose 15 mL twice daily",
+    "shipped_conf": 0.7822,
+    "shipped_if_routed": "Lactulose 15 mL twice daily",
+    "shipped_if_routed_conf": 0.7822,
+    "truth": "Lactulose 15 mL twice daily"
+   },
+   {
+    "handwriting": "Metformin 500 mg once daily",
+    "handwriting_conf": 0.9156,
+    "hw_share": 0.9974,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1003,
+    "printed": "Metformin 500 my onee doilry",
+    "printed_conf": 0.433,
+    "routed": true,
+    "shipped": "Metformin 500 mg once daily",
+    "shipped_conf": 0.9156,
+    "shipped_if_routed": "Metformin 500 mg once daily",
+    "shipped_if_routed_conf": 0.9156,
+    "truth": "Metformin 500 mg once daily"
+   },
+   {
+    "handwriting": "BP 153/87",
+    "handwriting_conf": 0.9065,
+    "hw_share": 0.9992,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1003,
+    "printed": "Bp 153/87",
+    "printed_conf": 0.8471,
+    "routed": true,
+    "shipped": "BP 153/87",
+    "shipped_conf": 0.9065,
+    "shipped_if_routed": "BP 153/87",
+    "shipped_if_routed_conf": 0.9065,
+    "truth": "BP 153/87"
+   },
+   {
+    "handwriting": "Paracetamol 1.25 mg prn",
+    "handwriting_conf": 0.7728,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1003,
+    "printed": "Parnectamol 1.2-5 mer Prn",
+    "printed_conf": 0.3751,
+    "routed": true,
+    "shipped": "Paracetamol 1.25 mg prn",
+    "shipped_conf": 0.7728,
+    "shipped_if_routed": "Paracetamol 1.25 mg prn",
+    "shipped_if_routed_conf": 0.7728,
+    "truth": "Paracetamol 1.25 mg prn"
+   },
+   {
+    "handwriting": "Insulin 10 units nocte",
+    "handwriting_conf": 0.9429,
+    "hw_share": 0.9993,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1003,
+    "printed": "Ensulin 10 uni-ts nocte",
+    "printed_conf": 0.8851,
+    "routed": true,
+    "shipped": "Insulin 10 units nocte",
+    "shipped_conf": 0.9429,
+    "shipped_if_routed": "Insulin 10 units nocte",
+    "shipped_if_routed_conf": 0.9429,
+    "truth": "Insulin 10 units nocte"
+   },
+   {
+    "handwriting": "Metformin 100 mg 0D",
+    "handwriting_conf": 0.8509,
+    "hw_share": 0.9974,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1004,
+    "printed": "Metformin 100 mey OD",
+    "printed_conf": 0.6177,
+    "routed": true,
+    "shipped": "Metformin 100 mg 0D",
+    "shipped_conf": 0.8509,
+    "shipped_if_routed": "Metformin 100 mg 0D",
+    "shipped_if_routed_conf": 0.8509,
+    "truth": "Metformin 100 mg OD"
+   },
+   {
+    "handwriting": "Sertraline 20 mg twice daily",
+    "handwriting_conf": 0.9365,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1004,
+    "printed": "surtrnline 2-0 mey twice doiluy",
+    "printed_conf": 0.4372,
+    "routed": true,
+    "shipped": "Sertraline 20 mg twice daily",
+    "shipped_conf": 0.9365,
+    "shipped_if_routed": "Sertraline 20 mg twice daily",
+    "shipped_if_routed_conf": 0.9365,
+    "truth": "Sertraline 20 mg twice daily"
+   },
+   {
+    "handwriting": "check sugar weekly",
+    "handwriting_conf": 0.9941,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1004,
+    "printed": "Check Sugnr wekly",
+    "printed_conf": 0.5671,
+    "routed": true,
+    "shipped": "check sugar weekly",
+    "shipped_conf": 0.9941,
+    "shipped_if_routed": "check sugar weekly",
+    "shipped_if_routed_conf": 0.9941,
+    "truth": "Check sugar weekly"
+   },
+   {
+    "handwriting": "Review on 28/09/2026",
+    "handwriting_conf": 0.9217,
+    "hw_share": 0.9735,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1004,
+    "printed": "Review on 18/09/2-026",
+    "printed_conf": 0.4691,
+    "routed": true,
+    "shipped": "Review on 28/09/2026",
+    "shipped_conf": 0.9217,
+    "shipped_if_routed": "Review on 28/09/2026",
+    "shipped_if_routed_conf": 0.9217,
+    "truth": "Review on 28/09/2026"
+   },
+   {
+    "handwriting": "Bisoprobol 20 mg OD",
+    "handwriting_conf": 0.7081,
+    "hw_share": 0.9962,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1004,
+    "printed": "TAsopralal 2-0 mey OD",
+    "printed_conf": 0.4071,
+    "routed": true,
+    "shipped": "Bisoprobol 20 mg OD",
+    "shipped_conf": 0.7081,
+    "shipped_if_routed": "Bisoprobol 20 mg OD",
+    "shipped_if_routed_conf": 0.7081,
+    "truth": "Bisoprolol 20 mg OD"
+   },
+   {
+    "handwriting": "5. Salbutamol 125 mg after meals",
+    "handwriting_conf": 0.9073,
+    "hw_share": 0.9888,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1005,
+    "printed": "5. Salbutamol 1.25 mg after meals",
+    "printed_conf": 0.7551,
+    "routed": true,
+    "shipped": "5. Salbutamol 125 mg after meals",
+    "shipped_conf": 0.9073,
+    "shipped_if_routed": "5. Salbutamol 125 mg after meals",
+    "shipped_if_routed_conf": 0.9073,
+    "truth": "5. Salbutamol 1.25 mg after meals"
+   },
+   {
+    "handwriting": "Review on 23/10/2026",
+    "handwriting_conf": 0.9225,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1005,
+    "printed": "Review On 23/0/2026",
+    "printed_conf": 0.7462,
+    "routed": true,
+    "shipped": "Review on 23/10/2026",
+    "shipped_conf": 0.9225,
+    "shipped_if_routed": "Review on 23/10/2026",
+    "shipped_if_routed_conf": 0.9225,
+    "truth": "Review on 23/10/2026"
+   },
+   {
+    "handwriting": "3. Gliclazide 100 mg pm",
+    "handwriting_conf": 0.794,
+    "hw_share": 0.8289,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1005,
+    "printed": "3. Gliclazide 100 mg Pvn",
+    "printed_conf": 0.5935,
+    "routed": true,
+    "shipped": "3. Gliclazide 100 mg pm",
+    "shipped_conf": 0.794,
+    "shipped_if_routed": "3. Gliclazide 100 mg pm",
+    "shipped_if_routed_conf": 0.794,
+    "truth": "3. Gliclazide 100 mg prn"
+   },
+   {
+    "handwriting": "salbutamol 50 mg 00",
+    "handwriting_conf": 0.9684,
+    "hw_share": 0.9207,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1005,
+    "printed": "Salbutamol 50 mg 00",
+    "printed_conf": 0.8631,
+    "routed": true,
+    "shipped": "salbutamol 50 mg 00",
+    "shipped_conf": 0.9684,
+    "shipped_if_routed": "salbutamol 50 mg 00",
+    "shipped_if_routed_conf": 0.9684,
+    "truth": "Salbutamol 50 mg OD"
+   },
+   {
+    "handwriting": "Review in clinic",
+    "handwriting_conf": 0.9844,
+    "hw_share": 0.1057,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1006,
+    "printed": "Review in clinic",
+    "printed_conf": 0.8429,
+    "routed": false,
+    "shipped": "Review in clinic",
+    "shipped_conf": 0.8429,
+    "shipped_if_routed": "Review in clinic",
+    "shipped_if_routed_conf": 0.9844,
+    "truth": "Review in clinic"
+   },
+   {
+    "handwriting": "Warfarin 2.5 mg pm",
+    "handwriting_conf": 0.7925,
+    "hw_share": 0.0019,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1006,
+    "printed": "Warfarin 2.5 mg prn",
+    "printed_conf": 0.8863,
+    "routed": false,
+    "shipped": "Warfarin 2.5 mg prn",
+    "shipped_conf": 0.8863,
+    "shipped_if_routed": "Warfarin 2.5 mg prn",
+    "shipped_if_routed_conf": 0.8863,
+    "truth": "Warfarin 2.5 mg prn"
+   },
+   {
+    "handwriting": "Review in clinic",
+    "handwriting_conf": 0.9833,
+    "hw_share": 0.1469,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1006,
+    "printed": "Review in cinic",
+    "printed_conf": 0.839,
+    "routed": false,
+    "shipped": "Review in cinic",
+    "shipped_conf": 0.839,
+    "shipped_if_routed": "Review in clinic",
+    "shipped_if_routed_conf": 0.9833,
+    "truth": "Review in clinic"
+   },
+   {
+    "handwriting": "Furosemide 100 mg once daily",
+    "handwriting_conf": 0.9567,
+    "hw_share": 0.1036,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1006,
+    "printed": "Furosemide 100 mg once daily",
+    "printed_conf": 0.9048,
+    "routed": false,
+    "shipped": "Furosemide 100 mg once daily",
+    "shipped_conf": 0.9048,
+    "shipped_if_routed": "Furosemide 100 mg once daily",
+    "shipped_if_routed_conf": 0.9567,
+    "truth": "Furosemide 100 mg once daily"
+   },
+   {
+    "handwriting": "BP 142/9/2",
+    "handwriting_conf": 0.648,
+    "hw_share": 0.0034,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1006,
+    "printed": "BP 142/92",
+    "printed_conf": 0.8213,
+    "routed": false,
+    "shipped": "BP 142/92",
+    "shipped_conf": 0.8213,
+    "shipped_if_routed": "BP 142/92",
+    "shipped_if_routed_conf": 0.8213,
+    "truth": "BP 142/92"
+   },
+   {
+    "handwriting": "Amoxicillin 125 mg BD",
+    "handwriting_conf": 0.8832,
+    "hw_share": 0.0623,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1006,
+    "printed": "Amoxicillin 1.25 mg BD",
+    "printed_conf": 0.8439,
+    "routed": false,
+    "shipped": "Amoxicillin 1.25 mg BD",
+    "shipped_conf": 0.8439,
+    "shipped_if_routed": "Amoxicillin 125 mg BD",
+    "shipped_if_routed_conf": 0.8832,
+    "truth": "Amoxicillin 1.25 mg BD"
+   },
+   {
+    "handwriting": "4. Ramipril 20 mg OD",
+    "handwriting_conf": 0.9046,
+    "hw_share": 0.723,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1007,
+    "printed": "4. Ramiprd 20 mg OD",
+    "printed_conf": 0.771,
+    "routed": true,
+    "shipped": "4. Ramipril 20 mg OD",
+    "shipped_conf": 0.9046,
+    "shipped_if_routed": "4. Ramipril 20 mg OD",
+    "shipped_if_routed_conf": 0.9046,
+    "truth": "4. Ramipril 20 mg OD"
+   },
+   {
+    "handwriting": "BP 138778",
+    "handwriting_conf": 0.8191,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1007,
+    "printed": "BP 138/78",
+    "printed_conf": 0.7137,
+    "routed": true,
+    "shipped": "BP 138778",
+    "shipped_conf": 0.8191,
+    "shipped_if_routed": "BP 138778",
+    "shipped_if_routed_conf": 0.8191,
+    "truth": "BP 138/78"
+   },
+   {
+    "handwriting": "Review on 15/0872026",
+    "handwriting_conf": 0.8681,
+    "hw_share": 0.6733,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1007,
+    "printed": "Review on 15/08/2026",
+    "printed_conf": 0.933,
+    "routed": true,
+    "shipped": "Review on 15/08/2026",
+    "shipped_conf": 0.933,
+    "shipped_if_routed": "Review on 15/08/2026",
+    "shipped_if_routed_conf": 0.933,
+    "truth": "Review on 15/08/2026"
+   },
+   {
+    "handwriting": "Omeprazole 40 mg at night",
+    "handwriting_conf": 0.8102,
+    "hw_share": 0.8209,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1007,
+    "printed": "Omeprazole 40 mg a rigat",
+    "printed_conf": 0.5309,
+    "routed": true,
+    "shipped": "Omeprazole 40 mg at night",
+    "shipped_conf": 0.8102,
+    "shipped_if_routed": "Omeprazole 40 mg at night",
+    "shipped_if_routed_conf": 0.8102,
+    "truth": "Omeprazole 40 mg at night"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.9834,
+    "hw_share": 0.8773,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1007,
+    "printed": "Take wrth food",
+    "printed_conf": 0.6668,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.9834,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.9834,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "Signed",
+    "handwriting_conf": 0.9962,
+    "hw_share": 0.9905,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1007,
+    "printed": "Simed",
+    "printed_conf": 0.5161,
+    "routed": true,
+    "shipped": "Signed",
+    "shipped_conf": 0.9962,
+    "shipped_if_routed": "Signed",
+    "shipped_if_routed_conf": 0.9962,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "1. Insulin 10 units TDS",
+    "handwriting_conf": 0.9263,
+    "hw_share": 0.9706,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1008,
+    "printed": "/. Insulin 10 units TDS",
+    "printed_conf": 0.8682,
+    "routed": true,
+    "shipped": "1. Insulin 10 units TDS",
+    "shipped_conf": 0.9263,
+    "shipped_if_routed": "1. Insulin 10 units TDS",
+    "shipped_if_routed_conf": 0.9263,
+    "truth": "1. Insulin 10 units TDS"
+   },
+   {
+    "handwriting": "Review on 2110912026",
+    "handwriting_conf": 0.8599,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1008,
+    "printed": "Review on 2110912026",
+    "printed_conf": 0.7519,
+    "routed": true,
+    "shipped": "Review on 2110912026",
+    "shipped_conf": 0.8599,
+    "shipped_if_routed": "Review on 2110912026",
+    "shipped_if_routed_conf": 0.8599,
+    "truth": "Review on 21/09/2026"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.9206,
+    "hw_share": 0.9989,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1008,
+    "printed": "See me if worse",
+    "printed_conf": 0.8978,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.9206,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.9206,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "BP 152193",
+    "handwriting_conf": 0.8939,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1008,
+    "printed": "BP 152/93",
+    "printed_conf": 0.8281,
+    "routed": true,
+    "shipped": "BP 152193",
+    "shipped_conf": 0.8939,
+    "shipped_if_routed": "BP 152193",
+    "shipped_if_routed_conf": 0.8939,
+    "truth": "BP 152/93"
+   },
+   {
+    "handwriting": "Salbutamol 2.5 mg once daily",
+    "handwriting_conf": 0.8675,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1008,
+    "printed": "Salbutamal 2.5 m9 once daily",
+    "printed_conf": 0.6926,
+    "routed": true,
+    "shipped": "Salbutamol 2.5 mg once daily",
+    "shipped_conf": 0.8675,
+    "shipped_if_routed": "Salbutamol 2.5 mg once daily",
+    "shipped_if_routed_conf": 0.8675,
+    "truth": "Salbutamol 2.5 mg once daily"
+   },
+   {
+    "handwriting": "Lorazepam 2.5 mg twice daily",
+    "handwriting_conf": 0.9682,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1008,
+    "printed": "Lorazepam 2.5 m9 twice aaily",
+    "printed_conf": 0.7159,
+    "routed": true,
+    "shipped": "Lorazepam 2.5 mg twice daily",
+    "shipped_conf": 0.9682,
+    "shipped_if_routed": "Lorazepam 2.5 mg twice daily",
+    "shipped_if_routed_conf": 0.9682,
+    "truth": "Lorazepam 2.5 mg twice daily"
+   },
+   {
+    "handwriting": "Aspirin 5 mg 0D",
+    "handwriting_conf": 0.8875,
+    "hw_share": 0.6251,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1009,
+    "printed": "Asptin 5 mg OD",
+    "printed_conf": 0.8605,
+    "routed": true,
+    "shipped": "Aspirin 5 mg 0D",
+    "shipped_conf": 0.8875,
+    "shipped_if_routed": "Aspirin 5 mg 0D",
+    "shipped_if_routed_conf": 0.8875,
+    "truth": "Aspirin 5 mg OD"
+   },
+   {
+    "handwriting": "1. Ramipril 50 mg 0D",
+    "handwriting_conf": 0.8601,
+    "hw_share": 0.5935,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1009,
+    "printed": "1. Rampnil 50 mg OD",
+    "printed_conf": 0.7907,
+    "routed": true,
+    "shipped": "1. Ramipril 50 mg 0D",
+    "shipped_conf": 0.8601,
+    "shipped_if_routed": "1. Ramipril 50 mg 0D",
+    "shipped_if_routed_conf": 0.8601,
+    "truth": "1. Ramipril 50 mg OD"
+   },
+   {
+    "handwriting": "Digoxin 25 mcg once daily",
+    "handwriting_conf": 0.9547,
+    "hw_share": 0.7716,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1009,
+    "printed": "Digpain 25 mcg once daly",
+    "printed_conf": 0.7386,
+    "routed": true,
+    "shipped": "Digoxin 25 mcg once daily",
+    "shipped_conf": 0.9547,
+    "shipped_if_routed": "Digoxin 25 mcg once daily",
+    "shipped_if_routed_conf": 0.9547,
+    "truth": "Digoxin 25 mcg once daily"
+   },
+   {
+    "handwriting": "3. Metformin 500 mg at night",
+    "handwriting_conf": 0.9356,
+    "hw_share": 0.6862,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1009,
+    "printed": "3. Mctformin 500 mg at rigl",
+    "printed_conf": 0.756,
+    "routed": true,
+    "shipped": "3. Metformin 500 mg at night",
+    "shipped_conf": 0.9356,
+    "shipped_if_routed": "3. Metformin 500 mg at night",
+    "shipped_if_routed_conf": 0.9356,
+    "truth": "3. Metformin 500 mg at night"
+   },
+   {
+    "handwriting": "1. Bisoprolo! 20 mg nocte",
+    "handwriting_conf": 0.7445,
+    "hw_share": 0.8893,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1009,
+    "printed": "1. Beprold 20 mg nocie",
+    "printed_conf": 0.6323,
+    "routed": true,
+    "shipped": "1. Bisoprolo! 20 mg nocte",
+    "shipped_conf": 0.7445,
+    "shipped_if_routed": "1. Bisoprolo! 20 mg nocte",
+    "shipped_if_routed_conf": 0.7445,
+    "truth": "1. Bisoprolol 20 mg nocte"
+   },
+   {
+    "handwriting": "Atoryastatin 100 mg twice daily",
+    "handwriting_conf": 0.9034,
+    "hw_share": 0.9803,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1010,
+    "printed": "Atorvastain 100 mg fwice daly",
+    "printed_conf": 0.6052,
+    "routed": true,
+    "shipped": "Atoryastatin 100 mg twice daily",
+    "shipped_conf": 0.9034,
+    "shipped_if_routed": "Atoryastatin 100 mg twice daily",
+    "shipped_if_routed_conf": 0.9034,
+    "truth": "Atorvastatin 100 mg twice daily"
+   },
+   {
+    "handwriting": "Omegazole 75 mg after meals",
+    "handwriting_conf": 0.7914,
+    "hw_share": 0.9967,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1010,
+    "printed": "Omeprazole 15 mg affer meals",
+    "printed_conf": 0.6738,
+    "routed": true,
+    "shipped": "Omegazole 75 mg after meals",
+    "shipped_conf": 0.7914,
+    "shipped_if_routed": "Omegazole 75 mg after meals",
+    "shipped_if_routed_conf": 0.7914,
+    "truth": "Omeprazole 75 mg after meals"
+   },
+   {
+    "handwriting": "BP 13/1/89",
+    "handwriting_conf": 0.8286,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1010,
+    "printed": "BP 131/89",
+    "printed_conf": 0.9314,
+    "routed": true,
+    "shipped": "BP 131/89",
+    "shipped_conf": 0.9314,
+    "shipped_if_routed": "BP 131/89",
+    "shipped_if_routed_conf": 0.9314,
+    "truth": "BP 131/89"
+   },
+   {
+    "handwriting": "Low salt diet",
+    "handwriting_conf": 0.9666,
+    "hw_share": 0.6581,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1010,
+    "printed": "Low salt diet",
+    "printed_conf": 0.9548,
+    "routed": true,
+    "shipped": "Low salt diet",
+    "shipped_conf": 0.9666,
+    "shipped_if_routed": "Low salt diet",
+    "shipped_if_routed_conf": 0.9666,
+    "truth": "Low salt diet"
+   },
+   {
+    "handwriting": "Gliclade 50 mg once daily",
+    "handwriting_conf": 0.8606,
+    "hw_share": 0.0714,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1011,
+    "printed": "Gliclazide 50 mg once daily",
+    "printed_conf": 0.8948,
+    "routed": false,
+    "shipped": "Gliclazide 50 mg once daily",
+    "shipped_conf": 0.8948,
+    "shipped_if_routed": "Gliclazide 50 mg once daily",
+    "shipped_if_routed_conf": 0.8948,
+    "truth": "Gliclazide 50 mg once daily"
+   },
+   {
+    "handwriting": "Insulin 16 units at night",
+    "handwriting_conf": 0.9738,
+    "hw_share": 0.3939,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1011,
+    "printed": "Insulin 16 units at night",
+    "printed_conf": 0.9395,
+    "routed": false,
+    "shipped": "Insulin 16 units at night",
+    "shipped_conf": 0.9395,
+    "shipped_if_routed": "Insulin 16 units at night",
+    "shipped_if_routed_conf": 0.9738,
+    "truth": "Insulin 16 units at night"
+   },
+   {
+    "handwriting": "BP 126/18",
+    "handwriting_conf": 0.8033,
+    "hw_share": 0.4782,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1011,
+    "printed": "BP 126/78",
+    "printed_conf": 0.9185,
+    "routed": false,
+    "shipped": "BP 126/78",
+    "shipped_conf": 0.9185,
+    "shipped_if_routed": "BP 126/78",
+    "shipped_if_routed_conf": 0.9185,
+    "truth": "BP 126/78"
+   },
+   {
+    "handwriting": "Amoxicillin 1.25 mg at night",
+    "handwriting_conf": 0.9063,
+    "hw_share": 0.1573,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1011,
+    "printed": "Amoxicillin 1.25 mg at night",
+    "printed_conf": 0.8834,
+    "routed": false,
+    "shipped": "Amoxicillin 1.25 mg at night",
+    "shipped_conf": 0.8834,
+    "shipped_if_routed": "Amoxicillin 1.25 mg at night",
+    "shipped_if_routed_conf": 0.9063,
+    "truth": "Amoxicillin 1.25 mg at night"
+   },
+   {
+    "handwriting": "1. Omerazole 500 mg BD",
+    "handwriting_conf": 0.9155,
+    "hw_share": 0.9619,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1012,
+    "printed": "/. Omeprazole 500 mg BD",
+    "printed_conf": 0.9404,
+    "routed": true,
+    "shipped": "/. Omeprazole 500 mg BD",
+    "shipped_conf": 0.9404,
+    "shipped_if_routed": "/. Omeprazole 500 mg BD",
+    "shipped_if_routed_conf": 0.9404,
+    "truth": "1. Omeprazole 500 mg BD"
+   },
+   {
+    "handwriting": "3. Paracetamol 10 mg",
+    "handwriting_conf": 0.9493,
+    "hw_share": 0.9456,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1012,
+    "printed": "3. Paracetamol 10 mg",
+    "printed_conf": 0.8821,
+    "routed": true,
+    "shipped": "3. Paracetamol 10 mg",
+    "shipped_conf": 0.9493,
+    "shipped_if_routed": "3. Paracetamol 10 mg",
+    "shipped_if_routed_conf": 0.9493,
+    "truth": "3. Paracetamol 10 mg"
+   },
+   {
+    "handwriting": "Low salt diet",
+    "handwriting_conf": 0.9841,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1012,
+    "printed": "Low salt diet",
+    "printed_conf": 0.9953,
+    "routed": true,
+    "shipped": "Low salt diet",
+    "shipped_conf": 0.9953,
+    "shipped_if_routed": "Low salt diet",
+    "shipped_if_routed_conf": 0.9953,
+    "truth": "Low salt diet"
+   },
+   {
+    "handwriting": "BP 14/1162",
+    "handwriting_conf": 0.6956,
+    "hw_share": 0.8217,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1012,
+    "printed": "BP 141/62",
+    "printed_conf": 0.746,
+    "routed": true,
+    "shipped": "BP 141/62",
+    "shipped_conf": 0.746,
+    "shipped_if_routed": "BP 141/62",
+    "shipped_if_routed_conf": 0.746,
+    "truth": "BP 141/62"
+   },
+   {
+    "handwriting": "Lorazepam 0.5 mg nocte",
+    "handwriting_conf": 0.9674,
+    "hw_share": 0.9941,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1012,
+    "printed": "Lorazepam 0.5 mg nocte",
+    "printed_conf": 0.9372,
+    "routed": true,
+    "shipped": "Lorazepam 0.5 mg nocte",
+    "shipped_conf": 0.9674,
+    "shipped_if_routed": "Lorazepam 0.5 mg nocte",
+    "shipped_if_routed_conf": 0.9674,
+    "truth": "Lorazepam 0.5 mg nocte"
+   },
+   {
+    "handwriting": "5. Sertraline 20 mg",
+    "handwriting_conf": 0.9024,
+    "hw_share": 0.9757,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1012,
+    "printed": "S. Sertraline 20 mg",
+    "printed_conf": 0.853,
+    "routed": true,
+    "shipped": "5. Sertraline 20 mg",
+    "shipped_conf": 0.9024,
+    "shipped_if_routed": "5. Sertraline 20 mg",
+    "shipped_if_routed_conf": 0.9024,
+    "truth": "5. Sertraline 20 mg"
+   },
+   {
+    "handwriting": "Review on 1810912026",
+    "handwriting_conf": 0.9073,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1013,
+    "printed": "Review on 1810912026",
+    "printed_conf": 0.6588,
+    "routed": true,
+    "shipped": "Review on 1810912026",
+    "shipped_conf": 0.9073,
+    "shipped_if_routed": "Review on 1810912026",
+    "shipped_if_routed_conf": 0.9073,
+    "truth": "Review on 18/09/2026"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.947,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1013,
+    "printed": "See me if worse",
+    "printed_conf": 0.8731,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.947,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.947,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "4. Prednisolone 5 mg after meals",
+    "handwriting_conf": 0.9715,
+    "hw_share": 0.9953,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1013,
+    "printed": "4. Prednisolone 5 m9 after meals",
+    "printed_conf": 0.7752,
+    "routed": true,
+    "shipped": "4. Prednisolone 5 mg after meals",
+    "shipped_conf": 0.9715,
+    "shipped_if_routed": "4. Prednisolone 5 mg after meals",
+    "shipped_if_routed_conf": 0.9715,
+    "truth": "4. Prednisolone 5 mg after meals"
+   },
+   {
+    "handwriting": "Lactulose 10 mL prn",
+    "handwriting_conf": 0.7198,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1013,
+    "printed": "Lactulose 10 mL prn",
+    "printed_conf": 0.8469,
+    "routed": true,
+    "shipped": "Lactulose 10 mL prn",
+    "shipped_conf": 0.8469,
+    "shipped_if_routed": "Lactulose 10 mL prn",
+    "shipped_if_routed_conf": 0.8469,
+    "truth": "Lactulose 10 mL prn"
+   },
+   {
+    "handwriting": "3. Bisoprdol 10 mg after meals",
+    "handwriting_conf": 0.8557,
+    "hw_share": 0.9987,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1013,
+    "printed": "3. Bisoprolal 10 m9 after meals",
+    "printed_conf": 0.7353,
+    "routed": true,
+    "shipped": "3. Bisoprdol 10 mg after meals",
+    "shipped_conf": 0.8557,
+    "shipped_if_routed": "3. Bisoprdol 10 mg after meals",
+    "shipped_if_routed_conf": 0.8557,
+    "truth": "3. Bisoprolol 10 mg after meals"
+   },
+   {
+    "handwriting": "5. Atorvastatin 500 mg",
+    "handwriting_conf": 0.8563,
+    "hw_share": 0.8937,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1013,
+    "printed": "5. Atorvastatin 500 mg",
+    "printed_conf": 0.7026,
+    "routed": true,
+    "shipped": "5. Atorvastatin 500 mg",
+    "shipped_conf": 0.8563,
+    "shipped_if_routed": "5. Atorvastatin 500 mg",
+    "shipped_if_routed_conf": 0.8563,
+    "truth": "5. Atorvastatin 500 mg"
+   },
+   {
+    "handwriting": "4. Furosemide 5 mg twice daily",
+    "handwriting_conf": 0.9186,
+    "hw_share": 0.9982,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1013,
+    "printed": "4. Furosemide 5 m9 twice daily",
+    "printed_conf": 0.8376,
+    "routed": true,
+    "shipped": "4. Furosemide 5 mg twice daily",
+    "shipped_conf": 0.9186,
+    "shipped_if_routed": "4. Furosemide 5 mg twice daily",
+    "shipped_if_routed_conf": 0.9186,
+    "truth": "4. Furosemide 5 mg twice daily"
+   },
+   {
+    "handwriting": "Review on 02/01/ 2026",
+    "handwriting_conf": 0.9048,
+    "hw_share": 0.692,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1014,
+    "printed": "Review On 02/01/2026",
+    "printed_conf": 0.9108,
+    "routed": true,
+    "shipped": "Review On 02/01/2026",
+    "shipped_conf": 0.9108,
+    "shipped_if_routed": "Review On 02/01/2026",
+    "shipped_if_routed_conf": 0.9108,
+    "truth": "Review on 02/01/2026"
+   },
+   {
+    "handwriting": "1. Sertraline 10 mg BD",
+    "handwriting_conf": 0.9357,
+    "hw_share": 0.3307,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1014,
+    "printed": "1. Sertraline 10 mg BD",
+    "printed_conf": 0.8708,
+    "routed": false,
+    "shipped": "1. Sertraline 10 mg BD",
+    "shipped_conf": 0.8708,
+    "shipped_if_routed": "1. Sertraline 10 mg BD",
+    "shipped_if_routed_conf": 0.9357,
+    "truth": "1. Sertraline 10 mg BD"
+   },
+   {
+    "handwriting": "Gliclazide 50 mg",
+    "handwriting_conf": 0.8497,
+    "hw_share": 0.4804,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1014,
+    "printed": "Gliclazide 50 mg",
+    "printed_conf": 0.987,
+    "routed": false,
+    "shipped": "Gliclazide 50 mg",
+    "shipped_conf": 0.987,
+    "shipped_if_routed": "Gliclazide 50 mg",
+    "shipped_if_routed_conf": 0.987,
+    "truth": "Gliclazide 50 mg"
+   },
+   {
+    "handwriting": "Amoxicillin 5 mg after meals",
+    "handwriting_conf": 0.9321,
+    "hw_share": 0.5011,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1014,
+    "printed": "Amoxicillin 5 mg after meals",
+    "printed_conf": 0.9356,
+    "routed": true,
+    "shipped": "Amoxicillin 5 mg after meals",
+    "shipped_conf": 0.9356,
+    "shipped_if_routed": "Amoxicillin 5 mg after meals",
+    "shipped_if_routed_conf": 0.9356,
+    "truth": "Amoxicillin 5 mg after meals"
+   },
+   {
+    "handwriting": "signed",
+    "handwriting_conf": 0.9932,
+    "hw_share": 0.0002,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1015,
+    "printed": "Signed",
+    "printed_conf": 0.9042,
+    "routed": false,
+    "shipped": "Signed",
+    "shipped_conf": 0.9042,
+    "shipped_if_routed": "signed",
+    "shipped_if_routed_conf": 0.9932,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "Low salt diet",
+    "handwriting_conf": 0.9855,
+    "hw_share": 0.6711,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1015,
+    "printed": "Low salt diet",
+    "printed_conf": 0.9538,
+    "routed": true,
+    "shipped": "Low salt diet",
+    "shipped_conf": 0.9855,
+    "shipped_if_routed": "Low salt diet",
+    "shipped_if_routed_conf": 0.9855,
+    "truth": "Low salt diet"
+   },
+   {
+    "handwriting": "1. Amoxicillin 40 mg",
+    "handwriting_conf": 0.9292,
+    "hw_share": 0.2333,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1015,
+    "printed": "1. Amoxicillin 40 mg",
+    "printed_conf": 0.8829,
+    "routed": false,
+    "shipped": "1. Amoxicillin 40 mg",
+    "shipped_conf": 0.8829,
+    "shipped_if_routed": "1. Amoxicillin 40 mg",
+    "shipped_if_routed_conf": 0.9292,
+    "truth": "1. Amoxicillin 40 mg"
+   },
+   {
+    "handwriting": "Amoxicillin 5 mg once daily",
+    "handwriting_conf": 0.9074,
+    "hw_share": 0.2027,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1015,
+    "printed": "Amoxicillin 5 mg once daily",
+    "printed_conf": 0.9704,
+    "routed": false,
+    "shipped": "Amoxicillin 5 mg once daily",
+    "shipped_conf": 0.9704,
+    "shipped_if_routed": "Amoxicillin 5 mg once daily",
+    "shipped_if_routed_conf": 0.9704,
+    "truth": "Amoxicillin 5 mg once daily"
+   },
+   {
+    "handwriting": "salbutamol 75 mg OD",
+    "handwriting_conf": 0.8954,
+    "hw_share": 0.1756,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1015,
+    "printed": "Salbutamol 75 mg OD",
+    "printed_conf": 0.9106,
+    "routed": false,
+    "shipped": "Salbutamol 75 mg OD",
+    "shipped_conf": 0.9106,
+    "shipped_if_routed": "Salbutamol 75 mg OD",
+    "shipped_if_routed_conf": 0.9106,
+    "truth": "Salbutamol 75 mg OD"
+   },
+   {
+    "handwriting": "Amlodipine 5 mg OD",
+    "handwriting_conf": 0.8478,
+    "hw_share": 0.2336,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1015,
+    "printed": "Amlodipine 5 mg OD",
+    "printed_conf": 0.9717,
+    "routed": false,
+    "shipped": "Amlodipine 5 mg OD",
+    "shipped_conf": 0.9717,
+    "shipped_if_routed": "Amlodipine 5 mg OD",
+    "shipped_if_routed_conf": 0.9717,
+    "truth": "Amlodipine 5 mg OD"
+   },
+   {
+    "handwriting": "Low salt diet",
+    "handwriting_conf": 0.9837,
+    "hw_share": 0.8568,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1015,
+    "printed": "Low salt diet",
+    "printed_conf": 0.959,
+    "routed": true,
+    "shipped": "Low salt diet",
+    "shipped_conf": 0.9837,
+    "shipped_if_routed": "Low salt diet",
+    "shipped_if_routed_conf": 0.9837,
+    "truth": "Low salt diet"
+   },
+   {
+    "handwriting": "Levothyroxine 75 mg after meals",
+    "handwriting_conf": 0.8418,
+    "hw_share": 0.9988,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1016,
+    "printed": "Levothyroxine 75 mcg after meals",
+    "printed_conf": 0.7572,
+    "routed": true,
+    "shipped": "Levothyroxine 75 mg after meals",
+    "shipped_conf": 0.8418,
+    "shipped_if_routed": "Levothyroxine 75 mg after meals",
+    "shipped_if_routed_conf": 0.8418,
+    "truth": "Levothyroxine 75 mcg after meals"
+   },
+   {
+    "handwriting": "Salbutamol 1.25 mg BD",
+    "handwriting_conf": 0.8115,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1016,
+    "printed": "Salbutamol 1.25 mg BD",
+    "printed_conf": 0.894,
+    "routed": true,
+    "shipped": "Salbutamol 1.25 mg BD",
+    "shipped_conf": 0.894,
+    "shipped_if_routed": "Salbutamol 1.25 mg BD",
+    "shipped_if_routed_conf": 0.894,
+    "truth": "Salbutamol 1.25 mg BD"
+   },
+   {
+    "handwriting": "BP 13/172",
+    "handwriting_conf": 0.8247,
+    "hw_share": 0.5011,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1016,
+    "printed": "BP 131/72",
+    "printed_conf": 0.8079,
+    "routed": true,
+    "shipped": "BP 13/172",
+    "shipped_conf": 0.8247,
+    "shipped_if_routed": "BP 13/172",
+    "shipped_if_routed_conf": 0.8247,
+    "truth": "BP 131/72"
+   },
+   {
+    "handwriting": "Pred his alone 500 mg OD",
+    "handwriting_conf": 0.7631,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1016,
+    "printed": "Prednisolone 500 mg OD",
+    "printed_conf": 0.9725,
+    "routed": true,
+    "shipped": "Prednisolone 500 mg OD",
+    "shipped_conf": 0.9725,
+    "shipped_if_routed": "Prednisolone 500 mg OD",
+    "shipped_if_routed_conf": 0.9725,
+    "truth": "Prednisolone 500 mg OD"
+   },
+   {
+    "handwriting": "Check sugar weekly",
+    "handwriting_conf": 0.9777,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1017,
+    "printed": "Check sugar weebly",
+    "printed_conf": 0.7396,
+    "routed": true,
+    "shipped": "Check sugar weekly",
+    "shipped_conf": 0.9777,
+    "shipped_if_routed": "Check sugar weekly",
+    "shipped_if_routed_conf": 0.9777,
+    "truth": "Check sugar weekly"
+   },
+   {
+    "handwriting": "Amlodipine 12.5 mg",
+    "handwriting_conf": 0.8481,
+    "hw_share": 0.9979,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1017,
+    "printed": "Omlodipine 12.5 my",
+    "printed_conf": 0.6921,
+    "routed": true,
+    "shipped": "Amlodipine 12.5 mg",
+    "shipped_conf": 0.8481,
+    "shipped_if_routed": "Amlodipine 12.5 mg",
+    "shipped_if_routed_conf": 0.8481,
+    "truth": "Amlodipine 12.5 mg"
+   },
+   {
+    "handwriting": "Paracetamol 75 mg twice daily",
+    "handwriting_conf": 0.9117,
+    "hw_share": 0.974,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1017,
+    "printed": "Paracetamot 75 my twice daily",
+    "printed_conf": 0.7486,
+    "routed": true,
+    "shipped": "Paracetamol 75 mg twice daily",
+    "shipped_conf": 0.9117,
+    "shipped_if_routed": "Paracetamol 75 mg twice daily",
+    "shipped_if_routed_conf": 0.9117,
+    "truth": "Paracetamol 75 mg twice daily"
+   },
+   {
+    "handwriting": "Review on 13/02/2026",
+    "handwriting_conf": 0.677,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1017,
+    "printed": "Peview On 13/05/2026",
+    "printed_conf": 0.5954,
+    "routed": true,
+    "shipped": "Review on 13/02/2026",
+    "shipped_conf": 0.677,
+    "shipped_if_routed": "Review on 13/02/2026",
+    "shipped_if_routed_conf": 0.677,
+    "truth": "Review on 13/05/2026"
+   },
+   {
+    "handwriting": "Omerazole 100 mg after meals",
+    "handwriting_conf": 0.8903,
+    "hw_share": 0.935,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1017,
+    "printed": "Omeprayote 100 my after meala",
+    "printed_conf": 0.6109,
+    "routed": true,
+    "shipped": "Omerazole 100 mg after meals",
+    "shipped_conf": 0.8903,
+    "shipped_if_routed": "Omerazole 100 mg after meals",
+    "shipped_if_routed_conf": 0.8903,
+    "truth": "Omeprazole 100 mg after meals"
+   },
+   {
+    "handwriting": "Metformin 12.5 mg Tbs",
+    "handwriting_conf": 0.6861,
+    "hw_share": 0.9992,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1017,
+    "printed": "Metformin 12.5 my Thx",
+    "printed_conf": 0.5828,
+    "routed": true,
+    "shipped": "Metformin 12.5 mg Tbs",
+    "shipped_conf": 0.6861,
+    "shipped_if_routed": "Metformin 12.5 mg Tbs",
+    "shipped_if_routed_conf": 0.6861,
+    "truth": "Metformin 12.5 mg TDS"
+   },
+   {
+    "handwriting": "5. Gliclazide 5 mg after meals",
+    "handwriting_conf": 0.8603,
+    "hw_share": 0.929,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1017,
+    "printed": "5. Huclargide 5 mg after meals",
+    "printed_conf": 0.6989,
+    "routed": true,
+    "shipped": "5. Gliclazide 5 mg after meals",
+    "shipped_conf": 0.8603,
+    "shipped_if_routed": "5. Gliclazide 5 mg after meals",
+    "shipped_if_routed_conf": 0.8603,
+    "truth": "5. Gliclazide 5 mg after meals"
+   },
+   {
+    "handwriting": "Digoxin 75 mcg OD",
+    "handwriting_conf": 0.8741,
+    "hw_share": 0.9211,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1018,
+    "printed": "Pigoxin 75 mog OD",
+    "printed_conf": 0.7708,
+    "routed": true,
+    "shipped": "Digoxin 75 mcg OD",
+    "shipped_conf": 0.8741,
+    "shipped_if_routed": "Digoxin 75 mcg OD",
+    "shipped_if_routed_conf": 0.8741,
+    "truth": "Digoxin 75 mcg OD"
+   },
+   {
+    "handwriting": "see me if worse",
+    "handwriting_conf": 0.9763,
+    "hw_share": 0.9894,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1018,
+    "printed": "See me if WDrse",
+    "printed_conf": 0.4953,
+    "routed": true,
+    "shipped": "see me if worse",
+    "shipped_conf": 0.9763,
+    "shipped_if_routed": "see me if worse",
+    "shipped_if_routed_conf": 0.9763,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "A xxxicillin 75 mg prn",
+    "handwriting_conf": 0.7103,
+    "hw_share": 0.9622,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1018,
+    "printed": "Amoxtoillin 75 Mg PYM",
+    "printed_conf": 0.5689,
+    "routed": true,
+    "shipped": "A xxxicillin 75 mg prn",
+    "shipped_conf": 0.7103,
+    "shipped_if_routed": "A xxxicillin 75 mg prn",
+    "shipped_if_routed_conf": 0.7103,
+    "truth": "Amoxicillin 75 mg prn"
+   },
+   {
+    "handwriting": "Gliclazide 50 mg 0D",
+    "handwriting_conf": 0.8346,
+    "hw_share": 0.9347,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1018,
+    "printed": "Gliolazide 50 mg 00",
+    "printed_conf": 0.713,
+    "routed": true,
+    "shipped": "Gliclazide 50 mg 0D",
+    "shipped_conf": 0.8346,
+    "shipped_if_routed": "Gliclazide 50 mg 0D",
+    "shipped_if_routed_conf": 0.8346,
+    "truth": "Gliclazide 50 mg OD"
+   },
+   {
+    "handwriting": "Lorazepam 0.5 mg twice daily",
+    "handwriting_conf": 0.941,
+    "hw_share": 0.964,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1018,
+    "printed": "LOYAZ-OPAM 0.5 Mg twice dmtly",
+    "printed_conf": 0.5559,
+    "routed": true,
+    "shipped": "Lorazepam 0.5 mg twice daily",
+    "shipped_conf": 0.941,
+    "shipped_if_routed": "Lorazepam 0.5 mg twice daily",
+    "shipped_if_routed_conf": 0.941,
+    "truth": "Lorazepam 0.5 mg twice daily"
+   },
+   {
+    "handwriting": "5. R-amipril 125 mg twice daily",
+    "handwriting_conf": 0.867,
+    "hw_share": 0.9694,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1018,
+    "printed": "5. PAmipril 12.5 Mg twice dmly",
+    "printed_conf": 0.5436,
+    "routed": true,
+    "shipped": "5. R-amipril 125 mg twice daily",
+    "shipped_conf": 0.867,
+    "shipped_if_routed": "5. R-amipril 125 mg twice daily",
+    "shipped_if_routed_conf": 0.867,
+    "truth": "5. Ramipril 12.5 mg twice daily"
+   },
+   {
+    "handwriting": "1. Lactulose 15 mL nocte",
+    "handwriting_conf": 0.8757,
+    "hw_share": 0.8211,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1019,
+    "printed": "L Lactulose 15 ML vocte",
+    "printed_conf": 0.841,
+    "routed": true,
+    "shipped": "1. Lactulose 15 mL nocte",
+    "shipped_conf": 0.8757,
+    "shipped_if_routed": "1. Lactulose 15 mL nocte",
+    "shipped_if_routed_conf": 0.8757,
+    "truth": "1. Lactulose 15 mL nocte"
+   },
+   {
+    "handwriting": "Warfarin 50 mg BD",
+    "handwriting_conf": 0.9017,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1019,
+    "printed": "Warfarin 50 mg BD",
+    "printed_conf": 0.7716,
+    "routed": true,
+    "shipped": "Warfarin 50 mg BD",
+    "shipped_conf": 0.9017,
+    "shipped_if_routed": "Warfarin 50 mg BD",
+    "shipped_if_routed_conf": 0.9017,
+    "truth": "Warfarin 50 mg BD"
+   },
+   {
+    "handwriting": "4. Bisoprolol 5 mg 0D",
+    "handwriting_conf": 0.8021,
+    "hw_share": 0.997,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1019,
+    "printed": "4. Bisoprolol 5 mg O",
+    "printed_conf": 0.7076,
+    "routed": true,
+    "shipped": "4. Bisoprolol 5 mg 0D",
+    "shipped_conf": 0.8021,
+    "shipped_if_routed": "4. Bisoprolol 5 mg 0D",
+    "shipped_if_routed_conf": 0.8021,
+    "truth": "4. Bisoprolol 5 mg OD"
+   },
+   {
+    "handwriting": "Lorazepam 20 mg",
+    "handwriting_conf": 0.9452,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1019,
+    "printed": "LOrazepaM 20 mg",
+    "printed_conf": 0.7187,
+    "routed": true,
+    "shipped": "Lorazepam 20 mg",
+    "shipped_conf": 0.9452,
+    "shipped_if_routed": "Lorazepam 20 mg",
+    "shipped_if_routed_conf": 0.9452,
+    "truth": "Lorazepam 20 mg"
+   },
+   {
+    "handwriting": "Dr A. Example",
+    "handwriting_conf": 0.9814,
+    "hw_share": 0.9915,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1019,
+    "printed": "Pr A Example",
+    "printed_conf": 0.8613,
+    "routed": true,
+    "shipped": "Dr A. Example",
+    "shipped_conf": 0.9814,
+    "shipped_if_routed": "Dr A. Example",
+    "shipped_if_routed_conf": 0.9814,
+    "truth": "Dr A. Example"
+   },
+   {
+    "handwriting": "Review on 2610412026",
+    "handwriting_conf": 0.8292,
+    "hw_share": 0.9992,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1020,
+    "printed": "Review on 26/04/2026",
+    "printed_conf": 0.897,
+    "routed": true,
+    "shipped": "Review on 26/04/2026",
+    "shipped_conf": 0.897,
+    "shipped_if_routed": "Review on 26/04/2026",
+    "shipped_if_routed_conf": 0.897,
+    "truth": "Review on 26/04/2026"
+   },
+   {
+    "handwriting": "Bisoprolol 10 mg OD",
+    "handwriting_conf": 0.8051,
+    "hw_share": 0.997,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1020,
+    "printed": "Bisoprolol 10 mg OD",
+    "printed_conf": 0.9837,
+    "routed": true,
+    "shipped": "Bisoprolol 10 mg OD",
+    "shipped_conf": 0.9837,
+    "shipped_if_routed": "Bisoprolol 10 mg OD",
+    "shipped_if_routed_conf": 0.9837,
+    "truth": "Bisoprolol 10 mg OD"
+   },
+   {
+    "handwriting": "Paracetamol 10 mg at night",
+    "handwriting_conf": 0.9231,
+    "hw_share": 0.9976,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1020,
+    "printed": "Paracetamol 10 mg at night",
+    "printed_conf": 0.9333,
+    "routed": true,
+    "shipped": "Paracetamol 10 mg at night",
+    "shipped_conf": 0.9333,
+    "shipped_if_routed": "Paracetamol 10 mg at night",
+    "shipped_if_routed_conf": 0.9333,
+    "truth": "Paracetamol 10 mg at night"
+   },
+   {
+    "handwriting": "Review on 10/01/2026",
+    "handwriting_conf": 0.9298,
+    "hw_share": 0.993,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1020,
+    "printed": "Review on 10/01/2026",
+    "printed_conf": 0.872,
+    "routed": true,
+    "shipped": "Review on 10/01/2026",
+    "shipped_conf": 0.9298,
+    "shipped_if_routed": "Review on 10/01/2026",
+    "shipped_if_routed_conf": 0.9298,
+    "truth": "Review on 10/01/2026"
+   },
+   {
+    "handwriting": "Digoxin 100 mcg after meals",
+    "handwriting_conf": 0.9724,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1020,
+    "printed": "Digoxin 100 mcg after meals",
+    "printed_conf": 0.9084,
+    "routed": true,
+    "shipped": "Digoxin 100 mcg after meals",
+    "shipped_conf": 0.9724,
+    "shipped_if_routed": "Digoxin 100 mcg after meals",
+    "shipped_if_routed_conf": 0.9724,
+    "truth": "Digoxin 100 mcg after meals"
+   },
+   {
+    "handwriting": "Continue same medicines",
+    "handwriting_conf": 0.964,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1020,
+    "printed": "Continue same medicines",
+    "printed_conf": 0.8023,
+    "routed": true,
+    "shipped": "Continue same medicines",
+    "shipped_conf": 0.964,
+    "shipped_if_routed": "Continue same medicines",
+    "shipped_if_routed_conf": 0.964,
+    "truth": "Continue same medicines"
+   },
+   {
+    "handwriting": "Stop if rash",
+    "handwriting_conf": 0.8372,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1021,
+    "printed": "Nop 4 nash",
+    "printed_conf": 0.5245,
+    "routed": true,
+    "shipped": "Stop if rash",
+    "shipped_conf": 0.8372,
+    "shipped_if_routed": "Stop if rash",
+    "shipped_if_routed_conf": 0.8372,
+    "truth": "Stop if rash"
+   },
+   {
+    "handwriting": "Insulin 16 units nocte",
+    "handwriting_conf": 0.8848,
+    "hw_share": 0.9931,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1021,
+    "printed": "Onaulin 16 wnuts nocte",
+    "printed_conf": 0.7766,
+    "routed": true,
+    "shipped": "Insulin 16 units nocte",
+    "shipped_conf": 0.8848,
+    "shipped_if_routed": "Insulin 16 units nocte",
+    "shipped_if_routed_conf": 0.8848,
+    "truth": "Insulin 16 units nocte"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.9192,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1021,
+    "printed": "Wlee me % woside",
+    "printed_conf": 0.5813,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.9192,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.9192,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.8507,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1021,
+    "printed": "Jake with fead",
+    "printed_conf": 0.6509,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.8507,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.8507,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "3. Paracetamol 125 mg at night",
+    "handwriting_conf": 0.9316,
+    "hw_share": 0.9982,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1021,
+    "printed": "3. Baracetamal 125 mg at mght",
+    "printed_conf": 0.6441,
+    "routed": true,
+    "shipped": "3. Paracetamol 125 mg at night",
+    "shipped_conf": 0.9316,
+    "shipped_if_routed": "3. Paracetamol 125 mg at night",
+    "shipped_if_routed_conf": 0.9316,
+    "truth": "3. Paracetamol 1.25 mg at night"
+   },
+   {
+    "handwriting": "Prednisolone 2.5 mg at night",
+    "handwriting_conf": 0.9239,
+    "hw_share": 0.9662,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1022,
+    "printed": "Prednisolone 2.5 mg at right",
+    "printed_conf": 0.6638,
+    "routed": true,
+    "shipped": "Prednisolone 2.5 mg at night",
+    "shipped_conf": 0.9239,
+    "shipped_if_routed": "Prednisolone 2.5 mg at night",
+    "shipped_if_routed_conf": 0.9239,
+    "truth": "Prednisolone 2.5 mg at night"
+   },
+   {
+    "handwriting": "Atorvastatin 1.25 mg at night",
+    "handwriting_conf": 0.8127,
+    "hw_share": 0.9556,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1022,
+    "printed": "Atorvastalin 1.25 mg a right",
+    "printed_conf": 0.5968,
+    "routed": true,
+    "shipped": "Atorvastatin 1.25 mg at night",
+    "shipped_conf": 0.8127,
+    "shipped_if_routed": "Atorvastatin 1.25 mg at night",
+    "shipped_if_routed_conf": 0.8127,
+    "truth": "Atorvastatin 1.25 mg at night"
+   },
+   {
+    "handwriting": "Review on 02/10/2026",
+    "handwriting_conf": 0.9775,
+    "hw_share": 0.7391,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1022,
+    "printed": "Review on 02/10/2026",
+    "printed_conf": 0.8868,
+    "routed": true,
+    "shipped": "Review on 02/10/2026",
+    "shipped_conf": 0.9775,
+    "shipped_if_routed": "Review on 02/10/2026",
+    "shipped_if_routed_conf": 0.9775,
+    "truth": "Review on 02/10/2026"
+   },
+   {
+    "handwriting": "Amlodipine 40 mg after meals",
+    "handwriting_conf": 0.8974,
+    "hw_share": 0.8287,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1022,
+    "printed": "Amodrine 40 mg affer meals",
+    "printed_conf": 0.7253,
+    "routed": true,
+    "shipped": "Amlodipine 40 mg after meals",
+    "shipped_conf": 0.8974,
+    "shipped_if_routed": "Amlodipine 40 mg after meals",
+    "shipped_if_routed_conf": 0.8974,
+    "truth": "Amlodipine 40 mg after meals"
+   },
+   {
+    "handwriting": "3. Lorazepam 75 mg at night",
+    "handwriting_conf": 0.9763,
+    "hw_share": 0.9057,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1022,
+    "printed": "3. Lorazepam 75 mg a night",
+    "printed_conf": 0.4738,
+    "routed": true,
+    "shipped": "3. Lorazepam 75 mg at night",
+    "shipped_conf": 0.9763,
+    "shipped_if_routed": "3. Lorazepam 75 mg at night",
+    "shipped_if_routed_conf": 0.9763,
+    "truth": "3. Lorazepam 75 mg at night"
+   },
+   {
+    "handwriting": "Review on 08/07/2026",
+    "handwriting_conf": 0.9345,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1023,
+    "printed": "Review on 08/07/2026",
+    "printed_conf": 0.8064,
+    "routed": true,
+    "shipped": "Review on 08/07/2026",
+    "shipped_conf": 0.9345,
+    "shipped_if_routed": "Review on 08/07/2026",
+    "shipped_if_routed_conf": 0.9345,
+    "truth": "Review on 08/07/2026"
+   },
+   {
+    "handwriting": "Stop if rash",
+    "handwriting_conf": 0.9977,
+    "hw_share": 0.993,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1023,
+    "printed": "Stop if rash",
+    "printed_conf": 0.9833,
+    "routed": true,
+    "shipped": "Stop if rash",
+    "shipped_conf": 0.9977,
+    "shipped_if_routed": "Stop if rash",
+    "shipped_if_routed_conf": 0.9977,
+    "truth": "Stop if rash"
+   },
+   {
+    "handwriting": "Lorazepam 12.5 mg BD",
+    "handwriting_conf": 0.9169,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1023,
+    "printed": "Lorazepam 12.5 Ug BD",
+    "printed_conf": 0.7235,
+    "routed": true,
+    "shipped": "Lorazepam 12.5 mg BD",
+    "shipped_conf": 0.9169,
+    "shipped_if_routed": "Lorazepam 12.5 mg BD",
+    "shipped_if_routed_conf": 0.9169,
+    "truth": "Lorazepam 12.5 mg BD"
+   },
+   {
+    "handwriting": "Omerazole 0.5 mg prn",
+    "handwriting_conf": 0.7956,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1023,
+    "printed": "Omeprazole 0.5 ig prn",
+    "printed_conf": 0.5943,
+    "routed": true,
+    "shipped": "Omerazole 0.5 mg prn",
+    "shipped_conf": 0.7956,
+    "shipped_if_routed": "Omerazole 0.5 mg prn",
+    "shipped_if_routed_conf": 0.7956,
+    "truth": "Omeprazole 0.5 mg prn"
+   },
+   {
+    "handwriting": "Digoxin 100 mcg once daily",
+    "handwriting_conf": 0.9789,
+    "hw_share": 0.4154,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1024,
+    "printed": "Digoxin 100 mcg once daily",
+    "printed_conf": 0.9195,
+    "routed": false,
+    "shipped": "Digoxin 100 mcg once daily",
+    "shipped_conf": 0.9195,
+    "shipped_if_routed": "Digoxin 100 mcg once daily",
+    "shipped_if_routed_conf": 0.9789,
+    "truth": "Digoxin 100 mcg once daily"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.9941,
+    "hw_share": 0.6534,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1024,
+    "printed": "Take with food",
+    "printed_conf": 0.9749,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.9941,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.9941,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "4. Paracetamol 1 g at night",
+    "handwriting_conf": 0.9541,
+    "hw_share": 0.772,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1024,
+    "printed": "4. Paracetamol 1 9 at night",
+    "printed_conf": 0.9449,
+    "routed": true,
+    "shipped": "4. Paracetamol 1 g at night",
+    "shipped_conf": 0.9541,
+    "shipped_if_routed": "4. Paracetamol 1 g at night",
+    "shipped_if_routed_conf": 0.9541,
+    "truth": "4. Paracetamol 1 g at night"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.9163,
+    "hw_share": 0.5147,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1024,
+    "printed": "See me if worse",
+    "printed_conf": 0.8807,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.9163,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.9163,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "2. Sertraline 1.25 mg",
+    "handwriting_conf": 0.8658,
+    "hw_share": 0.7049,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1024,
+    "printed": "2. Sertraline 1.25 mg",
+    "printed_conf": 0.9831,
+    "routed": true,
+    "shipped": "2. Sertraline 1.25 mg",
+    "shipped_conf": 0.9831,
+    "shipped_if_routed": "2. Sertraline 1.25 mg",
+    "shipped_if_routed_conf": 0.9831,
+    "truth": "2. Sertraline 1.25 mg"
+   },
+   {
+    "handwriting": "BP 160/65",
+    "handwriting_conf": 0.9037,
+    "hw_share": 0.5061,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1024,
+    "printed": "BP 160/65",
+    "printed_conf": 0.7015,
+    "routed": true,
+    "shipped": "BP 160/65",
+    "shipped_conf": 0.9037,
+    "shipped_if_routed": "BP 160/65",
+    "shipped_if_routed_conf": 0.9037,
+    "truth": "BP 160/65"
+   },
+   {
+    "handwriting": "Signed",
+    "handwriting_conf": 0.9821,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1025,
+    "printed": "Signed",
+    "printed_conf": 0.9802,
+    "routed": true,
+    "shipped": "Signed",
+    "shipped_conf": 0.9821,
+    "shipped_if_routed": "Signed",
+    "shipped_if_routed_conf": 0.9821,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "Review on 23/02/2026",
+    "handwriting_conf": 0.9601,
+    "hw_share": 0.99,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1025,
+    "printed": "Review on 23/02/2026",
+    "printed_conf": 0.8788,
+    "routed": true,
+    "shipped": "Review on 23/02/2026",
+    "shipped_conf": 0.9601,
+    "shipped_if_routed": "Review on 23/02/2026",
+    "shipped_if_routed_conf": 0.9601,
+    "truth": "Review on 23/02/2026"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.9912,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1025,
+    "printed": "Take with food",
+    "printed_conf": 0.9745,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.9912,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.9912,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "Gliclazie 2.5 mg prn",
+    "handwriting_conf": 0.7223,
+    "hw_share": 0.958,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1025,
+    "printed": "Gliclazide 2.5 mg prn",
+    "printed_conf": 0.8615,
+    "routed": true,
+    "shipped": "Gliclazide 2.5 mg prn",
+    "shipped_conf": 0.8615,
+    "shipped_if_routed": "Gliclazide 2.5 mg prn",
+    "shipped_if_routed_conf": 0.8615,
+    "truth": "Gliclazide 2.5 mg prn"
+   },
+   {
+    "handwriting": "Bisoprolol 2.5 mg TDS",
+    "handwriting_conf": 0.7812,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1025,
+    "printed": "Bisoprolol 2.5 mg TDS",
+    "printed_conf": 0.9279,
+    "routed": true,
+    "shipped": "Bisoprolol 2.5 mg TDS",
+    "shipped_conf": 0.9279,
+    "shipped_if_routed": "Bisoprolol 2.5 mg TDS",
+    "shipped_if_routed_conf": 0.9279,
+    "truth": "Bisoprolol 2.5 mg TDS"
+   },
+   {
+    "handwriting": "Omerazole 12.5 mg OD",
+    "handwriting_conf": 0.8082,
+    "hw_share": 0.9982,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1026,
+    "printed": "Omeprazole 12.5 mg OD",
+    "printed_conf": 0.592,
+    "routed": true,
+    "shipped": "Omerazole 12.5 mg OD",
+    "shipped_conf": 0.8082,
+    "shipped_if_routed": "Omerazole 12.5 mg OD",
+    "shipped_if_routed_conf": 0.8082,
+    "truth": "Omeprazole 12.5 mg OD"
+   },
+   {
+    "handwriting": "1. Sertraline 0.5 mg",
+    "handwriting_conf": 0.9232,
+    "hw_share": 0.974,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1026,
+    "printed": "L. Sertraline 0.5 mg",
+    "printed_conf": 0.7053,
+    "routed": true,
+    "shipped": "1. Sertraline 0.5 mg",
+    "shipped_conf": 0.9232,
+    "shipped_if_routed": "1. Sertraline 0.5 mg",
+    "shipped_if_routed_conf": 0.9232,
+    "truth": "1. Sertraline 0.5 mg"
+   },
+   {
+    "handwriting": "2. Furosemide 20 mg nocte",
+    "handwriting_conf": 0.9514,
+    "hw_share": 0.9958,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1026,
+    "printed": "2. Furosemide 20 mg nocte",
+    "printed_conf": 0.8292,
+    "routed": true,
+    "shipped": "2. Furosemide 20 mg nocte",
+    "shipped_conf": 0.9514,
+    "shipped_if_routed": "2. Furosemide 20 mg nocte",
+    "shipped_if_routed_conf": 0.9514,
+    "truth": "2. Furosemide 20 mg nocte"
+   },
+   {
+    "handwriting": "Furosemide 1.25 mg twice daily",
+    "handwriting_conf": 0.9321,
+    "hw_share": 0.9982,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1026,
+    "printed": "Furasemide 1.25 mg fwice daily",
+    "printed_conf": 0.6611,
+    "routed": true,
+    "shipped": "Furosemide 1.25 mg twice daily",
+    "shipped_conf": 0.9321,
+    "shipped_if_routed": "Furosemide 1.25 mg twice daily",
+    "shipped_if_routed_conf": 0.9321,
+    "truth": "Furosemide 1.25 mg twice daily"
+   },
+   {
+    "handwriting": "Review on 25/11/2026",
+    "handwriting_conf": 0.9281,
+    "hw_share": 0.5817,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1026,
+    "printed": "Review on 25/11/2026",
+    "printed_conf": 0.9708,
+    "routed": true,
+    "shipped": "Review on 25/11/2026",
+    "shipped_conf": 0.9708,
+    "shipped_if_routed": "Review on 25/11/2026",
+    "shipped_if_routed_conf": 0.9708,
+    "truth": "Review on 25/11/2026"
+   },
+   {
+    "handwriting": "Prednisolone 100 mg pm",
+    "handwriting_conf": 0.8931,
+    "hw_share": 0.6417,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1026,
+    "printed": "Prednisolone 100 mg pm",
+    "printed_conf": 0.7081,
+    "routed": true,
+    "shipped": "Prednisolone 100 mg pm",
+    "shipped_conf": 0.8931,
+    "shipped_if_routed": "Prednisolone 100 mg pm",
+    "shipped_if_routed_conf": 0.8931,
+    "truth": "Prednisolone 100 mg prn"
+   },
+   {
+    "handwriting": "Review on 22/09/2026",
+    "handwriting_conf": 0.9301,
+    "hw_share": 0.6842,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1026,
+    "printed": "Review on 22/09/2026",
+    "printed_conf": 0.9381,
+    "routed": true,
+    "shipped": "Review on 22/09/2026",
+    "shipped_conf": 0.9381,
+    "shipped_if_routed": "Review on 22/09/2026",
+    "shipped_if_routed_conf": 0.9381,
+    "truth": "Review on 22/09/2026"
+   },
+   {
+    "handwriting": "Bisoprolo! 75 mg after meals",
+    "handwriting_conf": 0.7145,
+    "hw_share": 0.9952,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1027,
+    "printed": "Bisoprolol 75 mg after meals",
+    "printed_conf": 0.9641,
+    "routed": true,
+    "shipped": "Bisoprolol 75 mg after meals",
+    "shipped_conf": 0.9641,
+    "shipped_if_routed": "Bisoprolol 75 mg after meals",
+    "shipped_if_routed_conf": 0.9641,
+    "truth": "Bisoprolol 75 mg after meals"
+   },
+   {
+    "handwriting": "Signed",
+    "handwriting_conf": 0.9778,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1027,
+    "printed": "Signed",
+    "printed_conf": 0.9812,
+    "routed": true,
+    "shipped": "Signed",
+    "shipped_conf": 0.9812,
+    "shipped_if_routed": "Signed",
+    "shipped_if_routed_conf": 0.9812,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "BP 144/80",
+    "handwriting_conf": 0.8888,
+    "hw_share": 0.9995,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1027,
+    "printed": "BP 149/80",
+    "printed_conf": 0.843,
+    "routed": true,
+    "shipped": "BP 144/80",
+    "shipped_conf": 0.8888,
+    "shipped_if_routed": "BP 144/80",
+    "shipped_if_routed_conf": 0.8888,
+    "truth": "BP 144/80"
+   },
+   {
+    "handwriting": "Prednisolone 75 mg after meals",
+    "handwriting_conf": 0.9192,
+    "hw_share": 0.998,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1027,
+    "printed": "Prednisolone 75 mg after meals",
+    "printed_conf": 0.9403,
+    "routed": true,
+    "shipped": "Prednisolone 75 mg after meals",
+    "shipped_conf": 0.9403,
+    "shipped_if_routed": "Prednisolone 75 mg after meals",
+    "shipped_if_routed_conf": 0.9403,
+    "truth": "Prednisolone 75 mg after meals"
+   },
+   {
+    "handwriting": "3. Levothyroxine 125 mcg once daily",
+    "handwriting_conf": 0.9049,
+    "hw_share": 0.9872,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1027,
+    "printed": "3. Levothyroxine 125 mcg once daily",
+    "printed_conf": 0.8452,
+    "routed": true,
+    "shipped": "3. Levothyroxine 125 mcg once daily",
+    "shipped_conf": 0.9049,
+    "shipped_if_routed": "3. Levothyroxine 125 mcg once daily",
+    "shipped_if_routed_conf": 0.9049,
+    "truth": "3. Levothyroxine 125 mcg once daily"
+   },
+   {
+    "handwriting": "lactulose 10 md nocte",
+    "handwriting_conf": 0.8096,
+    "hw_share": 0.9683,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1028,
+    "printed": "dactulose 10 mor nocte",
+    "printed_conf": 0.5976,
+    "routed": true,
+    "shipped": "lactulose 10 md nocte",
+    "shipped_conf": 0.8096,
+    "shipped_if_routed": "lactulose 10 md nocte",
+    "shipped_if_routed_conf": 0.8096,
+    "truth": "Lactulose 10 mL nocte"
+   },
+   {
+    "handwriting": "Review on 12/04/2026",
+    "handwriting_conf": 0.9273,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1028,
+    "printed": "Pwview on 12/04/2026",
+    "printed_conf": 0.6038,
+    "routed": true,
+    "shipped": "Review on 12/04/2026",
+    "shipped_conf": 0.9273,
+    "shipped_if_routed": "Review on 12/04/2026",
+    "shipped_if_routed_conf": 0.9273,
+    "truth": "Review on 12/04/2026"
+   },
+   {
+    "handwriting": "aspirin 20 mg once daily",
+    "handwriting_conf": 0.9319,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1028,
+    "printed": "Ospirin 20 mg once daily",
+    "printed_conf": 0.6718,
+    "routed": true,
+    "shipped": "aspirin 20 mg once daily",
+    "shipped_conf": 0.9319,
+    "shipped_if_routed": "aspirin 20 mg once daily",
+    "shipped_if_routed_conf": 0.9319,
+    "truth": "Aspirin 20 mg once daily"
+   },
+   {
+    "handwriting": "2. Aspirin 0.5 mg at night",
+    "handwriting_conf": 0.968,
+    "hw_share": 0.8417,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1028,
+    "printed": "2. Ospirin 0.5 mg at nighe",
+    "printed_conf": 0.7121,
+    "routed": true,
+    "shipped": "2. Aspirin 0.5 mg at night",
+    "shipped_conf": 0.968,
+    "shipped_if_routed": "2. Aspirin 0.5 mg at night",
+    "shipped_if_routed_conf": 0.968,
+    "truth": "2. Aspirin 0.5 mg at night"
+   },
+   {
+    "handwriting": "BP 154771",
+    "handwriting_conf": 0.705,
+    "hw_share": 0.997,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1028,
+    "printed": "BP 154/7/",
+    "printed_conf": 0.754,
+    "routed": true,
+    "shipped": "BP 154/7/",
+    "shipped_conf": 0.754,
+    "shipped_if_routed": "BP 154/7/",
+    "shipped_if_routed_conf": 0.754,
+    "truth": "BP 154/71"
+   },
+   {
+    "handwriting": "Review on 27/12/2026",
+    "handwriting_conf": 0.976,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1028,
+    "printed": "Review on 27/12/2026",
+    "printed_conf": 0.7683,
+    "routed": true,
+    "shipped": "Review on 27/12/2026",
+    "shipped_conf": 0.976,
+    "shipped_if_routed": "Review on 27/12/2026",
+    "shipped_if_routed_conf": 0.976,
+    "truth": "Review on 27/12/2026"
+   },
+   {
+    "handwriting": "Review on 28/01/2026",
+    "handwriting_conf": 0.9,
+    "hw_share": 0.0826,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1029,
+    "printed": "Review on 28/01/2026",
+    "printed_conf": 0.8327,
+    "routed": false,
+    "shipped": "Review on 28/01/2026",
+    "shipped_conf": 0.8327,
+    "shipped_if_routed": "Review on 28/01/2026",
+    "shipped_if_routed_conf": 0.9,
+    "truth": "Review on 28/01/2026"
+   },
+   {
+    "handwriting": "Insulin & units twice daily",
+    "handwriting_conf": 0.8974,
+    "hw_share": 0.0068,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1029,
+    "printed": "Insulin 8 units twice daily",
+    "printed_conf": 0.9505,
+    "routed": false,
+    "shipped": "Insulin 8 units twice daily",
+    "shipped_conf": 0.9505,
+    "shipped_if_routed": "Insulin 8 units twice daily",
+    "shipped_if_routed_conf": 0.9505,
+    "truth": "Insulin 8 units twice daily"
+   },
+   {
+    "handwriting": "Prednisolone 5 mg TDS",
+    "handwriting_conf": 0.9141,
+    "hw_share": 0.0125,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1029,
+    "printed": "Prednisolone 5 mg TDS",
+    "printed_conf": 0.9873,
+    "routed": false,
+    "shipped": "Prednisolone 5 mg TDS",
+    "shipped_conf": 0.9873,
+    "shipped_if_routed": "Prednisolone 5 mg TDS",
+    "shipped_if_routed_conf": 0.9873,
+    "truth": "Prednisolone 5 mg TDS"
+   },
+   {
+    "handwriting": "Stop if rash",
+    "handwriting_conf": 0.9969,
+    "hw_share": 0.1494,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1029,
+    "printed": "Stop if rash",
+    "printed_conf": 0.968,
+    "routed": false,
+    "shipped": "Stop if rash",
+    "shipped_conf": 0.968,
+    "shipped_if_routed": "Stop if rash",
+    "shipped_if_routed_conf": 0.9969,
+    "truth": "Stop if rash"
+   },
+   {
+    "handwriting": "Gliclazide 500 mg twice daily",
+    "handwriting_conf": 0.8981,
+    "hw_share": 0.0155,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1029,
+    "printed": "Gliclazide 500 mg twice daily",
+    "printed_conf": 0.8163,
+    "routed": false,
+    "shipped": "Gliclazide 500 mg twice daily",
+    "shipped_conf": 0.8163,
+    "shipped_if_routed": "Gliclazide 500 mg twice daily",
+    "shipped_if_routed_conf": 0.8981,
+    "truth": "Gliclazide 500 mg twice daily"
+   },
+   {
+    "handwriting": "Levethyloxine 100 mcg OD",
+    "handwriting_conf": 0.7948,
+    "hw_share": 0.2553,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1029,
+    "printed": "Levothyroxine 100 mcg OD",
+    "printed_conf": 0.7714,
+    "routed": false,
+    "shipped": "Levothyroxine 100 mcg OD",
+    "shipped_conf": 0.7714,
+    "shipped_if_routed": "Levethyloxine 100 mcg OD",
+    "shipped_if_routed_conf": 0.7948,
+    "truth": "Levothyroxine 100 mcg OD"
+   },
+   {
+    "handwriting": "Dr A. Example",
+    "handwriting_conf": 0.9959,
+    "hw_share": 0.2843,
+    "keep_printed": false,
+    "line": 6,
+    "page": 1029,
+    "printed": "Dr A. Example",
+    "printed_conf": 0.9257,
+    "routed": false,
+    "shipped": "Dr A. Example",
+    "shipped_conf": 0.9257,
+    "shipped_if_routed": "Dr A. Example",
+    "shipped_if_routed_conf": 0.9959,
+    "truth": "Dr A. Example"
+   }
+  ],
+  "scores": {
+   "candidate": {
+    "fields": {
+     "drug": {
+      "den": 104,
+      "num": 90,
+      "rate": 0.8654
+     },
+     "exact": {
+      "den": 104,
+      "num": 84,
+      "rate": 0.8077
+     },
+     "unit": {
+      "den": 104,
+      "num": 87,
+      "rate": 0.8365
+     },
+     "value": {
+      "den": 104,
+      "num": 87,
+      "rate": 0.8365
+     }
+    },
+    "line": {
+     "cer": 0.0194,
+     "char_errors": 67,
+     "chars": 3446,
+     "n": 167,
+     "wer": 0.0846,
+     "word_errors": 56,
+     "words": 662
+    },
+    "line_exact": {
+     "den": 167,
+     "num": 117,
+     "rate": 0.7006
+    },
+    "line_exact_ignoring_case": {
+     "den": 167,
+     "num": 125,
+     "rate": 0.7485
+    },
+    "numeric_line_accuracy": {
+     "den": 133,
+     "num": 89,
+     "rate": 0.6692
+    },
+    "page": {
+     "cer": 0.0187,
+     "char_errors": 67,
+     "chars": 3583,
+     "n": 30,
+     "wer": 0.0846,
+     "word_errors": 56,
+     "words": 662
+    }
+   },
+   "handwriting": {
+    "fields": {
+     "drug": {
+      "den": 104,
+      "num": 87,
+      "rate": 0.8365
+     },
+     "exact": {
+      "den": 104,
+      "num": 80,
+      "rate": 0.7692
+     },
+     "unit": {
+      "den": 104,
+      "num": 83,
+      "rate": 0.7981
+     },
+     "value": {
+      "den": 104,
+      "num": 83,
+      "rate": 0.7981
+     }
+    },
+    "line": {
+     "cer": 0.0244,
+     "char_errors": 84,
+     "chars": 3446,
+     "n": 167,
+     "wer": 0.1042,
+     "word_errors": 69,
+     "words": 662
+    },
+    "line_exact": {
+     "den": 167,
+     "num": 106,
+     "rate": 0.6347
+    },
+    "line_exact_ignoring_case": {
+     "den": 167,
+     "num": 114,
+     "rate": 0.6826
+    },
+    "numeric_line_accuracy": {
+     "den": 133,
+     "num": 78,
+     "rate": 0.5865
+    },
+    "page": {
+     "cer": 0.0234,
+     "char_errors": 84,
+     "chars": 3583,
+     "n": 30,
+     "wer": 0.1042,
+     "word_errors": 69,
+     "words": 662
+    }
+   },
+   "printed": {
+    "fields": {
+     "drug": {
+      "den": 104,
+      "num": 70,
+      "rate": 0.6731
+     },
+     "exact": {
+      "den": 104,
+      "num": 56,
+      "rate": 0.5385
+     },
+     "unit": {
+      "den": 104,
+      "num": 57,
+      "rate": 0.5481
+     },
+     "value": {
+      "den": 104,
+      "num": 67,
+      "rate": 0.6442
+     }
+    },
+    "line": {
+     "cer": 0.0702,
+     "char_errors": 242,
+     "chars": 3446,
+     "n": 167,
+     "wer": 0.2372,
+     "word_errors": 157,
+     "words": 662
+    },
+    "line_exact": {
+     "den": 167,
+     "num": 78,
+     "rate": 0.4671
+    },
+    "line_exact_ignoring_case": {
+     "den": 167,
+     "num": 82,
+     "rate": 0.491
+    },
+    "numeric_line_accuracy": {
+     "den": 133,
+     "num": 58,
+     "rate": 0.4361
+    },
+    "page": {
+     "cer": 0.0675,
+     "char_errors": 242,
+     "chars": 3583,
+     "n": 30,
+     "wer": 0.2372,
+     "word_errors": 157,
+     "words": 662
+    }
+   },
+   "shipped": {
+    "fields": {
+     "drug": {
+      "den": 104,
+      "num": 93,
+      "rate": 0.8942
+     },
+     "exact": {
+      "den": 104,
+      "num": 88,
+      "rate": 0.8462
+     },
+     "unit": {
+      "den": 104,
+      "num": 90,
+      "rate": 0.8654
+     },
+     "value": {
+      "den": 104,
+      "num": 91,
+      "rate": 0.875
+     }
+    },
+    "line": {
+     "cer": 0.0177,
+     "char_errors": 61,
+     "chars": 3446,
+     "n": 167,
+     "wer": 0.077,
+     "word_errors": 51,
+     "words": 662
+    },
+    "line_exact": {
+     "den": 167,
+     "num": 121,
+     "rate": 0.7246
+    },
+    "line_exact_ignoring_case": {
+     "den": 167,
+     "num": 128,
+     "rate": 0.7665
+    },
+    "numeric_line_accuracy": {
+     "den": 133,
+     "num": 93,
+     "rate": 0.6992
+    },
+    "page": {
+     "cer": 0.017,
+     "char_errors": 61,
+     "chars": 3583,
+     "n": 30,
+     "wer": 0.077,
+     "word_errors": 51,
+     "words": 662
+    }
+   },
+   "shipped_if_routed": {
+    "fields": {
+     "drug": {
+      "den": 104,
+      "num": 92,
+      "rate": 0.8846
+     },
+     "exact": {
+      "den": 104,
+      "num": 86,
+      "rate": 0.8269
+     },
+     "unit": {
+      "den": 104,
+      "num": 89,
+      "rate": 0.8558
+     },
+     "value": {
+      "den": 104,
+      "num": 89,
+      "rate": 0.8558
+     }
+    },
+    "line": {
+     "cer": 0.0186,
+     "char_errors": 64,
+     "chars": 3446,
+     "n": 167,
+     "wer": 0.0801,
+     "word_errors": 53,
+     "words": 662
+    },
+    "line_exact": {
+     "den": 167,
+     "num": 119,
+     "rate": 0.7126
+    },
+    "line_exact_ignoring_case": {
+     "den": 167,
+     "num": 127,
+     "rate": 0.7605
+    },
+    "numeric_line_accuracy": {
+     "den": 133,
+     "num": 91,
+     "rate": 0.6842
+    },
+    "page": {
+     "cer": 0.0179,
+     "char_errors": 64,
+     "chars": 3583,
+     "n": 30,
+     "wer": 0.0801,
+     "word_errors": 53,
+     "words": 662
+    }
+   }
+  }
+ },
+ "threads": 2,
+ "validation": {
+  "calibration": {
+   "handwriting_reader": {
+    "by_threshold": {
+     "0.50": {
+      "accepted": {
+       "den": 113,
+       "num": 113,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 113,
+       "num": 33,
+       "rate": 0.292
+      },
+      "number_errors_among_accepted": {
+       "den": 96,
+       "num": 15,
+       "rate": 0.1562
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.55": {
+      "accepted": {
+       "den": 113,
+       "num": 112,
+       "rate": 0.9912
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 112,
+       "num": 32,
+       "rate": 0.2857
+      },
+      "number_errors_among_accepted": {
+       "den": 95,
+       "num": 14,
+       "rate": 0.1474
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.60": {
+      "accepted": {
+       "den": 113,
+       "num": 111,
+       "rate": 0.9823
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 111,
+       "num": 31,
+       "rate": 0.2793
+      },
+      "number_errors_among_accepted": {
+       "den": 94,
+       "num": 14,
+       "rate": 0.1489
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.65": {
+      "accepted": {
+       "den": 113,
+       "num": 111,
+       "rate": 0.9823
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 111,
+       "num": 31,
+       "rate": 0.2793
+      },
+      "number_errors_among_accepted": {
+       "den": 94,
+       "num": 14,
+       "rate": 0.1489
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.70": {
+      "accepted": {
+       "den": 113,
+       "num": 109,
+       "rate": 0.9646
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 109,
+       "num": 29,
+       "rate": 0.2661
+      },
+      "number_errors_among_accepted": {
+       "den": 92,
+       "num": 13,
+       "rate": 0.1413
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.75": {
+      "accepted": {
+       "den": 113,
+       "num": 104,
+       "rate": 0.9204
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 104,
+       "num": 25,
+       "rate": 0.2404
+      },
+      "number_errors_among_accepted": {
+       "den": 87,
+       "num": 11,
+       "rate": 0.1264
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 2,
+       "rate": 0.0952
+      }
+     },
+     "0.80": {
+      "accepted": {
+       "den": 113,
+       "num": 96,
+       "rate": 0.8496
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 96,
+       "num": 20,
+       "rate": 0.2083
+      },
+      "number_errors_among_accepted": {
+       "den": 79,
+       "num": 10,
+       "rate": 0.1266
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 17,
+       "num": 2,
+       "rate": 0.1176
+      }
+     },
+     "0.85": {
+      "accepted": {
+       "den": 113,
+       "num": 78,
+       "rate": 0.6903
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 78,
+       "num": 14,
+       "rate": 0.1795
+      },
+      "number_errors_among_accepted": {
+       "den": 62,
+       "num": 6,
+       "rate": 0.0968
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 11,
+       "num": 2,
+       "rate": 0.1818
+      }
+     },
+     "0.90": {
+      "accepted": {
+       "den": 113,
+       "num": 52,
+       "rate": 0.4602
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 52,
+       "num": 8,
+       "rate": 0.1538
+      },
+      "number_errors_among_accepted": {
+       "den": 39,
+       "num": 4,
+       "rate": 0.1026
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)",
+       "3. Aspirin 12.5 mg twice daily -> 3. Aspirin 125 mg twice daily (0.93)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 6,
+       "num": 2,
+       "rate": 0.3333
+      }
+     },
+     "0.95": {
+      "accepted": {
+       "den": 113,
+       "num": 27,
+       "rate": 0.2389
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 27,
+       "num": 0,
+       "rate": 0.0
+      },
+      "number_errors_among_accepted": {
+       "den": 17,
+       "num": 0,
+       "rate": 0.0
+      },
+      "wrong_decimal_examples": [],
+      "wrong_decimals_among_accepted": {
+       "den": 2,
+       "num": 0,
+       "rate": 0.0
+      }
+     }
+    },
+    "reliability": [
+     {
+      "bin": "[0.5, 0.6)",
+      "line_exact": {
+       "den": 2,
+       "num": 0,
+       "rate": 0.0
+      },
+      "mean_confidence": 0.5473,
+      "n": 2
+     },
+     {
+      "bin": "[0.6, 0.7)",
+      "line_exact": {
+       "den": 2,
+       "num": 0,
+       "rate": 0.0
+      },
+      "mean_confidence": 0.6828,
+      "n": 2
+     },
+     {
+      "bin": "[0.7, 0.8)",
+      "line_exact": {
+       "den": 13,
+       "num": 4,
+       "rate": 0.3077
+      },
+      "mean_confidence": 0.7569,
+      "n": 13
+     },
+     {
+      "bin": "[0.8, 0.9)",
+      "line_exact": {
+       "den": 44,
+       "num": 32,
+       "rate": 0.7273
+      },
+      "mean_confidence": 0.8561,
+      "n": 44
+     },
+     {
+      "bin": "[0.9, 1.0)",
+      "line_exact": {
+       "den": 52,
+       "num": 44,
+       "rate": 0.8462
+      },
+      "mean_confidence": 0.9519,
+      "n": 52
+     }
+    ]
+   },
+   "shipped": {
+    "by_threshold": {
+     "0.50": {
+      "accepted": {
+       "den": 113,
+       "num": 113,
+       "rate": 1.0
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 113,
+       "num": 27,
+       "rate": 0.2389
+      },
+      "number_errors_among_accepted": {
+       "den": 96,
+       "num": 12,
+       "rate": 0.125
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.55": {
+      "accepted": {
+       "den": 113,
+       "num": 112,
+       "rate": 0.9912
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 112,
+       "num": 26,
+       "rate": 0.2321
+      },
+      "number_errors_among_accepted": {
+       "den": 95,
+       "num": 11,
+       "rate": 0.1158
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.60": {
+      "accepted": {
+       "den": 113,
+       "num": 111,
+       "rate": 0.9823
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 111,
+       "num": 25,
+       "rate": 0.2252
+      },
+      "number_errors_among_accepted": {
+       "den": 94,
+       "num": 11,
+       "rate": 0.117
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.65": {
+      "accepted": {
+       "den": 113,
+       "num": 111,
+       "rate": 0.9823
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 111,
+       "num": 25,
+       "rate": 0.2252
+      },
+      "number_errors_among_accepted": {
+       "den": 94,
+       "num": 11,
+       "rate": 0.117
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.70": {
+      "accepted": {
+       "den": 113,
+       "num": 111,
+       "rate": 0.9823
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 111,
+       "num": 25,
+       "rate": 0.2252
+      },
+      "number_errors_among_accepted": {
+       "den": 94,
+       "num": 11,
+       "rate": 0.117
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.75": {
+      "accepted": {
+       "den": 113,
+       "num": 108,
+       "rate": 0.9558
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 108,
+       "num": 23,
+       "rate": 0.213
+      },
+      "number_errors_among_accepted": {
+       "den": 91,
+       "num": 9,
+       "rate": 0.0989
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 21,
+       "num": 1,
+       "rate": 0.0476
+      }
+     },
+     "0.80": {
+      "accepted": {
+       "den": 113,
+       "num": 104,
+       "rate": 0.9204
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 104,
+       "num": 20,
+       "rate": 0.1923
+      },
+      "number_errors_among_accepted": {
+       "den": 87,
+       "num": 9,
+       "rate": 0.1034
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 19,
+       "num": 1,
+       "rate": 0.0526
+      }
+     },
+     "0.85": {
+      "accepted": {
+       "den": 113,
+       "num": 86,
+       "rate": 0.7611
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 86,
+       "num": 13,
+       "rate": 0.1512
+      },
+      "number_errors_among_accepted": {
+       "den": 70,
+       "num": 5,
+       "rate": 0.0714
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 16,
+       "num": 1,
+       "rate": 0.0625
+      }
+     },
+     "0.90": {
+      "accepted": {
+       "den": 113,
+       "num": 62,
+       "rate": 0.5487
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 62,
+       "num": 8,
+       "rate": 0.129
+      },
+      "number_errors_among_accepted": {
+       "den": 49,
+       "num": 3,
+       "rate": 0.0612
+      },
+      "wrong_decimal_examples": [
+       "1. Metformin 12.5 mg after meals -> 1. Metformin 125 mg after meals (0.92)"
+      ],
+      "wrong_decimals_among_accepted": {
+       "den": 10,
+       "num": 1,
+       "rate": 0.1
+      }
+     },
+     "0.95": {
+      "accepted": {
+       "den": 113,
+       "num": 37,
+       "rate": 0.3274
+      },
+      "errors_among_accepted (line not exact)": {
+       "den": 37,
+       "num": 1,
+       "rate": 0.027
+      },
+      "number_errors_among_accepted": {
+       "den": 27,
+       "num": 0,
+       "rate": 0.0
+      },
+      "wrong_decimal_examples": [],
+      "wrong_decimals_among_accepted": {
+       "den": 8,
+       "num": 0,
+       "rate": 0.0
+      }
+     }
+    },
+    "reliability": [
+     {
+      "bin": "[0.5, 0.6)",
+      "line_exact": {
+       "den": 2,
+       "num": 0,
+       "rate": 0.0
+      },
+      "mean_confidence": 0.5473,
+      "n": 2
+     },
+     {
+      "bin": "[0.7, 0.8)",
+      "line_exact": {
+       "den": 7,
+       "num": 2,
+       "rate": 0.2857
+      },
+      "mean_confidence": 0.7587,
+      "n": 7
+     },
+     {
+      "bin": "[0.8, 0.9)",
+      "line_exact": {
+       "den": 42,
+       "num": 30,
+       "rate": 0.7143
+      },
+      "mean_confidence": 0.856,
+      "n": 42
+     },
+     {
+      "bin": "[0.9, 1.0)",
+      "line_exact": {
+       "den": 62,
+       "num": 54,
+       "rate": 0.871
+      },
+      "mean_confidence": 0.9536,
+      "n": 62
+     }
+    ]
+   }
+  },
+  "diagnosis": {
+   "lines_exact_by_either_reader (oracle selection)": {
+    "den": 113,
+    "num": 90,
+    "rate": 0.7965
+   },
+   "lines_exact_shipped": {
+    "den": 113,
+    "num": 86,
+    "rate": 0.7611
+   },
+   "reader_disagreement (numbers)": {
+    "den": 113,
+    "num": 32,
+    "rate": 0.2832
+   },
+   "reader_disagreement (text)": {
+    "den": 113,
+    "num": 74,
+    "rate": 0.6549
+   },
+   "recognition_loss (both readers wrong)": {
+    "den": 113,
+    "num": 23,
+    "rate": 0.2035
+   },
+   "routed_to_handwriting": {
+    "den": 113,
+    "num": 96,
+    "rate": 0.8496
+   },
+   "routing_loss (handwriting right, line not routed)": {
+    "den": 113,
+    "num": 0,
+    "rate": 0.0
+   },
+   "selection_loss (one reader right, shipped wrong)": {
+    "den": 113,
+    "num": 4,
+    "rate": 0.0354
+   }
+  },
+  "n_lines": 113,
+  "n_pages": 20,
+  "rows": [
+   {
+    "handwriting": "Digoxin 62.5 mcg at night",
+    "handwriting_conf": 0.8134,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 0,
+    "printed": "Digmat 62.5 macg at migjhe",
+    "printed_conf": 0.5139,
+    "routed": true,
+    "shipped": "Digoxin 62.5 mcg at night",
+    "shipped_conf": 0.8134,
+    "shipped_if_routed": "Digoxin 62.5 mcg at night",
+    "shipped_if_routed_conf": 0.8134,
+    "truth": "Digoxin 62.5 mcg at night"
+   },
+   {
+    "handwriting": "Dr A. Example",
+    "handwriting_conf": 0.9953,
+    "hw_share": 0.9059,
+    "keep_printed": false,
+    "line": 1,
+    "page": 0,
+    "printed": "Dr 94. Enample",
+    "printed_conf": 0.6445,
+    "routed": true,
+    "shipped": "Dr A. Example",
+    "shipped_conf": 0.9953,
+    "shipped_if_routed": "Dr A. Example",
+    "shipped_if_routed_conf": 0.9953,
+    "truth": "Dr A. Example"
+   },
+   {
+    "handwriting": "salbutamol 75 mg at night",
+    "handwriting_conf": 0.9494,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 2,
+    "page": 0,
+    "printed": "Salbwiammol 75 mg at migjhe",
+    "printed_conf": 0.5891,
+    "routed": true,
+    "shipped": "salbutamol 75 mg at night",
+    "shipped_conf": 0.9494,
+    "shipped_if_routed": "salbutamol 75 mg at night",
+    "shipped_if_routed_conf": 0.9494,
+    "truth": "Salbutamol 75 mg at night"
+   },
+   {
+    "handwriting": "2. Lactulose 15 mL 0D",
+    "handwriting_conf": 0.7556,
+    "hw_share": 0.9909,
+    "keep_printed": false,
+    "line": 3,
+    "page": 0,
+    "printed": "2. Cactulose 15 ml OD",
+    "printed_conf": 0.8187,
+    "routed": true,
+    "shipped": "2. Cactulose 15 ml OD",
+    "shipped_conf": 0.8187,
+    "shipped_if_routed": "2. Cactulose 15 ml OD",
+    "shipped_if_routed_conf": 0.8187,
+    "truth": "2. Lactulose 15 mL OD"
+   },
+   {
+    "handwriting": "Gliclassic 40 mg at night",
+    "handwriting_conf": 0.9357,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 4,
+    "page": 0,
+    "printed": "Epliclazide 40 mug at migne",
+    "printed_conf": 0.5372,
+    "routed": true,
+    "shipped": "Gliclassic 40 mg at night",
+    "shipped_conf": 0.9357,
+    "shipped_if_routed": "Gliclassic 40 mg at night",
+    "shipped_if_routed_conf": 0.9357,
+    "truth": "Gliclazide 40 mg at night"
+   },
+   {
+    "handwriting": "4. Digoxin 50 mg price daily",
+    "handwriting_conf": 0.8525,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 5,
+    "page": 0,
+    "printed": "A Digmats 50 macg tvice daihy",
+    "printed_conf": 0.4934,
+    "routed": true,
+    "shipped": "4. Digoxin 50 mg price daily",
+    "shipped_conf": 0.8525,
+    "shipped_if_routed": "4. Digoxin 50 mg price daily",
+    "shipped_if_routed_conf": 0.8525,
+    "truth": "4. Digoxin 50 mcg twice daily"
+   },
+   {
+    "handwriting": "Furosemide 500 mg prn",
+    "handwriting_conf": 0.769,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 6,
+    "page": 0,
+    "printed": "Fvorosemide 500 mg prn",
+    "printed_conf": 0.593,
+    "routed": true,
+    "shipped": "Furosemide 500 mg prn",
+    "shipped_conf": 0.769,
+    "shipped_if_routed": "Furosemide 500 mg prn",
+    "shipped_if_routed_conf": 0.769,
+    "truth": "Furosemide 500 mg prn"
+   },
+   {
+    "handwriting": "Review on 13/03/2026",
+    "handwriting_conf": 0.9456,
+    "hw_share": 0.9941,
+    "keep_printed": false,
+    "line": 0,
+    "page": 1,
+    "printed": "Review On 13/03/2026",
+    "printed_conf": 0.7199,
+    "routed": true,
+    "shipped": "Review on 13/03/2026",
+    "shipped_conf": 0.9456,
+    "shipped_if_routed": "Review on 13/03/2026",
+    "shipped_if_routed_conf": 0.9456,
+    "truth": "Review on 13/03/2026"
+   },
+   {
+    "handwriting": "Bisoprolol 12.5 mg nocte",
+    "handwriting_conf": 0.8464,
+    "hw_share": 0.9982,
+    "keep_printed": false,
+    "line": 1,
+    "page": 1,
+    "printed": "Bicoprolol 12.5 ig nocte",
+    "printed_conf": 0.7243,
+    "routed": true,
+    "shipped": "Bisoprolol 12.5 mg nocte",
+    "shipped_conf": 0.8464,
+    "shipped_if_routed": "Bisoprolol 12.5 mg nocte",
+    "shipped_if_routed_conf": 0.8464,
+    "truth": "Bisoprolol 12.5 mg nocte"
+   },
+   {
+    "handwriting": "Aspirin 20 mg nocte",
+    "handwriting_conf": 0.9665,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 2,
+    "page": 1,
+    "printed": "Aspirin 20 ig nocte",
+    "printed_conf": 0.7554,
+    "routed": true,
+    "shipped": "Aspirin 20 mg nocte",
+    "shipped_conf": 0.9665,
+    "shipped_if_routed": "Aspirin 20 mg nocte",
+    "shipped_if_routed_conf": 0.9665,
+    "truth": "Aspirin 20 mg nocte"
+   },
+   {
+    "handwriting": "Gliclazide 10 mg TDS",
+    "handwriting_conf": 0.8305,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 3,
+    "page": 1,
+    "printed": "Gliclazide 10 ig TDS",
+    "printed_conf": 0.7884,
+    "routed": true,
+    "shipped": "Gliclazide 10 mg TDS",
+    "shipped_conf": 0.8305,
+    "shipped_if_routed": "Gliclazide 10 mg TDS",
+    "shipped_if_routed_conf": 0.8305,
+    "truth": "Gliclazide 10 mg TDS"
+   },
+   {
+    "handwriting": "2. Levothyroxine 75 mcg nocte",
+    "handwriting_conf": 0.8776,
+    "hw_share": 0.9719,
+    "keep_printed": false,
+    "line": 4,
+    "page": 1,
+    "printed": "2. Levothyroxine 75 mcg nocte",
+    "printed_conf": 0.9452,
+    "routed": true,
+    "shipped": "2. Levothyroxine 75 mcg nocte",
+    "shipped_conf": 0.9452,
+    "shipped_if_routed": "2. Levothyroxine 75 mcg nocte",
+    "shipped_if_routed_conf": 0.9452,
+    "truth": "2. Levothyroxine 75 mcg nocte"
+   },
+   {
+    "handwriting": "Amlodipine 75 mg",
+    "handwriting_conf": 0.8999,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 5,
+    "page": 1,
+    "printed": "Amlodipine 75 ig",
+    "printed_conf": 0.6669,
+    "routed": true,
+    "shipped": "Amlodipine 75 mg",
+    "shipped_conf": 0.8999,
+    "shipped_if_routed": "Amlodipine 75 mg",
+    "shipped_if_routed_conf": 0.8999,
+    "truth": "Amlodipine 75 mg"
+   },
+   {
+    "handwriting": "BP 110/92",
+    "handwriting_conf": 0.8124,
+    "hw_share": 0.9555,
+    "keep_printed": false,
+    "line": 0,
+    "page": 2,
+    "printed": "BP 110/92",
+    "printed_conf": 0.6898,
+    "routed": true,
+    "shipped": "BP 110/92",
+    "shipped_conf": 0.8124,
+    "shipped_if_routed": "BP 110/92",
+    "shipped_if_routed_conf": 0.8124,
+    "truth": "BP 110/92"
+   },
+   {
+    "handwriting": "Amlodipine 100 mg once daily",
+    "handwriting_conf": 0.8656,
+    "hw_share": 0.9364,
+    "keep_printed": false,
+    "line": 1,
+    "page": 2,
+    "printed": "Omlodipine 100 my once daily",
+    "printed_conf": 0.5958,
+    "routed": true,
+    "shipped": "Amlodipine 100 mg once daily",
+    "shipped_conf": 0.8656,
+    "shipped_if_routed": "Amlodipine 100 mg once daily",
+    "shipped_if_routed_conf": 0.8656,
+    "truth": "Amlodipine 100 mg once daily"
+   },
+   {
+    "handwriting": "Ramiprill 20 mg BIB",
+    "handwriting_conf": 0.7862,
+    "hw_share": 0.9316,
+    "keep_printed": false,
+    "line": 2,
+    "page": 2,
+    "printed": "Ramipril 20 mg 6b",
+    "printed_conf": 0.7526,
+    "routed": true,
+    "shipped": "Ramiprill 20 mg BIB",
+    "shipped_conf": 0.7862,
+    "shipped_if_routed": "Ramiprill 20 mg BIB",
+    "shipped_if_routed_conf": 0.7862,
+    "truth": "Ramipril 20 mg BD"
+   },
+   {
+    "handwriting": "Continue same medicines",
+    "handwriting_conf": 0.9726,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 3,
+    "page": 2,
+    "printed": "Continue same medicines",
+    "printed_conf": 0.5455,
+    "routed": true,
+    "shipped": "Continue same medicines",
+    "shipped_conf": 0.9726,
+    "shipped_if_routed": "Continue same medicines",
+    "shipped_if_routed_conf": 0.9726,
+    "truth": "Continue same medicines"
+   },
+   {
+    "handwriting": "Metformin 2.5 mg OD",
+    "handwriting_conf": 0.8564,
+    "hw_share": 0.7714,
+    "keep_printed": false,
+    "line": 0,
+    "page": 3,
+    "printed": "Metformin 2.5 mg OD",
+    "printed_conf": 0.8508,
+    "routed": true,
+    "shipped": "Metformin 2.5 mg OD",
+    "shipped_conf": 0.8564,
+    "shipped_if_routed": "Metformin 2.5 mg OD",
+    "shipped_if_routed_conf": 0.8564,
+    "truth": "Metformin 2.5 mg OD"
+   },
+   {
+    "handwriting": "4. Levothyroxine 62.5 mcg",
+    "handwriting_conf": 0.8466,
+    "hw_share": 0.9416,
+    "keep_printed": false,
+    "line": 1,
+    "page": 3,
+    "printed": "4. Lonethnywime 62.5 mcg",
+    "printed_conf": 0.7452,
+    "routed": true,
+    "shipped": "4. Levothyroxine 62.5 mcg",
+    "shipped_conf": 0.8466,
+    "shipped_if_routed": "4. Levothyroxine 62.5 mcg",
+    "shipped_if_routed_conf": 0.8466,
+    "truth": "4. Levothyroxine 62.5 mcg"
+   },
+   {
+    "handwriting": "Check sugar weekly",
+    "handwriting_conf": 0.9709,
+    "hw_share": 0.9708,
+    "keep_printed": false,
+    "line": 2,
+    "page": 3,
+    "printed": "Check sugar wally",
+    "printed_conf": 0.7434,
+    "routed": true,
+    "shipped": "Check sugar weekly",
+    "shipped_conf": 0.9709,
+    "shipped_if_routed": "Check sugar weekly",
+    "shipped_if_routed_conf": 0.9709,
+    "truth": "Check sugar weekly"
+   },
+   {
+    "handwriting": "Levothyroxine 100 mcg at night",
+    "handwriting_conf": 0.854,
+    "hw_share": 0.8083,
+    "keep_printed": false,
+    "line": 3,
+    "page": 3,
+    "printed": "Losethnywime 100 mcg at rigpl",
+    "printed_conf": 0.5791,
+    "routed": true,
+    "shipped": "Levothyroxine 100 mcg at night",
+    "shipped_conf": 0.854,
+    "shipped_if_routed": "Levothyroxine 100 mcg at night",
+    "shipped_if_routed_conf": 0.854,
+    "truth": "Levothyroxine 100 mcg at night"
+   },
+   {
+    "handwriting": "Salbutamol 20 mg twice daily",
+    "handwriting_conf": 0.9539,
+    "hw_share": 0.9431,
+    "keep_printed": false,
+    "line": 4,
+    "page": 3,
+    "printed": "Salburamel 20 mg twice daly",
+    "printed_conf": 0.8041,
+    "routed": true,
+    "shipped": "Salbutamol 20 mg twice daily",
+    "shipped_conf": 0.9539,
+    "shipped_if_routed": "Salbutamol 20 mg twice daily",
+    "shipped_if_routed_conf": 0.9539,
+    "truth": "Salbutamol 20 mg twice daily"
+   },
+   {
+    "handwriting": "4. Ramipril 75 mg nocte",
+    "handwriting_conf": 0.9435,
+    "hw_share": 0.9492,
+    "keep_printed": false,
+    "line": 0,
+    "page": 4,
+    "printed": ". Ramipril 75 mg nocte",
+    "printed_conf": 0.8587,
+    "routed": true,
+    "shipped": "4. Ramipril 75 mg nocte",
+    "shipped_conf": 0.9435,
+    "shipped_if_routed": "4. Ramipril 75 mg nocte",
+    "shipped_if_routed_conf": 0.9435,
+    "truth": "4. Ramipril 75 mg nocte"
+   },
+   {
+    "handwriting": "5. Sertraline 75 mg once daily",
+    "handwriting_conf": 0.9588,
+    "hw_share": 0.7906,
+    "keep_printed": false,
+    "line": 1,
+    "page": 4,
+    "printed": "5. Sertraline 75 mg once daly",
+    "printed_conf": 0.9072,
+    "routed": true,
+    "shipped": "5. Sertraline 75 mg once daily",
+    "shipped_conf": 0.9588,
+    "shipped_if_routed": "5. Sertraline 75 mg once daily",
+    "shipped_if_routed_conf": 0.9588,
+    "truth": "5. Sertraline 75 mg once daily"
+   },
+   {
+    "handwriting": "2. Lactulose 5 mL once daily",
+    "handwriting_conf": 0.9225,
+    "hw_share": 0.8773,
+    "keep_printed": false,
+    "line": 2,
+    "page": 4,
+    "printed": "2. Lactulose 5 mL once daly",
+    "printed_conf": 0.9112,
+    "routed": true,
+    "shipped": "2. Lactulose 5 mL once daily",
+    "shipped_conf": 0.9225,
+    "shipped_if_routed": "2. Lactulose 5 mL once daily",
+    "shipped_if_routed_conf": 0.9225,
+    "truth": "2. Lactulose 5 mL once daily"
+   },
+   {
+    "handwriting": "Check sugar weekly",
+    "handwriting_conf": 0.8528,
+    "hw_share": 0.6722,
+    "keep_printed": false,
+    "line": 3,
+    "page": 4,
+    "printed": "Check sugar weekly",
+    "printed_conf": 0.7806,
+    "routed": true,
+    "shipped": "Check sugar weekly",
+    "shipped_conf": 0.8528,
+    "shipped_if_routed": "Check sugar weekly",
+    "shipped_if_routed_conf": 0.8528,
+    "truth": "Check sugar weekly"
+   },
+   {
+    "handwriting": "2. Gliclade 5 mg",
+    "handwriting_conf": 0.8519,
+    "hw_share": 0.6875,
+    "keep_printed": false,
+    "line": 4,
+    "page": 4,
+    "printed": "2. Gliclazide 5 mg",
+    "printed_conf": 0.9082,
+    "routed": true,
+    "shipped": "2. Gliclazide 5 mg",
+    "shipped_conf": 0.9082,
+    "shipped_if_routed": "2. Gliclazide 5 mg",
+    "shipped_if_routed_conf": 0.9082,
+    "truth": "2. Gliclazide 5 mg"
+   },
+   {
+    "handwriting": "5. Amoxicillin 500 mg at night",
+    "handwriting_conf": 0.8941,
+    "hw_share": 0.5088,
+    "keep_printed": false,
+    "line": 0,
+    "page": 5,
+    "printed": "S. Amoxicillin S00 mg at night",
+    "printed_conf": 0.8564,
+    "routed": true,
+    "shipped": "5. Amoxicillin 500 mg at night",
+    "shipped_conf": 0.8941,
+    "shipped_if_routed": "5. Amoxicillin 500 mg at night",
+    "shipped_if_routed_conf": 0.8941,
+    "truth": "5. Amoxicillin 500 mg at night"
+   },
+   {
+    "handwriting": "BP 122/69",
+    "handwriting_conf": 0.8927,
+    "hw_share": 0.5529,
+    "keep_printed": false,
+    "line": 1,
+    "page": 5,
+    "printed": "BP 122/69",
+    "printed_conf": 0.6932,
+    "routed": true,
+    "shipped": "BP 122/69",
+    "shipped_conf": 0.8927,
+    "shipped_if_routed": "BP 122/69",
+    "shipped_if_routed_conf": 0.8927,
+    "truth": "BP 122/69"
+   },
+   {
+    "handwriting": "check sugar weekly",
+    "handwriting_conf": 0.899,
+    "hw_share": 0.9991,
+    "keep_printed": false,
+    "line": 2,
+    "page": 5,
+    "printed": "Check sugar weekly",
+    "printed_conf": 0.8311,
+    "routed": true,
+    "shipped": "check sugar weekly",
+    "shipped_conf": 0.899,
+    "shipped_if_routed": "check sugar weekly",
+    "shipped_if_routed_conf": 0.899,
+    "truth": "Check sugar weekly"
+   },
+   {
+    "handwriting": "5. Paracetamol 75 mg after meals",
+    "handwriting_conf": 0.9691,
+    "hw_share": 0.6993,
+    "keep_printed": false,
+    "line": 3,
+    "page": 5,
+    "printed": "S. Paracetamol 7S mg after meals",
+    "printed_conf": 0.9,
+    "routed": true,
+    "shipped": "5. Paracetamol 75 mg after meals",
+    "shipped_conf": 0.9691,
+    "shipped_if_routed": "5. Paracetamol 75 mg after meals",
+    "shipped_if_routed_conf": 0.9691,
+    "truth": "5. Paracetamol 75 mg after meals"
+   },
+   {
+    "handwriting": "Metformin 50 mg nocte",
+    "handwriting_conf": 0.8622,
+    "hw_share": 0.5716,
+    "keep_printed": false,
+    "line": 4,
+    "page": 5,
+    "printed": "Metfommin So mg nocte",
+    "printed_conf": 0.7689,
+    "routed": true,
+    "shipped": "Metformin 50 mg nocte",
+    "shipped_conf": 0.8622,
+    "shipped_if_routed": "Metformin 50 mg nocte",
+    "shipped_if_routed_conf": 0.8622,
+    "truth": "Metformin 50 mg nocte"
+   },
+   {
+    "handwriting": "Good progress",
+    "handwriting_conf": 0.9726,
+    "hw_share": 0.9994,
+    "keep_printed": false,
+    "line": 0,
+    "page": 6,
+    "printed": "G0od progress",
+    "printed_conf": 0.5646,
+    "routed": true,
+    "shipped": "Good progress",
+    "shipped_conf": 0.9726,
+    "shipped_if_routed": "Good progress",
+    "shipped_if_routed_conf": 0.9726,
+    "truth": "Good progress"
+   },
+   {
+    "handwriting": "Atoryastatin 12.5 mg prn",
+    "handwriting_conf": 0.7855,
+    "hw_share": 0.9989,
+    "keep_printed": false,
+    "line": 1,
+    "page": 6,
+    "printed": "Aftorwastatin 12.5 mg prn",
+    "printed_conf": 0.5559,
+    "routed": true,
+    "shipped": "Atoryastatin 12.5 mg prn",
+    "shipped_conf": 0.7855,
+    "shipped_if_routed": "Atoryastatin 12.5 mg prn",
+    "shipped_if_routed_conf": 0.7855,
+    "truth": "Atorvastatin 12.5 mg prn"
+   },
+   {
+    "handwriting": "Amlodipine 500 mg nocte",
+    "handwriting_conf": 0.8781,
+    "hw_share": 0.9845,
+    "keep_printed": false,
+    "line": 2,
+    "page": 6,
+    "printed": "Amlbdipine 500 mg vocte",
+    "printed_conf": 0.5852,
+    "routed": true,
+    "shipped": "Amlodipine 500 mg nocte",
+    "shipped_conf": 0.8781,
+    "shipped_if_routed": "Amlodipine 500 mg nocte",
+    "shipped_if_routed_conf": 0.8781,
+    "truth": "Amlodipine 500 mg nocte"
+   },
+   {
+    "handwriting": "3. Atoryastatin 100 mg once daily",
+    "handwriting_conf": 0.9267,
+    "hw_share": 0.7571,
+    "keep_printed": false,
+    "line": 3,
+    "page": 6,
+    "printed": "3. Aforwastatin 100 mg onCe daily",
+    "printed_conf": 0.6863,
+    "routed": true,
+    "shipped": "3. Atoryastatin 100 mg once daily",
+    "shipped_conf": 0.9267,
+    "shipped_if_routed": "3. Atoryastatin 100 mg once daily",
+    "shipped_if_routed_conf": 0.9267,
+    "truth": "3. Atorvastatin 100 mg once daily"
+   },
+   {
+    "handwriting": "salbutamol 500 mg twice daily",
+    "handwriting_conf": 0.9351,
+    "hw_share": 0.9975,
+    "keep_printed": false,
+    "line": 4,
+    "page": 6,
+    "printed": "Salbutamol 500 mg twice daily",
+    "printed_conf": 0.793,
+    "routed": true,
+    "shipped": "salbutamol 500 mg twice daily",
+    "shipped_conf": 0.9351,
+    "shipped_if_routed": "salbutamol 500 mg twice daily",
+    "shipped_if_routed_conf": 0.9351,
+    "truth": "Salbutamol 500 mg twice daily"
+   },
+   {
+    "handwriting": "Good progress",
+    "handwriting_conf": 0.9941,
+    "hw_share": 0.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 7,
+    "printed": "Good progress",
+    "printed_conf": 0.9872,
+    "routed": false,
+    "shipped": "Good progress",
+    "shipped_conf": 0.9872,
+    "shipped_if_routed": "Good progress",
+    "shipped_if_routed_conf": 0.9941,
+    "truth": "Good progress"
+   },
+   {
+    "handwriting": "Aspirin 40 mg twice daily",
+    "handwriting_conf": 0.9771,
+    "hw_share": 0.323,
+    "keep_printed": false,
+    "line": 1,
+    "page": 7,
+    "printed": "Aspirin 40 mg twice daily",
+    "printed_conf": 0.9618,
+    "routed": false,
+    "shipped": "Aspirin 40 mg twice daily",
+    "shipped_conf": 0.9618,
+    "shipped_if_routed": "Aspirin 40 mg twice daily",
+    "shipped_if_routed_conf": 0.9771,
+    "truth": "Aspirin 40 mg twice daily"
+   },
+   {
+    "handwriting": "Dr A. Example",
+    "handwriting_conf": 0.9961,
+    "hw_share": 0.2553,
+    "keep_printed": false,
+    "line": 2,
+    "page": 7,
+    "printed": "Dr A. Example",
+    "printed_conf": 0.905,
+    "routed": false,
+    "shipped": "Dr A. Example",
+    "shipped_conf": 0.905,
+    "shipped_if_routed": "Dr A. Example",
+    "shipped_if_routed_conf": 0.9961,
+    "truth": "Dr A. Example"
+   },
+   {
+    "handwriting": "Bisoprolal 500 mg TDs",
+    "handwriting_conf": 0.7367,
+    "hw_share": 0.0059,
+    "keep_printed": false,
+    "line": 3,
+    "page": 7,
+    "printed": "Bisoprolol 500 mg TDS",
+    "printed_conf": 0.9848,
+    "routed": false,
+    "shipped": "Bisoprolol 500 mg TDS",
+    "shipped_conf": 0.9848,
+    "shipped_if_routed": "Bisoprolol 500 mg TDS",
+    "shipped_if_routed_conf": 0.9848,
+    "truth": "Bisoprolol 500 mg TDS"
+   },
+   {
+    "handwriting": "Atorvastatin 12.5 mg at night",
+    "handwriting_conf": 0.8089,
+    "hw_share": 0.3372,
+    "keep_printed": false,
+    "line": 4,
+    "page": 7,
+    "printed": "Atorvastatin 12.5 mg at night",
+    "printed_conf": 0.9733,
+    "routed": false,
+    "shipped": "Atorvastatin 12.5 mg at night",
+    "shipped_conf": 0.9733,
+    "shipped_if_routed": "Atorvastatin 12.5 mg at night",
+    "shipped_if_routed_conf": 0.9733,
+    "truth": "Atorvastatin 12.5 mg at night"
+   },
+   {
+    "handwriting": "Insulin 16 units OD",
+    "handwriting_conf": 0.8776,
+    "hw_share": 0.2078,
+    "keep_printed": false,
+    "line": 5,
+    "page": 7,
+    "printed": "Insulin 16 units OD",
+    "printed_conf": 0.9339,
+    "routed": false,
+    "shipped": "Insulin 16 units OD",
+    "shipped_conf": 0.9339,
+    "shipped_if_routed": "Insulin 16 units OD",
+    "shipped_if_routed_conf": 0.9339,
+    "truth": "Insulin 16 units OD"
+   },
+   {
+    "handwriting": "4. Warfarin 100 mg prn",
+    "handwriting_conf": 0.8475,
+    "hw_share": 0.901,
+    "keep_printed": false,
+    "line": 0,
+    "page": 8,
+    "printed": "4. Warfarin 100 mg Po",
+    "printed_conf": 0.6629,
+    "routed": true,
+    "shipped": "4. Warfarin 100 mg prn",
+    "shipped_conf": 0.8475,
+    "shipped_if_routed": "4. Warfarin 100 mg prn",
+    "shipped_if_routed_conf": 0.8475,
+    "truth": "4. Warfarin 100 mg prn"
+   },
+   {
+    "handwriting": "3. Gliclazide 500 mg nocte",
+    "handwriting_conf": 0.8428,
+    "hw_share": 0.7577,
+    "keep_printed": false,
+    "line": 1,
+    "page": 8,
+    "printed": "3. Gluiclazide 500 mg nocte",
+    "printed_conf": 0.832,
+    "routed": true,
+    "shipped": "3. Gliclazide 500 mg nocte",
+    "shipped_conf": 0.8428,
+    "shipped_if_routed": "3. Gliclazide 500 mg nocte",
+    "shipped_if_routed_conf": 0.8428,
+    "truth": "3. Gliclazide 500 mg nocte"
+   },
+   {
+    "handwriting": "Prednisolone 5 mg 00",
+    "handwriting_conf": 0.912,
+    "hw_share": 0.9712,
+    "keep_printed": false,
+    "line": 2,
+    "page": 8,
+    "printed": "Predhisolone 5 ng OD",
+    "printed_conf": 0.6125,
+    "routed": true,
+    "shipped": "Prednisolone 5 mg 00",
+    "shipped_conf": 0.912,
+    "shipped_if_routed": "Prednisolone 5 mg 00",
+    "shipped_if_routed_conf": 0.912,
+    "truth": "Prednisolone 5 mg OD"
+   },
+   {
+    "handwriting": "Review on 17/0812026",
+    "handwriting_conf": 0.8395,
+    "hw_share": 0.9999,
+    "keep_printed": false,
+    "line": 3,
+    "page": 8,
+    "printed": "Review On 7-100/2026",
+    "printed_conf": 0.6836,
+    "routed": true,
+    "shipped": "Review on 17/0812026",
+    "shipped_conf": 0.8395,
+    "shipped_if_routed": "Review on 17/0812026",
+    "shipped_if_routed_conf": 0.8395,
+    "truth": "Review on 17/08/2026"
+   },
+   {
+    "handwriting": "Lorazepam 10 mg",
+    "handwriting_conf": 0.954,
+    "hw_share": 0.9908,
+    "keep_printed": false,
+    "line": 4,
+    "page": 8,
+    "printed": "Lorazepam 10 mg",
+    "printed_conf": 0.7312,
+    "routed": true,
+    "shipped": "Lorazepam 10 mg",
+    "shipped_conf": 0.954,
+    "shipped_if_routed": "Lorazepam 10 mg",
+    "shipped_if_routed_conf": 0.954,
+    "truth": "Lorazepam 10 mg"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.909,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 0,
+    "page": 9,
+    "printed": "Jake with faad",
+    "printed_conf": 0.5775,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.909,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.909,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "Insulin 20 units JQ.S",
+    "handwriting_conf": 0.5729,
+    "hw_share": 0.9983,
+    "keep_printed": false,
+    "line": 1,
+    "page": 9,
+    "printed": "Onsulir 20 wuts 39",
+    "printed_conf": 0.5202,
+    "routed": true,
+    "shipped": "Insulin 20 units JQ.S",
+    "shipped_conf": 0.5729,
+    "shipped_if_routed": "Insulin 20 units JQ.S",
+    "shipped_if_routed_conf": 0.5729,
+    "truth": "Insulin 20 units TDS"
+   },
+   {
+    "handwriting": "Metformin 5 mg 019",
+    "handwriting_conf": 0.7021,
+    "hw_share": 0.9649,
+    "keep_printed": false,
+    "line": 2,
+    "page": 9,
+    "printed": "Meefarmur 5 mg 99",
+    "printed_conf": 0.7353,
+    "routed": true,
+    "shipped": "Meefarmur 5 mg 99",
+    "shipped_conf": 0.7353,
+    "shipped_if_routed": "Meefarmur 5 mg 99",
+    "shipped_if_routed_conf": 0.7353,
+    "truth": "Metformin 5 mg OD"
+   },
+   {
+    "handwriting": "Bisoprelal 50 mg 019",
+    "handwriting_conf": 0.7071,
+    "hw_share": 0.9996,
+    "keep_printed": false,
+    "line": 3,
+    "page": 9,
+    "printed": "Buropralel 50 mg 99",
+    "printed_conf": 0.7168,
+    "routed": true,
+    "shipped": "Buropralel 50 mg 99",
+    "shipped_conf": 0.7168,
+    "shipped_if_routed": "Buropralel 50 mg 99",
+    "shipped_if_routed_conf": 0.7168,
+    "truth": "Bisoprolol 50 mg OD"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.8821,
+    "hw_share": 0.9992,
+    "keep_printed": false,
+    "line": 4,
+    "page": 9,
+    "printed": "Jake with paod",
+    "printed_conf": 0.6436,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.8821,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.8821,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "1. Metformin 125 mg after meals",
+    "handwriting_conf": 0.9249,
+    "hw_share": 0.9925,
+    "keep_printed": false,
+    "line": 5,
+    "page": 9,
+    "printed": "1. Metfonmu 185 mg aften meals",
+    "printed_conf": 0.6529,
+    "routed": true,
+    "shipped": "1. Metformin 125 mg after meals",
+    "shipped_conf": 0.9249,
+    "shipped_if_routed": "1. Metformin 125 mg after meals",
+    "shipped_if_routed_conf": 0.9249,
+    "truth": "1. Metformin 12.5 mg after meals"
+   },
+   {
+    "handwriting": "BX 101769",
+    "handwriting_conf": 0.5217,
+    "hw_share": 0.9796,
+    "keep_printed": false,
+    "line": 6,
+    "page": 9,
+    "printed": "Bp 101/69",
+    "printed_conf": 0.3749,
+    "routed": true,
+    "shipped": "BX 101769",
+    "shipped_conf": 0.5217,
+    "shipped_if_routed": "BX 101769",
+    "shipped_if_routed_conf": 0.5217,
+    "truth": "BP 101/69"
+   },
+   {
+    "handwriting": "5. Aspirin 0.5 mg twice daily",
+    "handwriting_conf": 0.9811,
+    "hw_share": 0.951,
+    "keep_printed": false,
+    "line": 0,
+    "page": 10,
+    "printed": "5. Asptin 0.5 mg twice daly",
+    "printed_conf": 0.7699,
+    "routed": true,
+    "shipped": "5. Aspirin 0.5 mg twice daily",
+    "shipped_conf": 0.9811,
+    "shipped_if_routed": "5. Aspirin 0.5 mg twice daily",
+    "shipped_if_routed_conf": 0.9811,
+    "truth": "5. Aspirin 0.5 mg twice daily"
+   },
+   {
+    "handwriting": "Signed",
+    "handwriting_conf": 0.9936,
+    "hw_share": 0.9735,
+    "keep_printed": false,
+    "line": 1,
+    "page": 10,
+    "printed": "Sgmcd",
+    "printed_conf": 0.2902,
+    "routed": true,
+    "shipped": "Signed",
+    "shipped_conf": 0.9936,
+    "shipped_if_routed": "Signed",
+    "shipped_if_routed_conf": 0.9936,
+    "truth": "Signed"
+   },
+   {
+    "handwriting": "3. Lorazepam 500 mg twice daily",
+    "handwriting_conf": 0.9634,
+    "hw_share": 0.8289,
+    "keep_printed": false,
+    "line": 2,
+    "page": 10,
+    "printed": "3. Larazepan 500 mg twice daly",
+    "printed_conf": 0.8586,
+    "routed": true,
+    "shipped": "3. Lorazepam 500 mg twice daily",
+    "shipped_conf": 0.9634,
+    "shipped_if_routed": "3. Lorazepam 500 mg twice daily",
+    "shipped_if_routed_conf": 0.9634,
+    "truth": "3. Lorazepam 500 mg twice daily"
+   },
+   {
+    "handwriting": "Levothyroxine 62.5 mcg TDs",
+    "handwriting_conf": 0.7699,
+    "hw_share": 0.7919,
+    "keep_printed": false,
+    "line": 3,
+    "page": 10,
+    "printed": "Lonethnyoaine 62.5 mcg TDS",
+    "printed_conf": 0.7454,
+    "routed": true,
+    "shipped": "Levothyroxine 62.5 mcg TDs",
+    "shipped_conf": 0.7699,
+    "shipped_if_routed": "Levothyroxine 62.5 mcg TDs",
+    "shipped_if_routed_conf": 0.7699,
+    "truth": "Levothyroxine 62.5 mcg TDS"
+   },
+   {
+    "handwriting": "Lactulose 15 mL 0D",
+    "handwriting_conf": 0.823,
+    "hw_share": 0.6002,
+    "keep_printed": false,
+    "line": 4,
+    "page": 10,
+    "printed": "Lactulose 15 ml OD",
+    "printed_conf": 0.7764,
+    "routed": true,
+    "shipped": "Lactulose 15 mL 0D",
+    "shipped_conf": 0.823,
+    "shipped_if_routed": "Lactulose 15 mL 0D",
+    "shipped_if_routed_conf": 0.823,
+    "truth": "Lactulose 15 mL OD"
+   },
+   {
+    "handwriting": "Dr A. Example",
+    "handwriting_conf": 0.9931,
+    "hw_share": 0.8625,
+    "keep_printed": false,
+    "line": 5,
+    "page": 10,
+    "printed": "Dr A. Erample",
+    "printed_conf": 0.5403,
+    "routed": true,
+    "shipped": "Dr A. Example",
+    "shipped_conf": 0.9931,
+    "shipped_if_routed": "Dr A. Example",
+    "shipped_if_routed_conf": 0.9931,
+    "truth": "Dr A. Example"
+   },
+   {
+    "handwriting": "Ramipril 1.25 mg",
+    "handwriting_conf": 0.8751,
+    "hw_share": 0.9559,
+    "keep_printed": false,
+    "line": 6,
+    "page": 10,
+    "printed": "Rampnl 1.25 mg",
+    "printed_conf": 0.7016,
+    "routed": true,
+    "shipped": "Ramipril 1.25 mg",
+    "shipped_conf": 0.8751,
+    "shipped_if_routed": "Ramipril 1.25 mg",
+    "shipped_if_routed_conf": 0.8751,
+    "truth": "Ramipril 1.25 mg"
+   },
+   {
+    "handwriting": "4. Prednisolone 100 mg BD",
+    "handwriting_conf": 0.9491,
+    "hw_share": 0.4053,
+    "keep_printed": false,
+    "line": 0,
+    "page": 11,
+    "printed": "4. Prednisolone 100 mg BD",
+    "printed_conf": 0.9103,
+    "routed": false,
+    "shipped": "4. Prednisolone 100 mg BD",
+    "shipped_conf": 0.9103,
+    "shipped_if_routed": "4. Prednisolone 100 mg BD",
+    "shipped_if_routed_conf": 0.9491,
+    "truth": "4. Prednisolone 100 mg BD"
+   },
+   {
+    "handwriting": "Ramipril 50 mg nocte",
+    "handwriting_conf": 0.8659,
+    "hw_share": 0.7769,
+    "keep_printed": false,
+    "line": 1,
+    "page": 11,
+    "printed": "Ramipnl 50 mg nocte",
+    "printed_conf": 0.8298,
+    "routed": true,
+    "shipped": "Ramipril 50 mg nocte",
+    "shipped_conf": 0.8659,
+    "shipped_if_routed": "Ramipril 50 mg nocte",
+    "shipped_if_routed_conf": 0.8659,
+    "truth": "Ramipril 50 mg nocte"
+   },
+   {
+    "handwriting": "Review on 1912/2026",
+    "handwriting_conf": 0.9016,
+    "hw_share": 0.6782,
+    "keep_printed": false,
+    "line": 2,
+    "page": 11,
+    "printed": "Review on 14/12/2026",
+    "printed_conf": 0.7603,
+    "routed": true,
+    "shipped": "Review on 1912/2026",
+    "shipped_conf": 0.9016,
+    "shipped_if_routed": "Review on 1912/2026",
+    "shipped_if_routed_conf": 0.9016,
+    "truth": "Review on 19/12/2026"
+   },
+   {
+    "handwriting": "Review on 01/09/026",
+    "handwriting_conf": 0.8936,
+    "hw_share": 0.6856,
+    "keep_printed": false,
+    "line": 3,
+    "page": 11,
+    "printed": "Review on OV04/2026",
+    "printed_conf": 0.7244,
+    "routed": true,
+    "shipped": "Review on 01/09/026",
+    "shipped_conf": 0.8936,
+    "shipped_if_routed": "Review on 01/09/026",
+    "shipped_if_routed_conf": 0.8936,
+    "truth": "Review on 01/09/2026"
+   },
+   {
+    "handwriting": "Review on 16097026",
+    "handwriting_conf": 0.6929,
+    "hw_share": 0.6678,
+    "keep_printed": false,
+    "line": 4,
+    "page": 11,
+    "printed": "Review on 16/09/2026",
+    "printed_conf": 0.9025,
+    "routed": true,
+    "shipped": "Review on 16/09/2026",
+    "shipped_conf": 0.9025,
+    "shipped_if_routed": "Review on 16/09/2026",
+    "shipped_if_routed_conf": 0.9025,
+    "truth": "Review on 16/09/2026"
+   },
+   {
+    "handwriting": "Review on 03/02/2026",
+    "handwriting_conf": 0.9404,
+    "hw_share": 0.6675,
+    "keep_printed": false,
+    "line": 5,
+    "page": 11,
+    "printed": "Review on 03/02/2026",
+    "printed_conf": 0.8119,
+    "routed": true,
+    "shipped": "Review on 03/02/2026",
+    "shipped_conf": 0.9404,
+    "shipped_if_routed": "Review on 03/02/2026",
+    "shipped_if_routed_conf": 0.9404,
+    "truth": "Review on 03/02/2026"
+   },
+   {
+    "handwriting": "4. Gliclazide 20 mg BD",
+    "handwriting_conf": 0.8262,
+    "hw_share": 0.6463,
+    "keep_printed": false,
+    "line": 6,
+    "page": 11,
+    "printed": "4. Gliclazide 20 mg BD",
+    "printed_conf": 0.8238,
+    "routed": true,
+    "shipped": "4. Gliclazide 20 mg BD",
+    "shipped_conf": 0.8262,
+    "shipped_if_routed": "4. Gliclazide 20 mg BD",
+    "shipped_if_routed_conf": 0.8262,
+    "truth": "4. Gliclazide 20 mg BD"
+   },
+   {
+    "handwriting": "Amoxicillin 50 mg at night",
+    "handwriting_conf": 0.8984,
+    "hw_share": 0.9993,
+    "keep_printed": false,
+    "line": 0,
+    "page": 12,
+    "printed": "Amoxicillin 50 mg at night",
+    "printed_conf": 0.9282,
+    "routed": true,
+    "shipped": "Amoxicillin 50 mg at night",
+    "shipped_conf": 0.9282,
+    "shipped_if_routed": "Amoxicillin 50 mg at night",
+    "shipped_if_routed_conf": 0.9282,
+    "truth": "Amoxicillin 50 mg at night"
+   },
+   {
+    "handwriting": "BP 104/90",
+    "handwriting_conf": 0.9393,
+    "hw_share": 0.9901,
+    "keep_printed": false,
+    "line": 1,
+    "page": 12,
+    "printed": "BP 104/90",
+    "printed_conf": 0.9015,
+    "routed": true,
+    "shipped": "BP 104/90",
+    "shipped_conf": 0.9393,
+    "shipped_if_routed": "BP 104/90",
+    "shipped_if_routed_conf": 0.9393,
+    "truth": "BP 104/90"
+   },
+   {
+    "handwriting": "3. Insulin 8 units TDS",
+    "handwriting_conf": 0.914,
+    "hw_share": 0.9314,
+    "keep_printed": false,
+    "line": 2,
+    "page": 12,
+    "printed": "3. Insulin 8 units TDS",
+    "printed_conf": 0.9691,
+    "routed": true,
+    "shipped": "3. Insulin 8 units TDS",
+    "shipped_conf": 0.9691,
+    "shipped_if_routed": "3. Insulin 8 units TDS",
+    "shipped_if_routed_conf": 0.9691,
+    "truth": "3. Insulin 8 units TDS"
+   },
+   {
+    "handwriting": "5. Prednisolone 75 mg",
+    "handwriting_conf": 0.9679,
+    "hw_share": 0.9997,
+    "keep_printed": false,
+    "line": 3,
+    "page": 12,
+    "printed": "S. Prednisolone 75 mg",
+    "printed_conf": 0.8926,
+    "routed": true,
+    "shipped": "5. Prednisolone 75 mg",
+    "shipped_conf": 0.9679,
+    "shipped_if_routed": "5. Prednisolone 75 mg",
+    "shipped_if_routed_conf": 0.9679,
+    "truth": "5. Prednisolone 75 mg"
+   },
+   {
+    "handwriting": "Review on 23/06/2026",
+    "handwriting_conf": 0.8695,
+    "hw_share": 0.9962,
+    "keep_printed": false,
+    "line": 4,
+    "page": 12,
+    "printed": "Review on 23/06/2026",
+    "printed_conf": 0.8787,
+    "routed": true,
+    "shipped": "Review on 23/06/2026",
+    "shipped_conf": 0.8787,
+    "shipped_if_routed": "Review on 23/06/2026",
+    "shipped_if_routed_conf": 0.8787,
+    "truth": "Review on 23/06/2026"
+   },
+   {
+    "handwriting": "Lactulose 10 mL prn",
+    "handwriting_conf": 0.7737,
+    "hw_share": 0.9998,
+    "keep_printed": false,
+    "line": 5,
+    "page": 12,
+    "printed": "Lactulose 10 mL prn",
+    "printed_conf": 0.8474,
+    "routed": true,
+    "shipped": "Lactulose 10 mL prn",
+    "shipped_conf": 0.8474,
+    "shipped_if_routed": "Lactulose 10 mL prn",
+    "shipped_if_routed_conf": 0.8474,
+    "truth": "Lactulose 10 mL prn"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.9313,
+    "hw_share": 0.9714,
+    "keep_printed": false,
+    "line": 6,
+    "page": 12,
+    "printed": "See me if worse",
+    "printed_conf": 0.9568,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.9568,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.9568,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "See me if worse",
+    "handwriting_conf": 0.9369,
+    "hw_share": 0.7452,
+    "keep_printed": false,
+    "line": 0,
+    "page": 13,
+    "printed": "See me if worse",
+    "printed_conf": 0.856,
+    "routed": true,
+    "shipped": "See me if worse",
+    "shipped_conf": 0.9369,
+    "shipped_if_routed": "See me if worse",
+    "shipped_if_routed_conf": 0.9369,
+    "truth": "See me if worse"
+   },
+   {
+    "handwriting": "Amoxicillin 12.5 mg TDS",
+    "handwriting_conf": 0.8488,
+    "hw_share": 0.7568,
+    "keep_printed": false,
+    "line": 1,
+    "page": 13,
+    "printed": "Amoxicillin 12.5 mg TDS",
+    "printed_conf": 0.898,
+    "routed": true,
+    "shipped": "Amoxicillin 12.5 mg TDS",
+    "shipped_conf": 0.898,
+    "shipped_if_routed": "Amoxicillin 12.5 mg TDS",
+    "shipped_if_routed_conf": 0.898,
+    "truth": "Amoxicillin 12.5 mg TDS"
+   },
+   {
+    "handwriting": "Review on 14/06/2026",
+    "handwriting_conf": 0.9588,
+    "hw_share": 0.9876,
+    "keep_printed": false,
+    "line": 2,
+    "page": 13,
+    "printed": "Review on 14/06/2026",
+    "printed_conf": 0.8247,
+    "routed": true,
+    "shipped": "Review on 14/06/2026",
+    "shipped_conf": 0.9588,
+    "shipped_if_routed": "Review on 14/06/2026",
+    "shipped_if_routed_conf": 0.9588,
+    "truth": "Review on 14/06/2026"
+   },
+   {
+    "handwriting": "Ramipril 1.25 mg BD",
+    "handwriting_conf": 0.7915,
+    "hw_share": 0.896,
+    "keep_printed": false,
+    "line": 3,
+    "page": 13,
+    "printed": "Ramieril 1.25 mg BD",
+    "printed_conf": 0.8516,
+    "routed": true,
+    "shipped": "Ramieril 1.25 mg BD",
+    "shipped_conf": 0.8516,
+    "shipped_if_routed": "Ramieril 1.25 mg BD",
+    "shipped_if_routed_conf": 0.8516,
+    "truth": "Ramipril 1.25 mg BD"
+   },
+   {
+    "handwriting": "Metformin 2.5 mg nocte",
+    "handwriting_conf": 0.9402,
+    "hw_share": 0.7016,
+    "keep_printed": false,
+    "line": 4,
+    "page": 13,
+    "printed": "Metformin 2.5 mg nocte",
+    "printed_conf": 0.9165,
+    "routed": true,
+    "shipped": "Metformin 2.5 mg nocte",
+    "shipped_conf": 0.9402,
+    "shipped_if_routed": "Metformin 2.5 mg nocte",
+    "shipped_if_routed_conf": 0.9402,
+    "truth": "Metformin 2.5 mg nocte"
+   },
+   {
+    "handwriting": "Take with food",
+    "handwriting_conf": 0.9888,
+    "hw_share": 0.9796,
+    "keep_printed": false,
+    "line": 5,
+    "page": 13,
+    "printed": "Take with food",
+    "printed_conf": 0.9877,
+    "routed": true,
+    "shipped": "Take with food",
+    "shipped_conf": 0.9888,
+    "shipped_if_routed": "Take with food",
+    "shipped_if_routed_conf": 0.9888,
+    "truth": "Take with food"
+   },
+   {
+    "handwriting": "Furosemide 500 mg after meals",
+    "handwriting_conf": 0.9037,
+    "hw_share": 0.7035,
+    "keep_printed": false,
+    "line": 0,
+    "page": 14,
+    "printed": "Furosemide S00 mg after meals",
+    "printed_conf": 0.8268,
+    "routed": true,
+    "shipped": "Furosemide 500 mg after meals",
+    "shipped_conf": 0.9037,
+    "shipped_if_routed": "Furosemide 500 mg after meals",
+    "shipped_if_routed_conf": 0.9037,
+    "truth": "Furosemide 500 mg after meals"
+   },
+   {
+    "handwriting": "Review on 13/09/2026",
+    "handwriting_conf": 0.8797,
+    "hw_share": 0.9969,
+    "keep_printed": false,
+    "line": 1,
+    "page": 14,
+    "printed": "Review on 13/09/2026",
+    "printed_conf": 0.8442,
+    "routed": true,
+    "shipped": "Review on 13/09/2026",
+    "shipped_conf": 0.8797,
+    "shipped_if_routed": "Review on 13/09/2026",
+    "shipped_if_routed_conf": 0.8797,
+    "truth": "Review on 13/09/2026"
+   },
+   {
+    "handwriting": "Review on 03/11/2026",
+    "handwriting_conf": 0.967,
+    "hw_share": 0.9958,
+    "keep_printed": false,
+    "line": 2,
+    "page": 14,
+    "printed": "Review on 03/1/2026",
+    "printed_conf": 0.8489,
+    "routed": true,
+    "shipped": "Review on 03/11/2026",
+    "shipped_conf": 0.967,
+    "shipped_if_routed": "Review on 03/11/2026",
+    "shipped_if_routed_conf": 0.967,
+    "truth": "Review on 03/11/2026"
+   },
+   {
+    "handwriting": "Insulin 8 units DD",
+    "handwriting_conf": 0.6728,
+    "hw_share": 0.4989,
+    "keep_printed": false,
+    "line": 3,
+    "page": 14,
+    "printed": "Insulin 8 units OD",
+    "printed_conf": 0.8278,
+    "routed": false,
+    "shipped": "Insulin 8 units OD",
+    "shipped_conf": 0.8278,
+    "shipped_if_routed": "Insulin 8 units OD",
+    "shipped_if_routed_conf": 0.8278,
+    "truth": "Insulin 8 units OD"
+   },
+   {
+    "handwriting": "Amlodipine 2.5 mg after meals",
+    "handwriting_conf": 0.876,
+    "hw_share": 0.7974,
+    "keep_printed": false,
+    "line": 4,
+    "page": 14,
+    "printed": "Amlodipine 2.5 mg after meals",
+    "printed_conf": 0.7754,
+    "routed": true,
+    "shipped": "Amlodipine 2.5 mg after meals",
+    "shipped_conf": 0.876,
+    "shipped_if_routed": "Amlodipine 2.5 mg after meals",
+    "shipped_if_routed_conf": 0.876,
+    "truth": "Amlodipine 2.5 mg after meals"
+   },
+   {
+    "handwriting": "Bisoprolol 75 mg once daily",
+    "handwriting_conf": 0.7295,
+    "hw_share": 0.0047,
+    "keep_printed": false,
+    "line": 0,
+    "page": 15,
+    "printed": "Bisoprolol 75 mg once daily",
+    "printed_conf": 0.9688,
+    "routed": false,
+    "shipped": "Bisoprolol 75 mg once daily",
+    "shipped_conf": 0.9688,
+    "shipped_if_routed": "Bisoprolol 75 mg once daily",
+    "shipped_if_routed_conf": 0.9688,
+    "truth": "Bisoprolol 75 mg once daily"
+   },
+   {
+    "handwriting": "Prednisolone 20 mg nocte",
+    "handwriting_conf": 0.938,
+    "hw_share": 0.0064,
+    "keep_printed": false,
+    "line": 1,
+    "page": 15,
+    "printed": "Prednisolone 20 mg nocte",
+    "printed_conf": 0.9869,
+    "routed": false,
+    "shipped": "Prednisolone 20 mg nocte",
+    "shipped_conf": 0.9869,
+    "shipped_if_routed": "Prednisolone 20 mg nocte",
+    "shipped_if_routed_conf": 0.9869,
+    "truth": "Prednisolone 20 mg nocte"
+   },
+   {
+    "handwriting": "Metformin 0.5 mg once daily",
+    "handwriting_conf": 0.9739,
+    "hw_share": 0.0281,
+    "keep_printed": false,
+    "line": 2,
+    "page": 15,
+    "printed": "Metformin 0.5 mg once daily",
+    "printed_conf": 0.9614,
+    "routed": false,
+    "shipped": "Metformin 0.5 mg once daily",
+    "shipped_conf": 0.9614,
+    "shipped_if_routed": "Metformin 0.5 mg once daily",
+    "shipped_if_routed_conf": 0.9739,
+    "truth": "Metformin 0.5 mg once daily"
+   },
+   {
+    "handwriting": "3. Aspirin 125 mg twice daily",
+    "handwriting_conf": 0.9283,
+    "hw_share": 0.0345,
+    "keep_printed": false,
+    "line": 3,
+    "page": 15,
+    "printed": "3. Aspirin 12.5 mg twice daily",
+    "printed_conf": 0.9764,
+    "routed": false,
+    "shipped": "3. Aspirin 12.5 mg twice daily",
+    "shipped_conf": 0.9764,
+    "shipped_if_routed": "3. Aspirin 12.5 mg twice daily",
+    "shipped_if_routed_conf": 0.9764,
+    "truth": "3. Aspirin 12.5 mg twice daily"
+   },
+   {
+    "handwriting": "BP 103/79",
+    "handwriting_conf": 0.9727,
+    "hw_share": 0.0,
+    "keep_printed": false,
+    "line": 4,
+    "page": 15,
+    "printed": "BP 103/79",
+    "printed_conf": 0.7481,
+    "routed": false,
+    "shipped": "BP 103/79",
+    "shipped_conf": 0.7481,
+    "shipped_if_routed": "BP 103/79",
+    "shipped_if_routed_conf": 0.9727,
+    "truth": "BP 103/79"
+   },
+   {
+    "handwriting": "Salbutamal 10 mg 019",
+    "handwriting_conf": 0.8135,
+    "hw_share": 0.9996,
+    "keep_printed": false,
+    "line": 0,
+    "page": 16,
+    "printed": "Jalbutamel 10 my 99",
+    "printed_conf": 0.5614,
+    "routed": true,
+    "shipped": "Salbutamal 10 mg 019",
+    "shipped_conf": 0.8135,
+    "shipped_if_routed": "Salbutamal 10 mg 019",
+    "shipped_if_routed_conf": 0.8135,
+    "truth": "Salbutamol 10 mg OD"
+   },
+   {
+    "handwriting": "Dr A Example",
+    "handwriting_conf": 0.8286,
+    "hw_share": 0.9981,
+    "keep_printed": false,
+    "line": 1,
+    "page": 16,
+    "printed": "On 4 Bpmple",
+    "printed_conf": 0.3413,
+    "routed": true,
+    "shipped": "Dr A Example",
+    "shipped_conf": 0.8286,
+    "shipped_if_routed": "Dr A Example",
+    "shipped_if_routed_conf": 0.8286,
+    "truth": "Dr A. Example"
+   },
+   {
+    "handwriting": "Review on 27/02/2026",
+    "handwriting_conf": 0.9016,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 2,
+    "page": 16,
+    "printed": "Renew on 8/0%/2026",
+    "printed_conf": 0.388,
+    "routed": true,
+    "shipped": "Review on 27/02/2026",
+    "shipped_conf": 0.9016,
+    "shipped_if_routed": "Review on 27/02/2026",
+    "shipped_if_routed_conf": 0.9016,
+    "truth": "Review on 27/02/2026"
+   },
+   {
+    "handwriting": "Atorvastatation 75 mg twice daily",
+    "handwriting_conf": 0.8013,
+    "hw_share": 0.9984,
+    "keep_printed": false,
+    "line": 3,
+    "page": 16,
+    "printed": "Atanrastatur 75 my twice dailly",
+    "printed_conf": 0.457,
+    "routed": true,
+    "shipped": "Atorvastatation 75 mg twice daily",
+    "shipped_conf": 0.8013,
+    "shipped_if_routed": "Atorvastatation 75 mg twice daily",
+    "shipped_if_routed_conf": 0.8013,
+    "truth": "Atorvastatin 75 mg twice daily"
+   },
+   {
+    "handwriting": "1. Sertraline 5 mg after meals",
+    "handwriting_conf": 0.878,
+    "hw_share": 0.9855,
+    "keep_printed": false,
+    "line": 4,
+    "page": 16,
+    "printed": "1. Jentraline 5 my aften meals",
+    "printed_conf": 0.6363,
+    "routed": true,
+    "shipped": "1. Sertraline 5 mg after meals",
+    "shipped_conf": 0.878,
+    "shipped_if_routed": "1. Sertraline 5 mg after meals",
+    "shipped_if_routed_conf": 0.878,
+    "truth": "1. Sertraline 5 mg after meals"
+   },
+   {
+    "handwriting": "4. Insulin 8 units after meals",
+    "handwriting_conf": 0.9597,
+    "hw_share": 0.9904,
+    "keep_printed": false,
+    "line": 5,
+    "page": 16,
+    "printed": "4. Onsulin 8 wnta aften meals",
+    "printed_conf": 0.7119,
+    "routed": true,
+    "shipped": "4. Insulin 8 units after meals",
+    "shipped_conf": 0.9597,
+    "shipped_if_routed": "4. Insulin 8 units after meals",
+    "shipped_if_routed_conf": 0.9597,
+    "truth": "4. Insulin 8 units after meals"
+   },
+   {
+    "handwriting": "Review in clinic",
+    "handwriting_conf": 0.956,
+    "hw_share": 1.0,
+    "keep_printed": false,
+    "line": 6,
+    "page": 16,
+    "printed": "Revew u duuc",
+    "printed_conf": 0.4043,
+    "routed": true,
+    "shipped": "Review in clinic",
+    "shipped_conf": 0.956,
+    "shipped_if_routed": "Review in clinic",
+    "shipped_if_routed_conf": 0.956,
+    "truth": "Review in clinic"
+   },
+   {
+    "handwriting": "3. Digoxin 25 mcg twice daily",
+    "handwriting_conf": 0.9772,
+    "hw_share": 0.9973,
+    "keep_printed": false,
+    "line": 0,
+    "page": 17,
+    "printed": "3. Digoxin 25 mcg twice daily",
+    "printed_conf": 0.8897,
+    "routed": true,
+    "shipped": "3. Digoxin 25 mcg twice daily",
+    "shipped_conf": 0.9772,
+    "shipped_if_routed": "3. Digoxin 25 mcg twice daily",
+    "shipped_if_routed_conf": 0.9772,
+    "truth": "3. Digoxin 25 mcg twice daily"
+   },
+   {
+    "handwriting": "salbutamol 2.5 mg OD",
+    "handwriting_conf": 0.8512,
+    "hw_share": 0.9965,
+    "keep_printed": false,
+    "line": 1,
+    "page": 17,
+    "printed": "Salbutamol 2.5 mg OD",
+    "printed_conf": 0.9714,
+    "routed": true,
+    "shipped": "Salbutamol 2.5 mg OD",
+    "shipped_conf": 0.9714,
+    "shipped_if_routed": "Salbutamol 2.5 mg OD",
+    "shipped_if_routed_conf": 0.9714,
+    "truth": "Salbutamol 2.5 mg OD"
+   },
+   {
+    "handwriting": "1. Aspirin 75 mg once daily",
+    "handwriting_conf": 0.9768,
+    "hw_share": 0.9907,
+    "keep_printed": false,
+    "line": 2,
+    "page": 17,
+    "printed": "/. Aspirin 75 mg once daily",
+    "printed_conf": 0.9101,
+    "routed": true,
+    "shipped": "1. Aspirin 75 mg once daily",
+    "shipped_conf": 0.9768,
+    "shipped_if_routed": "1. Aspirin 75 mg once daily",
+    "shipped_if_routed_conf": 0.9768,
+    "truth": "1. Aspirin 75 mg once daily"
+   },
+   {
+    "handwriting": "BP 163178",
+    "handwriting_conf": 0.8792,
+    "hw_share": 0.9511,
+    "keep_printed": false,
+    "line": 3,
+    "page": 17,
+    "printed": "BP 163/78",
+    "printed_conf": 0.8729,
+    "routed": true,
+    "shipped": "BP 163178",
+    "shipped_conf": 0.8792,
+    "shipped_if_routed": "BP 163178",
+    "shipped_if_routed_conf": 0.8792,
+    "truth": "BP 163/78"
+   },
+   {
+    "handwriting": "Lactulose 10 mL 0D",
+    "handwriting_conf": 0.8462,
+    "hw_share": 0.9954,
+    "keep_printed": false,
+    "line": 4,
+    "page": 17,
+    "printed": "Lactulose 10 ml OD",
+    "printed_conf": 0.9605,
+    "routed": true,
+    "shipped": "Lactulose 10 ml OD",
+    "shipped_conf": 0.9605,
+    "shipped_if_routed": "Lactulose 10 ml OD",
+    "shipped_if_routed_conf": 0.9605,
+    "truth": "Lactulose 10 mL OD"
+   },
+   {
+    "handwriting": "Sertraline 12.5 mg OD",
+    "handwriting_conf": 0.8647,
+    "hw_share": 0.0271,
+    "keep_printed": false,
+    "line": 0,
+    "page": 18,
+    "printed": "Sertraline 12.5 mg OD",
+    "printed_conf": 0.9902,
+    "routed": false,
+    "shipped": "Sertraline 12.5 mg OD",
+    "shipped_conf": 0.9902,
+    "shipped_if_routed": "Sertraline 12.5 mg OD",
+    "shipped_if_routed_conf": 0.9902,
+    "truth": "Sertraline 12.5 mg OD"
+   },
+   {
+    "handwriting": "Gliclade 0.5 mg TDS",
+    "handwriting_conf": 0.7987,
+    "hw_share": 0.0017,
+    "keep_printed": false,
+    "line": 1,
+    "page": 18,
+    "printed": "Gliclazide 0.5 mg TDS",
+    "printed_conf": 0.9905,
+    "routed": false,
+    "shipped": "Gliclazide 0.5 mg TDS",
+    "shipped_conf": 0.9905,
+    "shipped_if_routed": "Gliclazide 0.5 mg TDS",
+    "shipped_if_routed_conf": 0.9905,
+    "truth": "Gliclazide 0.5 mg TDS"
+   },
+   {
+    "handwriting": "Review on 23/05/2026",
+    "handwriting_conf": 0.9116,
+    "hw_share": 0.2677,
+    "keep_printed": false,
+    "line": 2,
+    "page": 18,
+    "printed": "Review on 23/05/2026",
+    "printed_conf": 0.8803,
+    "routed": false,
+    "shipped": "Review on 23/05/2026",
+    "shipped_conf": 0.8803,
+    "shipped_if_routed": "Review on 23/05/2026",
+    "shipped_if_routed_conf": 0.9116,
+    "truth": "Review on 23/05/2026"
+   },
+   {
+    "handwriting": "1. Ramipril 2.5 mg nocte",
+    "handwriting_conf": 0.9207,
+    "hw_share": 0.1177,
+    "keep_printed": false,
+    "line": 3,
+    "page": 18,
+    "printed": "1. Ramipril 2.5 mg nocte",
+    "printed_conf": 0.9623,
+    "routed": false,
+    "shipped": "1. Ramipril 2.5 mg nocte",
+    "shipped_conf": 0.9623,
+    "shipped_if_routed": "1. Ramipril 2.5 mg nocte",
+    "shipped_if_routed_conf": 0.9623,
+    "truth": "1. Ramipril 2.5 mg nocte"
+   },
+   {
+    "handwriting": "Review on 02/03/2026",
+    "handwriting_conf": 0.947,
+    "hw_share": 0.9759,
+    "keep_printed": false,
+    "line": 0,
+    "page": 19,
+    "printed": "Review on 02/03/2026",
+    "printed_conf": 0.8339,
+    "routed": true,
+    "shipped": "Review on 02/03/2026",
+    "shipped_conf": 0.947,
+    "shipped_if_routed": "Review on 02/03/2026",
+    "shipped_if_routed_conf": 0.947,
+    "truth": "Review on 02/03/2026"
+   },
+   {
+    "handwriting": "BP 125/68",
+    "handwriting_conf": 0.979,
+    "hw_share": 0.5777,
+    "keep_printed": false,
+    "line": 1,
+    "page": 19,
+    "printed": "BP 125/68",
+    "printed_conf": 0.8226,
+    "routed": true,
+    "shipped": "BP 125/68",
+    "shipped_conf": 0.979,
+    "shipped_if_routed": "BP 125/68",
+    "shipped_if_routed_conf": 0.979,
+    "truth": "BP 125/68"
+   },
+   {
+    "handwriting": "Atonvatation 40 mg twice daily",
+    "handwriting_conf": 0.7337,
+    "hw_share": 0.8407,
+    "keep_printed": false,
+    "line": 2,
+    "page": 19,
+    "printed": "Atorvastatin 40 m9 twice daily",
+    "printed_conf": 0.8016,
+    "routed": true,
+    "shipped": "Atorvastatin 40 m9 twice daily",
+    "shipped_conf": 0.8016,
+    "shipped_if_routed": "Atorvastatin 40 m9 twice daily",
+    "shipped_if_routed_conf": 0.8016,
+    "truth": "Atorvastatin 40 mg twice daily"
+   },
+   {
+    "handwriting": "Sertraline 10 mg OD",
+    "handwriting_conf": 0.8493,
+    "hw_share": 0.7886,
+    "keep_printed": false,
+    "line": 3,
+    "page": 19,
+    "printed": "Sertraline 10 m9 OD",
+    "printed_conf": 0.8265,
+    "routed": true,
+    "shipped": "Sertraline 10 mg OD",
+    "shipped_conf": 0.8493,
+    "shipped_if_routed": "Sertraline 10 mg OD",
+    "shipped_if_routed_conf": 0.8493,
+    "truth": "Sertraline 10 mg OD"
+   },
+   {
+    "handwriting": "Ramipril 2.5 mg after meals",
+    "handwriting_conf": 0.8162,
+    "hw_share": 0.7002,
+    "keep_printed": false,
+    "line": 4,
+    "page": 19,
+    "printed": "Ramipril 2.5 mg after meals",
+    "printed_conf": 0.8884,
+    "routed": true,
+    "shipped": "Ramipril 2.5 mg after meals",
+    "shipped_conf": 0.8884,
+    "shipped_if_routed": "Ramipril 2.5 mg after meals",
+    "shipped_if_routed_conf": 0.8884,
+    "truth": "Ramipril 2.5 mg after meals"
+   }
+  ],
+  "scores": {
+   "candidate": {
+    "fields": {
+     "drug": {
+      "den": 76,
+      "num": 67,
+      "rate": 0.8816
+     },
+     "exact": {
+      "den": 76,
+      "num": 63,
+      "rate": 0.8289
+     },
+     "unit": {
+      "den": 76,
+      "num": 65,
+      "rate": 0.8553
+     },
+     "value": {
+      "den": 76,
+      "num": 65,
+      "rate": 0.8553
+     }
+    },
+    "line": {
+     "cer": 0.0213,
+     "char_errors": 51,
+     "chars": 2397,
+     "n": 113,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    },
+    "line_exact": {
+     "den": 113,
+     "num": 85,
+     "rate": 0.7522
+    },
+    "line_exact_ignoring_case": {
+     "den": 113,
+     "num": 90,
+     "rate": 0.7965
+    },
+    "numeric_line_accuracy": {
+     "den": 96,
+     "num": 70,
+     "rate": 0.7292
+    },
+    "page": {
+     "cer": 0.0205,
+     "char_errors": 51,
+     "chars": 2490,
+     "n": 20,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    }
+   },
+   "handwriting": {
+    "fields": {
+     "drug": {
+      "den": 76,
+      "num": 65,
+      "rate": 0.8553
+     },
+     "exact": {
+      "den": 76,
+      "num": 62,
+      "rate": 0.8158
+     },
+     "unit": {
+      "den": 76,
+      "num": 64,
+      "rate": 0.8421
+     },
+     "value": {
+      "den": 76,
+      "num": 63,
+      "rate": 0.8289
+     }
+    },
+    "line": {
+     "cer": 0.0259,
+     "char_errors": 62,
+     "chars": 2397,
+     "n": 113,
+     "wer": 0.0853,
+     "word_errors": 39,
+     "words": 457
+    },
+    "line_exact": {
+     "den": 113,
+     "num": 80,
+     "rate": 0.708
+    },
+    "line_exact_ignoring_case": {
+     "den": 113,
+     "num": 85,
+     "rate": 0.7522
+    },
+    "numeric_line_accuracy": {
+     "den": 96,
+     "num": 65,
+     "rate": 0.6771
+    },
+    "page": {
+     "cer": 0.0249,
+     "char_errors": 62,
+     "chars": 2490,
+     "n": 20,
+     "wer": 0.0853,
+     "word_errors": 39,
+     "words": 457
+    }
+   },
+   "printed": {
+    "fields": {
+     "drug": {
+      "den": 76,
+      "num": 45,
+      "rate": 0.5921
+     },
+     "exact": {
+      "den": 76,
+      "num": 37,
+      "rate": 0.4868
+     },
+     "unit": {
+      "den": 76,
+      "num": 37,
+      "rate": 0.4868
+     },
+     "value": {
+      "den": 76,
+      "num": 42,
+      "rate": 0.5526
+     }
+    },
+    "line": {
+     "cer": 0.0872,
+     "char_errors": 209,
+     "chars": 2397,
+     "n": 113,
+     "wer": 0.2385,
+     "word_errors": 109,
+     "words": 457
+    },
+    "line_exact": {
+     "den": 113,
+     "num": 49,
+     "rate": 0.4336
+    },
+    "line_exact_ignoring_case": {
+     "den": 113,
+     "num": 53,
+     "rate": 0.469
+    },
+    "numeric_line_accuracy": {
+     "den": 96,
+     "num": 41,
+     "rate": 0.4271
+    },
+    "page": {
+     "cer": 0.0839,
+     "char_errors": 209,
+     "chars": 2490,
+     "n": 20,
+     "wer": 0.2385,
+     "word_errors": 109,
+     "words": 457
+    }
+   },
+   "shipped": {
+    "fields": {
+     "drug": {
+      "den": 76,
+      "num": 66,
+      "rate": 0.8684
+     },
+     "exact": {
+      "den": 76,
+      "num": 63,
+      "rate": 0.8289
+     },
+     "unit": {
+      "den": 76,
+      "num": 64,
+      "rate": 0.8421
+     },
+     "value": {
+      "den": 76,
+      "num": 65,
+      "rate": 0.8553
+     }
+    },
+    "line": {
+     "cer": 0.0225,
+     "char_errors": 54,
+     "chars": 2397,
+     "n": 113,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    },
+    "line_exact": {
+     "den": 113,
+     "num": 86,
+     "rate": 0.7611
+    },
+    "line_exact_ignoring_case": {
+     "den": 113,
+     "num": 91,
+     "rate": 0.8053
+    },
+    "numeric_line_accuracy": {
+     "den": 96,
+     "num": 71,
+     "rate": 0.7396
+    },
+    "page": {
+     "cer": 0.0217,
+     "char_errors": 54,
+     "chars": 2490,
+     "n": 20,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    }
+   },
+   "shipped_if_routed": {
+    "fields": {
+     "drug": {
+      "den": 76,
+      "num": 66,
+      "rate": 0.8684
+     },
+     "exact": {
+      "den": 76,
+      "num": 63,
+      "rate": 0.8289
+     },
+     "unit": {
+      "den": 76,
+      "num": 64,
+      "rate": 0.8421
+     },
+     "value": {
+      "den": 76,
+      "num": 65,
+      "rate": 0.8553
+     }
+    },
+    "line": {
+     "cer": 0.0225,
+     "char_errors": 54,
+     "chars": 2397,
+     "n": 113,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    },
+    "line_exact": {
+     "den": 113,
+     "num": 86,
+     "rate": 0.7611
+    },
+    "line_exact_ignoring_case": {
+     "den": 113,
+     "num": 91,
+     "rate": 0.8053
+    },
+    "numeric_line_accuracy": {
+     "den": 96,
+     "num": 71,
+     "rate": 0.7396
+    },
+    "page": {
+     "cer": 0.0217,
+     "char_errors": 54,
+     "chars": 2490,
+     "n": 20,
+     "wer": 0.0744,
+     "word_errors": 34,
+     "words": 457
+    }
+   }
+  }
+ }
+}
